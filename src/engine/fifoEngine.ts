@@ -1,4 +1,17 @@
-import type { TradeTransaction, FifoLot, FifoMatchDetail, RealizedGainResult, TaxSummary } from '../types/trade';
+import type { TradeTransaction, FifoLot, FifoMatchDetail, RealizedGainResult, TaxSummary, ProviderType } from '../types/trade';
+
+// ─── SRP: Centralized key generation ────────────────────────────────────────
+/**
+ * Generate a grouping key for FIFO lot matching.
+ * Lots are matched only when both symbol AND provider are identical.
+ * OCP: If future requirements change the grouping logic (e.g., add exchange),
+ *      only this function needs to change.
+ */
+function lotKey(symbol: string, provider: ProviderType): string {
+  return `${symbol}|${provider}`;
+}
+
+// ─── Pure calculation helpers ────────────────────────────────────────────────
 
 /**
  * Calculate gross THB cost basis for a buy trade.
@@ -26,6 +39,47 @@ export function calculateUnitCostTHB(trade: TradeTransaction): number {
   return calculateBuyCostTHB(trade) / trade.quantity;
 }
 
+// ─── SRP: Lot validation ─────────────────────────────────────────────────────
+
+/**
+ * Validation result for checking whether a sell trade can be executed
+ * against available lots for a given symbol+provider combination.
+ */
+export interface LotValidationResult {
+  valid: boolean;
+  availableQuantity: number;
+  requestedQuantity: number;
+  symbol: string;
+  provider: ProviderType;
+  message?: string;
+}
+
+/**
+ * SRP: Validate that sufficient lots exist BEFORE attempting to process a sell.
+ * Separated from processSellTrade so callers (e.g., TradeForm) can pre-validate
+ * without actually mutating lot state.
+ */
+export function validateSellLots(
+  sell: TradeTransaction,
+  lots: FifoLot[]
+): LotValidationResult {
+  const totalAvailable = lots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
+
+  return {
+    valid: totalAvailable >= sell.quantity,
+    availableQuantity: totalAvailable,
+    requestedQuantity: sell.quantity,
+    symbol: sell.symbol,
+    provider: sell.provider,
+    message: totalAvailable >= sell.quantity
+      ? undefined
+      : `Insufficient lots for ${sell.symbol} via ${sell.provider}. ` +
+        `Available: ${totalAvailable}, Requested: ${sell.quantity}`,
+  };
+}
+
+// ─── FIFO lot builder ────────────────────────────────────────────────────────
+
 /**
  * Build FIFO lots from an array of buy trades, sorted by date.
  * Each lot represents a buy trade with its remaining (unmatched) quantity.
@@ -39,6 +93,7 @@ export function buildFifoLots(buys: TradeTransaction[]): FifoLot[] {
     tradeId: buy.id,
     date: buy.date,
     symbol: buy.symbol,
+    provider: buy.provider,
     unitCostTHB: calculateUnitCostTHB(buy),
     remainingQuantity: buy.quantity,
     originalQuantity: buy.quantity,
@@ -46,9 +101,14 @@ export function buildFifoLots(buys: TradeTransaction[]): FifoLot[] {
   }));
 }
 
+// ─── Core FIFO sell processor ────────────────────────────────────────────────
+
 /**
- * Process a single sell trade against existing FIFO lots for the same symbol.
- * Returns the realized gain result and the updated lots array.
+ * Process a single sell trade against existing FIFO lots.
+ * LSP: Returns a well-defined result for any valid input — callers can rely
+ *      on the result shape regardless of matching outcome.
+ *
+ * @throws {Error} If insufficient lots exist for the sell (symbol + provider mismatch)
  */
 export function processSellTrade(
   sell: TradeTransaction,
@@ -62,6 +122,7 @@ export function processSellTrade(
 
   for (const lot of lots) {
     if (remainingSellQty <= 0) {
+      // No more quantity to match — pass remaining lots through unchanged
       updatedLots.push(lot);
       continue;
     }
@@ -79,16 +140,26 @@ export function processSellTrade(
     matchedLots.push({
       buyTradeId: lot.tradeId,
       buyDate: lot.date,
+      buyProvider: lot.provider,
       matchedQuantity: matchedQty,
       buyUnitCostTHB: lot.unitCostTHB,
       buyTotalCostTHB: matchedCost,
     });
 
-    // Push updated lot with reduced remaining quantity
+    // Push updated lot with reduced remaining quantity (immutable-style update)
     const newRemaining = lot.remainingQuantity - matchedQty;
     if (newRemaining > 0) {
       updatedLots.push({ ...lot, remainingQuantity: newRemaining });
     }
+    // If newRemaining === 0, the lot is fully consumed — don't push it back
+  }
+
+  // Guard: if sell quantity wasn't fully matched, the caller passed wrong lots
+  if (remainingSellQty > 0) {
+    throw new Error(
+      `Insufficient lots for ${sell.symbol} via ${sell.provider}. ` +
+      `${remainingSellQty.toFixed(4)} units could not be matched.`
+    );
   }
 
   const realizedGainTHB = sellRevenueTHB - totalBuyCostTHB;
@@ -98,7 +169,8 @@ export function processSellTrade(
     sellDate: sell.date,
     symbol: sell.symbol,
     assetType: sell.assetType,
-    quantity: sell.quantity - remainingSellQty, // Actual matched quantity
+    provider: sell.provider,
+    quantity: sell.quantity,
     sellRevenueTHB,
     buyCostBasisTHB: totalBuyCostTHB,
     realizedGainTHB,
@@ -108,47 +180,65 @@ export function processSellTrade(
   return { result, updatedLots };
 }
 
+// ─── Batch computation ───────────────────────────────────────────────────────
+
 /**
  * Process all trades (sorted by date) and compute realized gains using FIFO.
- * Returns an array of realized gain results (one per sell trade) and the remaining open lots.
+ * OCP: Lot grouping is abstracted behind lotKey() — changing the grouping
+ *      dimension only requires changing that one function.
  */
 export function computeAllRealizedGains(
   trades: TradeTransaction[]
 ): { gains: RealizedGainResult[]; remainingLots: FifoLot[] } {
   const sortedTrades = [...trades].sort((a, b) => a.date.localeCompare(b.date));
   const gains: RealizedGainResult[] = [];
-  let lotsBySymbol: Record<string, FifoLot[]> = {};
+
+  // DIP: Map keyed by abstraction (string), not a concrete field
+  const lotsByKey: Record<string, FifoLot[]> = {};
 
   for (const trade of sortedTrades) {
+    const key = lotKey(trade.symbol, trade.provider);
+
     if (trade.type === 'BUY') {
-      if (!lotsBySymbol[trade.symbol]) {
-        lotsBySymbol[trade.symbol] = [];
+      if (!lotsByKey[key]) {
+        lotsByKey[key] = [];
       }
-      lotsBySymbol[trade.symbol].push({
+      lotsByKey[key].push({
         tradeId: trade.id,
         date: trade.date,
         symbol: trade.symbol,
+        provider: trade.provider,
         unitCostTHB: calculateUnitCostTHB(trade),
         remainingQuantity: trade.quantity,
         originalQuantity: trade.quantity,
         fxRateTHB: trade.fxRateTHB,
       });
     } else if (trade.type === 'SELL') {
-      const symbolLots = lotsBySymbol[trade.symbol] || [];
+      const symbolLots = lotsByKey[key] || [];
+
+      // Validate before processing
+      const validation = validateSellLots(trade, symbolLots);
+      if (!validation.valid) {
+        throw new Error(validation.message!);
+      }
+
       const { result, updatedLots } = processSellTrade(trade, symbolLots);
-      lotsBySymbol[trade.symbol] = updatedLots;
+      lotsByKey[key] = updatedLots;
       gains.push(result);
     }
   }
 
-  // Flatten remaining lots
-  const remainingLots: FifoLot[] = Object.values(lotsBySymbol).flat();
+  // Flatten remaining lots across all providers
+  const remainingLots: FifoLot[] = Object.values(lotsByKey).flat();
 
   return { gains, remainingLots };
 }
 
+// ─── Tax summary ─────────────────────────────────────────────────────────────
+
 /**
  * Compute a tax summary for a given year.
+ * SRP: This function only aggregates — it delegates FIFO computation to computeAllRealizedGains.
  */
 export function computeTaxSummary(
   trades: TradeTransaction[],
@@ -193,109 +283,13 @@ export function computeTaxSummary(
   };
 }
 
+// ─── Formatting utility ──────────────────────────────────────────────────────
+
 /**
- * Generate a FIFO gain indicator string for a sell trade.
- * Returns a human-readable string showing the gain/loss.
+ * Generate a human-readable gain/loss indicator string in THB.
  */
 export function formatGainIndicator(gainTHB: number): string {
   if (gainTHB > 0) return `+฿${gainTHB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (gainTHB < 0) return `-฿${Math.abs(gainTHB).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   return '฿0.00';
-}
-
-/**
- * Generate a Markdown trade log table from trades and gains.
- */
-export function generateMarkdownTable(
-  trades: TradeTransaction[],
-  gains: RealizedGainResult[]
-): string {
-  const gainMap = new Map<string, RealizedGainResult>();
-  for (const g of gains) {
-    gainMap.set(g.sellTradeId, g);
-  }
-
-  const sortedTrades = [...trades].sort((a, b) => a.date.localeCompare(b.date));
-
-  let md = '| Date | Symbol | Type | Quantity | Unit Price (USD) | Fee (USD) | FX Rate (THB) | Total THB | FIFO Realized Gain (THB) |\n';
-  md += '| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n';
-
-  for (const t of sortedTrades) {
-    const totalTHB = t.type === 'BUY'
-      ? calculateBuyCostTHB(t)
-      : calculateSellRevenueTHB(t);
-
-    let gainStr = '-';
-    if (t.type === 'SELL') {
-      const gain = gainMap.get(t.id);
-      if (gain) {
-        gainStr = `**${formatGainIndicator(gain.realizedGainTHB)}**`;
-      }
-    }
-
-    md += `| ${t.date} | ${t.symbol} | ${t.type} | ${t.quantity} | $${t.priceUSD.toFixed(2)} | $${t.commissionUSD.toFixed(2)} | ${t.fxRateTHB.toFixed(2)} | ฿${totalTHB.toFixed(2)} | ${gainStr} |\n`;
-  }
-
-  return md;
-}
-
-/**
- * Generate a CSV string from trades.
- */
-export function generateCSV(trades: TradeTransaction[]): string {
-  const headers = ['Date', 'Symbol', 'AssetType', 'Type', 'Quantity', 'PriceUSD', 'CommissionUSD', 'FxRateTHB', 'Notes'];
-  const rows = trades.map(t => [
-    t.date,
-    t.symbol,
-    t.assetType,
-    t.type,
-    t.quantity.toString(),
-    t.priceUSD.toString(),
-    t.commissionUSD.toString(),
-    t.fxRateTHB.toString(),
-    t.notes || '',
-  ]);
-
-  const escapeCSV = (val: string) => {
-    if (val.includes(',') || val.includes('"') || val.includes('\n')) {
-      return `"${val.replace(/"/g, '""')}"`;
-    }
-    return val;
-  };
-
-  return [headers.join(','), ...rows.map(r => r.map(escapeCSV).join(','))].join('\n');
-}
-
-/**
- * Parse CSV string into TradeTransaction array.
- */
-export function parseCSV(csv: string): TradeTransaction[] {
-  const lines = csv.trim().split('\n');
-  if (lines.length < 2) return [];
-
-  const trades: TradeTransaction[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(',').map(v => v.trim());
-    if (values.length < 8) continue;
-
-    const trade: TradeTransaction = {
-      id: `trd_${Date.now()}_${i}`,
-      date: values[0],
-      symbol: values[1],
-      assetType: values[2] === 'CRYPTO' ? 'CRYPTO' : 'FOREIGN_STOCK',
-      type: values[3] === 'SELL' ? 'SELL' : 'BUY',
-      quantity: parseFloat(values[4]) || 0,
-      priceUSD: parseFloat(values[5]) || 0,
-      commissionUSD: parseFloat(values[6]) || 0,
-      fxRateTHB: parseFloat(values[7]) || 0,
-      notes: values[8] || '',
-    };
-
-    if (trade.quantity > 0 && trade.priceUSD > 0) {
-      trades.push(trade);
-    }
-  }
-
-  return trades;
 }

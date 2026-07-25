@@ -5,27 +5,25 @@ import {
   addTrade,
   updateTrade,
   deleteTrade,
-  importTrades,
   setSelectedTaxYear,
 } from '../store/tradeSlice';
-import { formatGainIndicator } from '../engine/fifoEngine';
+import { formatGainIndicator, validateSellLots } from '../engine/fifoEngine';
 import { KpiCard } from './KpiCard';
 import { TradeForm } from './TradeForm';
 import { TradeTable } from './TradeTable';
-import { ExportImportDrawer } from './ExportImportDrawer';
 
 export function Dashboard() {
   const dispatch = useAppDispatch();
   const {
     trades,
     gains,
+    remainingLots,
     selectedTaxYear,
     taxSummaries,
   } = useAppSelector(state => state.trade);
 
   const [showForm, setShowForm] = useState(false);
   const [editingTrade, setEditingTrade] = useState<TradeTransaction | null>(null);
-  const [showDrawer, setShowDrawer] = useState(false);
 
   const summary = taxSummaries[selectedTaxYear];
 
@@ -58,11 +56,18 @@ export function Dashboard() {
     setEditingTrade(trade);
   }, []);
 
-  const handleImport = useCallback((importedTrades: TradeTransaction[]) => {
-    if (window.confirm(`Import ${importedTrades.length} trades? This will replace all current trades.`)) {
-      dispatch(importTrades(importedTrades));
-    }
-  }, [dispatch]);
+  // DIP: Inject validation logic into TradeForm so it doesn't need to know about engine internals
+  const handleValidate = useCallback((trade: TradeTransaction): string | null => {
+    if (trade.type !== 'SELL') return null;
+
+    // Filter remaining lots to the same symbol + provider only
+    const relevantLots = remainingLots.filter(
+      lot => lot.symbol === trade.symbol && lot.provider === trade.provider
+    );
+
+    const validation = validateSellLots(trade, relevantLots);
+    return validation.valid ? null : validation.message!;
+  }, [remainingLots]);
 
   return (
     <div className="dashboard">
@@ -73,9 +78,7 @@ export function Dashboard() {
           <p className="header-subtitle">FIFO Capital Gains Calculator — Revenue Dept. Rules</p>
         </div>
         <div className="header-right">
-          <button className="btn btn-secondary" onClick={() => setShowDrawer(true)}>
-            📦 Export / Import
-          </button>
+          {/* Export/Import removed per BA spec */}
         </div>
       </header>
 
@@ -165,17 +168,9 @@ export function Dashboard() {
             setShowForm(false);
             setEditingTrade(null);
           }}
+          onValidate={handleValidate}
         />
       )}
-
-      {/* Export/Import Drawer */}
-      <ExportImportDrawer
-        isOpen={showDrawer}
-        onClose={() => setShowDrawer(false)}
-        trades={trades}
-        gains={gains}
-        onImport={handleImport}
-      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { TradeTransaction, RealizedGainResult, FifoLot, TaxSummary } from '../types/trade';
+import type { TradeTransaction, RealizedGainResult, FifoLot, TaxSummary, ProviderType } from '../types/trade';
 import { computeAllRealizedGains, computeTaxSummary } from '../engine/fifoEngine';
 
 const STORAGE_KEY = 'tax_tracker_trades';
@@ -13,11 +13,22 @@ export interface TradeState {
   taxSummaries: Record<number, TaxSummary>;
 }
 
+// SRP: Migration logic isolated from loading logic.
+// When new required fields are added to TradeTransaction, add migration steps here.
+function migrateTrade(trade: TradeTransaction): TradeTransaction {
+  // Migrate: trades created before Provider feature → default to 'Dime'
+  if (!trade.provider) {
+    return { ...trade, provider: 'Dime' as ProviderType };
+  }
+  return trade;
+}
+
 function loadTrades(): TradeTransaction[] {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     if (data) {
-      return JSON.parse(data);
+      const raw = JSON.parse(data) as TradeTransaction[];
+      return raw.map(migrateTrade);
     }
   } catch (e) {
     console.error('Failed to load trades from localStorage:', e);

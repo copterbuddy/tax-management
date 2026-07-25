@@ -72,6 +72,7 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                 <th className="sortable" onClick={() => handleSort('symbol')}>
                   Symbol {sortField === 'symbol' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                 </th>
+                <th>Provider</th>
                 <th>Type</th>
                 <th>Qty</th>
                 <th>Price (USD)</th>
@@ -99,6 +100,7 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                         {trade.assetType === 'FOREIGN_STOCK' ? 'STK' : 'CRYPTO'}
                       </span>
                     </td>
+                    <td>{trade.provider}</td>
                     <td>
                       <span className={`trade-type-badge ${trade.type.toLowerCase()}`}>
                         {trade.type}

@@ -1,5 +1,6 @@
 export type AssetType = 'FOREIGN_STOCK' | 'CRYPTO';
 export type TradeType = 'BUY' | 'SELL';
+export type ProviderType = 'Dime' | 'Liberator' | 'FinansiaSyrus';
 
 export interface TradeTransaction {
   id: string;
@@ -7,6 +8,7 @@ export interface TradeTransaction {
   symbol: string;
   assetType: AssetType;
   type: TradeType;
+  provider: ProviderType;
   quantity: number;
   priceUSD: number; // Unit price in USD (or foreign currency)
   commissionUSD: number; // Total commission in USD
@@ -18,6 +20,7 @@ export interface FifoLot {
   tradeId: string;
   date: string;
   symbol: string;
+  provider: ProviderType;
   unitCostTHB: number; // Cost per unit in THB including proportional commission
   remainingQuantity: number;
   originalQuantity: number;
@@ -27,6 +30,7 @@ export interface FifoLot {
 export interface FifoMatchDetail {
   buyTradeId: string;
   buyDate: string;
+  buyProvider: ProviderType;
   matchedQuantity: number;
   buyUnitCostTHB: number;
   buyTotalCostTHB: number;
@@ -37,6 +41,7 @@ export interface RealizedGainResult {
   sellDate: string;
   symbol: string;
   assetType: AssetType;
+  provider: ProviderType;
   quantity: number;
   sellRevenueTHB: number; // Total THB revenue from sell after deducting commission
   buyCostBasisTHB: number; // Total THB cost of matched buy lots

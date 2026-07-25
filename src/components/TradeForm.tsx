@@ -1,27 +1,34 @@
-import { useState, useEffect } from 'react';
-import type { TradeTransaction, AssetType, TradeType } from '../types/trade';
+import { useState, useEffect, useMemo } from 'react';
+import type { TradeTransaction, AssetType, TradeType, ProviderType } from '../types/trade';
+
+// OCP: Centralized provider list — add new providers here only
+const PROVIDER_OPTIONS: ProviderType[] = ['Dime', 'Liberator', 'FinansiaSyrus'];
 
 interface TradeFormProps {
   trade?: TradeTransaction | null;
   onSubmit: (trade: TradeTransaction) => void;
   onCancel: () => void;
+  /** DIP: Optional external validator — caller injects validation logic */
+  onValidate?: (trade: TradeTransaction) => string | null;
 }
 
 function generateId(): string {
   return `trd_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 }
 
-export function TradeForm({ trade, onSubmit, onCancel }: TradeFormProps) {
+export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormProps) {
   const [date, setDate] = useState('');
   const [symbol, setSymbol] = useState('');
   const [assetType, setAssetType] = useState<AssetType>('FOREIGN_STOCK');
   const [type, setType] = useState<TradeType>('BUY');
+  const [provider, setProvider] = useState<ProviderType>('Dime');
   const [quantity, setQuantity] = useState('');
   const [priceUSD, setPriceUSD] = useState('');
   const [commissionUSD, setCommissionUSD] = useState('');
   const [fxRateTHB, setFxRateTHB] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (trade) {
@@ -29,6 +36,7 @@ export function TradeForm({ trade, onSubmit, onCancel }: TradeFormProps) {
       setSymbol(trade.symbol);
       setAssetType(trade.assetType);
       setType(trade.type);
+      setProvider(trade.provider);
       setQuantity(trade.quantity.toString());
       setPriceUSD(trade.priceUSD.toString());
       setCommissionUSD(trade.commissionUSD.toString());
@@ -39,6 +47,7 @@ export function TradeForm({ trade, onSubmit, onCancel }: TradeFormProps) {
       setSymbol('');
       setAssetType('FOREIGN_STOCK');
       setType('BUY');
+      setProvider('Dime');
       setQuantity('');
       setPriceUSD('');
       setCommissionUSD('0');
@@ -46,6 +55,7 @@ export function TradeForm({ trade, onSubmit, onCancel }: TradeFormProps) {
       setNotes('');
     }
     setErrors({});
+    setValidationError(null);
   }, [trade]);
 
   const validate = (): boolean => {
@@ -72,6 +82,8 @@ export function TradeForm({ trade, onSubmit, onCancel }: TradeFormProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setValidationError(null);
+
     if (!validate()) return;
 
     const tradeData: TradeTransaction = {
@@ -80,12 +92,22 @@ export function TradeForm({ trade, onSubmit, onCancel }: TradeFormProps) {
       symbol: symbol.trim().toUpperCase(),
       assetType,
       type,
+      provider,
       quantity: Number(quantity),
       priceUSD: Number(priceUSD),
       commissionUSD: Number(commissionUSD),
       fxRateTHB: Number(fxRateTHB),
       notes: notes.trim() || undefined,
     };
+
+    // DIP: Delegate business validation to the caller via injected callback
+    if (type === 'SELL' && onValidate) {
+      const validationMessage = onValidate(tradeData);
+      if (validationMessage) {
+        setValidationError(validationMessage);
+        return;
+      }
+    }
 
     onSubmit(tradeData);
   };
@@ -145,6 +167,21 @@ export function TradeForm({ trade, onSubmit, onCancel }: TradeFormProps) {
               >
                 <option value="BUY">Buy</option>
                 <option value="SELL">Sell</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="trade-provider">Provider (Broker)</label>
+              <select
+                id="trade-provider"
+                value={provider}
+                onChange={e => setProvider(e.target.value as ProviderType)}
+              >
+                {PROVIDER_OPTIONS.map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -221,6 +258,10 @@ export function TradeForm({ trade, onSubmit, onCancel }: TradeFormProps) {
               placeholder="e.g. Broker reference"
             />
           </div>
+
+          {validationError && (
+            <div className="validation-error">{validationError}</div>
+          )}
 
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={onCancel}>Cancel</button>

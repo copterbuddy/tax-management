@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./node_modules/**)",
+      "Read(./dist/**)",
+      "Read(./dist-ssr/**)",
+      "Read(./package-lock.json)",
+      "Read(./*.log)",
+      "Read(./public/**)",
+      "Read(./src/assets/**)",
+      "Read(./.git/**)",
+      "Read(./.aiexclude)",
+      "Read(./.antigravityignore)",
+      "Read(./.clineignore)",
+      "Read(./.geminiignore)"
+    ]
+  }
+}

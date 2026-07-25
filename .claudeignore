@@ -1,0 +1,56 @@
+# ─── Claude Code: .claudeignore ────────────────────────────────────────────
+# Purpose:  Prevent Claude from wasting context on files that contain
+#           no code insight — dependencies, build output, static assets, logs.
+# Syntax:   Same as .gitignore (glob patterns, ! overrides)
+# Scope:    Soft filter — Claude still CAN read these if explicitly asked,
+#           but they won't be auto-consumed into context.
+# Docs:     github.com/anthropics/claude-code/issues/19875
+# ────────────────────────────────────────────────────────────────────────────
+
+# === Dependencies (huge, no code insight) ===
+node_modules/
+
+# === Lock file (auto-generated, 49KB of noise) ===
+package-lock.json
+
+# === Build output (auto-generated) ===
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# === Version control metadata ===
+.git/
+
+# === Logs & diagnostics ===
+*.log
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# === Static assets (icons, images — no logic) ===
+public/
+src/assets/
+
+# === Other AI tool configs (not relevant to Claude) ===
+.aiexclude
+.antigravityignore
+.clineignore
+.geminiignore
+
+# === OS junk ===
+.DS_Store
+Thumbs.db
+*.suo
+*.sw?
+
+# ─── KEPT (not ignored — Claude needs these) ──────────────────────────────
+# src/             ← all source code
+# .claude/         ← Claude Code own config (agents, skills, settings)
+# docs/            ← project documentation (tasks, test-cases, workflow)
+# memory-bank/     ← project context (brief, patterns, progress)
+# package.json     ← dependency manifest
+# tsconfig*.json   ← TypeScript configuration
+# vite.config.ts   ← build configuration
+# index.html       ← entry point
+# .gitignore       ← useful reference for what git excludes
+# .vscode/         ← editor settings (may contain useful config)
+# README.md        ← project overview
+# .oxlintrc.json   ← linter rules

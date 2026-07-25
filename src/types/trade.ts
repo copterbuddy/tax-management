@@ -10,7 +10,15 @@ export interface TradeTransaction {
   quantity: number;
   priceUSD: number; // Unit price in USD
   commissionUSD: number; // Total commission in USD
-  fxRateTHB: number; // Exchange rate to THB on trade date
+  notes?: string;
+}
+
+export interface RemittanceRecord {
+  id: string;
+  sellTradeId: string;
+  amountUSD: number; // Amount remitted in USD
+  remitDate: string; // YYYY-MM-DD — date funds arrived in Thailand
+  fxRateTHB: number; // Exchange rate on remittance date
   notes?: string;
 }
 
@@ -19,10 +27,9 @@ export interface FifoLot {
   date: string;
   symbol: string;
   provider: ProviderType;
-  unitCostTHB: number; // Cost per unit in THB including proportional commission
+  unitCostUSD: number; // Cost per unit in USD
   remainingQuantity: number;
   originalQuantity: number;
-  fxRateTHB: number;
 }
 
 export interface FifoMatchDetail {
@@ -30,8 +37,8 @@ export interface FifoMatchDetail {
   buyDate: string;
   buyProvider: ProviderType;
   matchedQuantity: number;
-  buyUnitCostTHB: number;
-  buyTotalCostTHB: number;
+  buyUnitCostUSD: number;
+  buyTotalCostUSD: number;
 }
 
 export interface RealizedGainResult {
@@ -39,21 +46,30 @@ export interface RealizedGainResult {
   sellDate: string;
   symbol: string;
   provider: ProviderType;
-  quantity: number;
-  sellRevenueTHB: number; // Total THB revenue from sell after deducting commission
-  buyCostBasisTHB: number; // Total THB cost of matched buy lots
-  realizedGainTHB: number; // Revenue minus Cost Basis
+  sellQuantity: number;
+  sellRevenueUSD: number; // Total USD revenue after deducting commission
+  buyCostBasisUSD: number; // Total USD cost of matched buy lots
+  gainUSD: number; // Revenue minus cost basis (USD)
+  gainPercent: number; // gainUSD / sellRevenueUSD (0-1)
   matchedLots: FifoMatchDetail[];
+  // Remittance tracking
+  totalRemittedUSD: number;
+  remainingProceedsUSD: number;
+  remittances: RemittanceRecord[];
+  taxableGainTHB: number; // Sum of (remitUSD × gainPercent × remitFX) across all remittances
 }
 
 export interface TaxSummary {
   taxYear: number;
-  totalRevenueTHB: number;
-  totalCostBasisTHB: number;
-  netRealizedGainTHB: number; // All gains minus all losses (legacy)
-  taxableGainTHB: number; // Only positive gains — per Thai law, losses cannot offset
-  excludedLossesTHB: number; // Sum of negative gains (absolute value) — not deductible
+  totalRevenueUSD: number;
+  totalCostBasisUSD: number;
+  netGainUSD: number;
+  totalRemittedUSD: number;
+  taxableGainUSD: number; // Gain portion of remittances (USD)
+  taxableGainTHB: number; // Gain converted at remittance FX rates
+  excludedLossesUSD: number; // Losses not deductible
   totalTransactions: number;
   totalBuyCount: number;
   totalSellCount: number;
+  totalRemittanceCount: number;
 }

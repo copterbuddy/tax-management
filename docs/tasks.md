@@ -95,6 +95,24 @@
 
 ---
 
+### TASK-015: Remittance-Based Tax (นำเงินเข้าไทย)
+
+**Priority:** 🔴 P0  
+**Effort:** L (8 files: 1 new, 7 modified)  
+**Status:** ✅ ทำเสร็จแล้ว  
+**Depends on:** None
+
+**What was done:**
+- FIFO engine now calculates entirely in USD
+- Gain% method: taxable = remitUSD × gain% × remitFX
+- RemitForm: new component for recording remittances
+- Tax year = remittance year (per Thai Revenue Code)
+- Cost basis portion of remittance is NOT taxable
+- Partial/多次 remittance supported with remaining proceeds tracking
+- Old fxRateTHB data migrated out
+
+---
+
 ### TASK-001: Replace US Tax Brackets with Thai Tax Brackets
 
 **Priority:** 🔴 P0  

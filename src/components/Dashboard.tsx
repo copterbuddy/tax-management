@@ -10,9 +10,12 @@ import {
 import { formatGainIndicator, validateSellLots } from '../engine/fifoEngine';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { Lang } from '../i18n/translations';
+import type { RemittanceRecord } from '../types/trade';
+import { addRemittance } from '../store/tradeSlice';
 import { KpiCard } from './KpiCard';
 import { TradeForm } from './TradeForm';
 import { TradeTable } from './TradeTable';
+import { RemitForm } from './RemitForm';
 
 export function Dashboard() {
   const dispatch = useAppDispatch();
@@ -26,6 +29,7 @@ export function Dashboard() {
   } = useAppSelector(state => state.trade);
 
   const [showForm, setShowForm] = useState(false);
+  const [showRemitForm, setShowRemitForm] = useState(false);
   const [editingTrade, setEditingTrade] = useState<TradeTransaction | null>(null);
 
   const summary = taxSummaries[selectedTaxYear];
@@ -72,6 +76,11 @@ export function Dashboard() {
     return validation.valid ? null : validation.message!;
   }, [remainingLots]);
 
+  const handleAddRemittance = useCallback((remit: RemittanceRecord) => {
+    dispatch(addRemittance(remit));
+    setShowRemitForm(false);
+  }, [dispatch]);
+
   const handleLangSwitch = useCallback((next: Lang) => {
     setLang(next);
   }, [setLang]);
@@ -85,6 +94,9 @@ export function Dashboard() {
           <p className="header-subtitle">{t.appSubtitle}</p>
         </div>
         <div className="header-right">
+          <button className="btn btn-primary" onClick={() => setShowRemitForm(true)}>
+            🏦 Record Remittance
+          </button>
           <div className="lang-switcher">
             <button
               className="lang-btn"
@@ -114,48 +126,33 @@ export function Dashboard() {
       {/* KPI Cards */}
       <div className="kpi-grid">
         <KpiCard
-          title={t.taxableGain}
+          title="Taxable Gain (นำเข้าแล้ว)"
           value={summary ? formatGainIndicator(summary.taxableGainTHB) : '฿0.00'}
-          subValue={summary ? `${summary.totalTransactions} ${t.transactionsCount}, ${summary.totalSellCount} ${t.sellsCount}` : t.noData}
+          subValue={summary ? `$${summary.taxableGainUSD.toFixed(2)} USD from ${summary.totalRemittanceCount} remittance(s)` : t.noData}
           variant={
-            summary?.taxableGainTHB > 0
-              ? 'positive'
-              : 'neutral'
+            summary?.taxableGainTHB > 0 ? 'positive' : 'neutral'
           }
           icon="💰"
         />
         <KpiCard
-          title={t.excludedLosses}
-          value={summary ? `-฿${summary.excludedLossesTHB.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '฿0.00'}
-          subValue={summary?.excludedLossesTHB > 0 ? t.excludedLossesSub : t.excludedLossesSubNone}
-          variant={
-            summary?.excludedLossesTHB > 0
-              ? 'negative'
-              : 'neutral'
-          }
-          icon="⚠️"
+          title="Total Remitted (USD)"
+          value={summary ? `$${summary.totalRemittedUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '$0.00'}
+          subValue={summary ? `${summary.totalSellCount} sell trades` : t.noData}
+          variant="neutral"
+          icon="🏦"
         />
         <KpiCard
-          title={t.totalRevenue}
-          value={summary ? `฿${summary.totalRevenueTHB.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '฿0.00'}
-          variant="neutral"
+          title="Net Gain (All Sells, USD)"
+          value={summary ? `$${summary.netGainUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '$0.00'}
+          variant={summary?.netGainUSD > 0 ? 'positive' : summary?.netGainUSD < 0 ? 'negative' : 'neutral'}
           icon="📈"
         />
         <KpiCard
-          title={t.totalCostBasis}
-          value={summary ? `฿${summary.totalCostBasisTHB.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '฿0.00'}
+          title="Not Yet Remitted (USD)"
+          value={summary ? `$${(summary.totalRevenueUSD - summary.totalRemittedUSD).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '$0.00'}
+          subValue="Proceeds still offshore — not taxable"
           variant="neutral"
-          icon="📉"
-        />
-        <KpiCard
-          title={t.totalGainTitle}
-          value={summary ? formatGainIndicator(summary.taxableGainTHB) : '฿0.00'}
-          variant={
-            summary?.taxableGainTHB > 0
-              ? 'positive'
-              : 'neutral'
-          }
-          icon="🏢"
+          icon="🌏"
         />
       </div>
 
@@ -179,6 +176,14 @@ export function Dashboard() {
             setEditingTrade(null);
           }}
           onValidate={handleValidate}
+        />
+      )}
+
+      {showRemitForm && (
+        <RemitForm
+          gains={gains}
+          onSubmit={handleAddRemittance}
+          onCancel={() => setShowRemitForm(false)}
         />
       )}
     </div>

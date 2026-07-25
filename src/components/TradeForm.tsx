@@ -42,7 +42,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
   const [quantity, setQuantity] = useState('');
   const [priceUSD, setPriceUSD] = useState('');
   const [commissionUSD, setCommissionUSD] = useState('');
-  const [fxRateTHB, setFxRateTHB] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -56,7 +55,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
       setQuantity(trade.quantity.toString());
       setPriceUSD(trade.priceUSD.toString());
       setCommissionUSD(trade.commissionUSD.toString());
-      setFxRateTHB(trade.fxRateTHB.toString());
       setNotes(trade.notes || '');
     } else {
       setDate(new Date().toISOString().substring(0, 10));
@@ -66,7 +64,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
       setQuantity('');
       setPriceUSD('');
       setCommissionUSD('0');
-      setFxRateTHB('35.00');
       setNotes('');
     }
     setErrors({});
@@ -87,10 +84,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
     if (commissionUSD === '' || isNaN(Number(commissionUSD)) || Number(commissionUSD) < 0) {
       newErrors.commissionUSD = 'Fee must be a non-negative number';
     }
-    if (!fxRateTHB || isNaN(Number(fxRateTHB)) || Number(fxRateTHB) <= 0) {
-      newErrors.fxRateTHB = 'FX rate must be a positive number';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -110,7 +103,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
       quantity: Number(quantity),
       priceUSD: Number(priceUSD),
       commissionUSD: Number(commissionUSD),
-      fxRateTHB: Number(fxRateTHB),
       notes: notes.trim() || undefined,
     };
 
@@ -236,20 +228,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
                 className={errors.commissionUSD ? 'input-error' : ''}
               />
               {errors.commissionUSD && <span className="error-msg">{errors.commissionUSD}</span>}
-            </div>
-            <div className="form-group">
-              <label htmlFor="trade-fx">{t.formFxRate}</label>
-              <input
-                id="trade-fx"
-                type="number"
-                step="any"
-                min="0"
-                value={fxRateTHB}
-                onChange={e => setFxRateTHB(e.target.value)}
-                placeholder="e.g. 36.50"
-                className={errors.fxRateTHB ? 'input-error' : ''}
-              />
-              {errors.fxRateTHB && <span className="error-msg">{errors.fxRateTHB}</span>}
             </div>
           </div>
 

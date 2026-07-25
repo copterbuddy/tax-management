@@ -828,6 +828,259 @@
 
 ---
 
+---
+
+## 🔴 TASK-015: Remittance-Based Tax (นำเงินเข้าไทย)
+
+**Reference Spec:** BA Spec — Remittance-Based Tax  
+**Task Status:** ⬜ ยังไม่ได้ทำ  
+**Test Status:** ⬜ ยังไม่ได้ทดสอบ
+
+---
+
+### 📦 Group 1: Type System — USD-based
+
+#### TC-015-001: TradeTransaction — no fxRateTHB, has USD fields only
+
+**Covers:** AC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis
+
+**Check:** `TradeTransaction` ไม่มี `fxRateTHB`, มี `priceUSD`, `commissionUSD` — เท่านั้น ไม่มี THB calculation
+
+---
+
+#### TC-015-002: RemittanceRecord type exists
+
+**Covers:** AC3  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis
+
+**Check:** `RemittanceRecord` มี: `id`, `sellTradeId`, `amountUSD`, `remitDate`, `fxRateTHB`
+
+---
+
+#### TC-015-003: RealizedGainResult — gain in USD
+
+**Covers:** AC1  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis
+
+**Check:** `RealizedGainResult` มี `gainUSD`, `revenueUSD`, `costBasisUSD`, `gainPercent`
+
+---
+
+### 📦 Group 2: FIFO Engine — USD Computation
+
+#### TC-015-004: FIFO calculates gains in USD
+
+**Covers:** AC1  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Input:** BUY AAPL 10 @ $150 + fee $1, SELL AAPL 10 @ $200 + fee $2  
+**Expected:** gainUSD = (10×200 - 2) - (10×150 + 1) = 1998 - 1501 = 497
+
+---
+
+#### TC-015-005: Gain % calculated correctly
+
+**Covers:** AC4  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Input:** BUY cost = $1,000, SELL revenue = $1,500 → gain = $500  
+**Expected:** gainPercent = 500/1500 = 33.33%
+
+---
+
+#### TC-015-006: Multiple BUY lots — FIFO weighted cost in USD
+
+**Covers:** AC1  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Input:** BUY 5 @ $100, BUY 5 @ $120, SELL 8 @ $150  
+**Expected:** Cost = 5×100 + 3×120 = 860, Revenue = 8×150 - fee, Gain = revenue - 860
+
+---
+
+### 📦 Group 3: Remittance Tax Calculation
+
+#### TC-015-007: Full remit — gain% × amount × remitFX
+
+**Covers:** AC4, AC5  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Input:** Sell proceeds = $2,000, gainPercent = 25%, remit $2,000 @ FX 36  
+**Expected:** taxableGainTHB = 2000 × 0.25 × 36 = 18,000
+
+---
+
+#### TC-015-008: Partial remit — gain% applied to partial amount
+
+**Covers:** AC4, AC8  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Input:** Sell proceeds = $2,000, gain% = 25%, remit $500 @ FX 35  
+**Expected:** taxableGainTHB = 500 × 0.25 × 35 = 4,375
+
+---
+
+#### TC-015-009: Cost basis portion not taxable
+
+**Covers:** AC7  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Input:** Remit $800 from $2,000 proceeds, gain% = 25%  
+**Expected:** Taxable = $200, Non-taxable (cost return) = $600
+
+---
+
+#### TC-015-010: Multiple remittances — cumulative check
+
+**Covers:** AC8, EC3  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Setup:** Remit $1,000 from $2,000 proceeds (เหลือ $1,000)  
+**Input:** Remit อีก $1,500 → เกิน remaining  
+**Expected:** Validation error — "Remaining proceeds: $1,000"
+
+---
+
+#### TC-015-011: Remit 0 or negative — blocked
+
+**Covers:** EC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Expected:** Validation error
+
+---
+
+#### TC-015-012: Loss trade (gain < 0) — remit = return of capital only
+
+**Covers:** EC5  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Input:** Loss trade (gain% negative), remit any amount  
+**Expected:** taxableGainTHB = 0, all remit = cost return
+
+---
+
+### 📦 Group 4: Remittance Form UI
+
+#### TC-015-013: RemitForm component exists
+
+**Covers:** AC3  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis
+
+**Check:** `src/components/RemitForm.tsx` มีอยู่
+
+---
+
+#### TC-015-014: RemitForm — select sell trade, amount, date, FX
+
+**Covers:** AC3  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Check:** Form มี: dropdown เลือก sell trade, input amount (USD), date picker, FX rate input
+
+---
+
+#### TC-015-015: RemitForm shows remaining proceeds per trade
+
+**Covers:** AC3  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Check:** ตอนเลือก sell trade → แสดง "Remaining: $X,XXX"
+
+---
+
+### 📦 Group 5: Dashboard & Table
+
+#### TC-015-016: Dashboard — Taxable Gain shows remittance-based amount
+
+**Covers:** AC9  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Check:** KPI ใช้ `taxableGainTHB` จาก remittance calculation (ไม่ใช่จาก trade date FX)
+
+---
+
+#### TC-015-017: Dashboard — Tax Year = remittance year
+
+**Covers:** AC6  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Input:** Trade ขายปี 2025, remit ปี 2026  
+**Expected:** Tax year = 2026, gain ปรากฏใน summary ปี 2026
+
+---
+
+#### TC-015-018: TradeTable — shows gain in USD + remitted status
+
+**Covers:** AC10  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Check:** คอลัมน์: Gain (USD), Remitted (USD), Remaining (USD), Taxable (THB)
+
+---
+
+### 📦 Group 6: Migration
+
+#### TC-015-019: Old trades with fxRateTHB — loaded, fxRate ignored
+
+**Covers:** AC11  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Input:** Old trade: `{ fxRateTHB: 35, ... }`  
+**Expected:** Loaded successfully, fxRateTHB stripped, engine works in USD
+
+---
+
+#### TC-015-020: TypeScript compiles cleanly
+
+**Covers:** AC12  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Compile check
+
+**Run:** `npx tsc --noEmit` → 0 errors
+
+---
+
+## 📐 Traceability Matrix (TASK-015)
+
+| AC | Test Cases |
+|---|---|
+| AC1 — USD FIFO | TC-015-003, 004, 006 |
+| AC2 — No fxRateTHB | TC-015-001 |
+| AC3 — RemitForm | TC-015-013, 014, 015 |
+| AC4 — Gain % method | TC-015-005, 007, 008 |
+| AC5 — THB conversion at remit | TC-015-007 |
+| AC6 — Tax year = remit year | TC-015-017 |
+| AC7 — Cost basis not taxable | TC-015-009 |
+| AC8 — Partial remit | TC-015-008, 010 |
+| AC9 — KPI remittance | TC-015-016 |
+| AC10 — Table display | TC-015-018 |
+| AC11 — Migration | TC-015-019 |
+| AC12 — tsc clean | TC-015-020 |
+| EC1-7 | TC-015-010, 011, 012 |
+
+---
+
 ## 🔜 Next: TASK-001 Test Cases (Thai Tax Brackets)
 
 Will be added when Dev completes TASK-001 implementation.

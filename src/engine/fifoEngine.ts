@@ -1,50 +1,29 @@
-import type { TradeTransaction, FifoLot, FifoMatchDetail, RealizedGainResult, TaxSummary, ProviderType } from '../types/trade';
+import type { TradeTransaction, FifoLot, FifoMatchDetail, RealizedGainResult, RemittanceRecord, TaxSummary, ProviderType } from '../types/trade';
 
-// ─── SRP: Centralized key generation ────────────────────────────────────────
-/**
- * Generate a grouping key for FIFO lot matching.
- * Lots are matched only when both symbol AND provider are identical.
- * OCP: If future requirements change the grouping logic (e.g., add exchange),
- *      only this function needs to change.
- */
+// ─── Key generation ──────────────────────────────────────────────────────
 function lotKey(symbol: string, provider: ProviderType): string {
   return `${symbol}|${provider}`;
 }
 
-// ─── Pure calculation helpers ────────────────────────────────────────────────
+// ─── USD helpers ─────────────────────────────────────────────────────────
 
-/**
- * Calculate gross THB cost basis for a buy trade.
- * Formula: (Quantity × Price USD + Commission USD) × FX Rate THB
- */
-export function calculateBuyCostTHB(trade: TradeTransaction): number {
+export function calculateBuyCostUSD(trade: TradeTransaction): number {
   if (trade.type !== 'BUY') return 0;
-  return (trade.quantity * trade.priceUSD + trade.commissionUSD) * trade.fxRateTHB;
+  return trade.quantity * trade.priceUSD + trade.commissionUSD;
 }
 
-/**
- * Calculate gross THB revenue for a sell trade.
- * Formula: (Quantity × Price USD - Commission USD) × FX Rate THB
- */
-export function calculateSellRevenueTHB(trade: TradeTransaction): number {
+export function calculateSellRevenueUSD(trade: TradeTransaction): number {
   if (trade.type !== 'SELL') return 0;
-  return (trade.quantity * trade.priceUSD - trade.commissionUSD) * trade.fxRateTHB;
+  return trade.quantity * trade.priceUSD - trade.commissionUSD;
 }
 
-/**
- * Calculate the unit cost in THB for a buy trade (including proportional commission).
- */
-export function calculateUnitCostTHB(trade: TradeTransaction): number {
+export function calculateUnitCostUSD(trade: TradeTransaction): number {
   if (trade.type !== 'BUY' || trade.quantity === 0) return 0;
-  return calculateBuyCostTHB(trade) / trade.quantity;
+  return calculateBuyCostUSD(trade) / trade.quantity;
 }
 
-// ─── SRP: Lot validation ─────────────────────────────────────────────────────
+// ─── Lot validation ──────────────────────────────────────────────────────
 
-/**
- * Validation result for checking whether a sell trade can be executed
- * against available lots for a given symbol+provider combination.
- */
 export interface LotValidationResult {
   valid: boolean;
   availableQuantity: number;
@@ -54,17 +33,11 @@ export interface LotValidationResult {
   message?: string;
 }
 
-/**
- * SRP: Validate that sufficient lots exist BEFORE attempting to process a sell.
- * Separated from processSellTrade so callers (e.g., TradeForm) can pre-validate
- * without actually mutating lot state.
- */
 export function validateSellLots(
   sell: TradeTransaction,
   lots: FifoLot[]
 ): LotValidationResult {
   const totalAvailable = lots.reduce((sum, lot) => sum + lot.remainingQuantity, 0);
-
   return {
     valid: totalAvailable >= sell.quantity,
     availableQuantity: totalAvailable,
@@ -73,68 +46,34 @@ export function validateSellLots(
     provider: sell.provider,
     message: totalAvailable >= sell.quantity
       ? undefined
-      : `Insufficient lots for ${sell.symbol} via ${sell.provider}. ` +
-        `Available: ${totalAvailable}, Requested: ${sell.quantity}`,
+      : `Insufficient lots for ${sell.symbol} via ${sell.provider}. Available: ${totalAvailable}, Requested: ${sell.quantity}`,
   };
 }
 
-// ─── FIFO lot builder ────────────────────────────────────────────────────────
+// ─── FIFO sell processor (USD) ───────────────────────────────────────────
 
-/**
- * Build FIFO lots from an array of buy trades, sorted by date.
- * Each lot represents a buy trade with its remaining (unmatched) quantity.
- */
-export function buildFifoLots(buys: TradeTransaction[]): FifoLot[] {
-  const sortedBuys = [...buys]
-    .filter(t => t.type === 'BUY')
-    .sort((a, b) => a.date.localeCompare(b.date));
-
-  return sortedBuys.map(buy => ({
-    tradeId: buy.id,
-    date: buy.date,
-    symbol: buy.symbol,
-    provider: buy.provider,
-    unitCostTHB: calculateUnitCostTHB(buy),
-    remainingQuantity: buy.quantity,
-    originalQuantity: buy.quantity,
-    fxRateTHB: buy.fxRateTHB,
-  }));
-}
-
-// ─── Core FIFO sell processor ────────────────────────────────────────────────
-
-/**
- * Process a single sell trade against existing FIFO lots.
- * LSP: Returns a well-defined result for any valid input — callers can rely
- *      on the result shape regardless of matching outcome.
- *
- * @throws {Error} If insufficient lots exist for the sell (symbol + provider mismatch)
- */
 export function processSellTrade(
   sell: TradeTransaction,
   lots: FifoLot[]
 ): { result: RealizedGainResult; updatedLots: FifoLot[] } {
-  const sellRevenueTHB = calculateSellRevenueTHB(sell);
+  const sellRevenueUSD = calculateSellRevenueUSD(sell);
   let remainingSellQty = sell.quantity;
   const matchedLots: FifoMatchDetail[] = [];
   const updatedLots: FifoLot[] = [];
-  let totalBuyCostTHB = 0;
+  let totalBuyCostUSD = 0;
 
   for (const lot of lots) {
     if (remainingSellQty <= 0) {
-      // No more quantity to match — pass remaining lots through unchanged
       updatedLots.push(lot);
       continue;
     }
-
     const matchedQty = Math.min(remainingSellQty, lot.remainingQuantity);
     if (matchedQty <= 0) {
       updatedLots.push(lot);
       continue;
     }
-
-    const matchedCost = matchedQty * lot.unitCostTHB;
-    totalBuyCostTHB += matchedCost;
+    const matchedCost = matchedQty * lot.unitCostUSD;
+    totalBuyCostUSD += matchedCost;
     remainingSellQty -= matchedQty;
 
     matchedLots.push({
@@ -142,19 +81,16 @@ export function processSellTrade(
       buyDate: lot.date,
       buyProvider: lot.provider,
       matchedQuantity: matchedQty,
-      buyUnitCostTHB: lot.unitCostTHB,
-      buyTotalCostTHB: matchedCost,
+      buyUnitCostUSD: lot.unitCostUSD,
+      buyTotalCostUSD: matchedCost,
     });
 
-    // Push updated lot with reduced remaining quantity (immutable-style update)
     const newRemaining = lot.remainingQuantity - matchedQty;
     if (newRemaining > 0) {
       updatedLots.push({ ...lot, remainingQuantity: newRemaining });
     }
-    // If newRemaining === 0, the lot is fully consumed — don't push it back
   }
 
-  // Guard: if sell quantity wasn't fully matched, the caller passed wrong lots
   if (remainingSellQty > 0) {
     throw new Error(
       `Insufficient lots for ${sell.symbol} via ${sell.provider}. ` +
@@ -162,89 +98,108 @@ export function processSellTrade(
     );
   }
 
-  const realizedGainTHB = sellRevenueTHB - totalBuyCostTHB;
+  const gainUSD = sellRevenueUSD - totalBuyCostUSD;
+  const gainPercent = sellRevenueUSD > 0 ? gainUSD / sellRevenueUSD : 0;
 
-  const result: RealizedGainResult = {
-    sellTradeId: sell.id,
-    sellDate: sell.date,
-    symbol: sell.symbol,
-    provider: sell.provider,
-    quantity: sell.quantity,
-    sellRevenueTHB,
-    buyCostBasisTHB: totalBuyCostTHB,
-    realizedGainTHB,
-    matchedLots,
+  return {
+    result: {
+      sellTradeId: sell.id,
+      sellDate: sell.date,
+      symbol: sell.symbol,
+      provider: sell.provider,
+      sellQuantity: sell.quantity,
+      sellRevenueUSD,
+      buyCostBasisUSD: totalBuyCostUSD,
+      gainUSD,
+      gainPercent,
+      matchedLots,
+      totalRemittedUSD: 0,
+      remainingProceedsUSD: sellRevenueUSD,
+      remittances: [],
+      taxableGainTHB: 0,
+    },
+    updatedLots,
   };
-
-  return { result, updatedLots };
 }
 
-// ─── Batch computation ───────────────────────────────────────────────────────
+// ─── Batch computation ───────────────────────────────────────────────────
 
-/**
- * Process all trades (sorted by date) and compute realized gains using FIFO.
- * OCP: Lot grouping is abstracted behind lotKey() — changing the grouping
- *      dimension only requires changing that one function.
- */
 export function computeAllRealizedGains(
   trades: TradeTransaction[]
 ): { gains: RealizedGainResult[]; remainingLots: FifoLot[] } {
   const sortedTrades = [...trades].sort((a, b) => a.date.localeCompare(b.date));
   const gains: RealizedGainResult[] = [];
-
-  // DIP: Map keyed by abstraction (string), not a concrete field
   const lotsByKey: Record<string, FifoLot[]> = {};
 
   for (const trade of sortedTrades) {
     const key = lotKey(trade.symbol, trade.provider);
-
     if (trade.type === 'BUY') {
-      if (!lotsByKey[key]) {
-        lotsByKey[key] = [];
-      }
+      if (!lotsByKey[key]) lotsByKey[key] = [];
       lotsByKey[key].push({
         tradeId: trade.id,
         date: trade.date,
         symbol: trade.symbol,
         provider: trade.provider,
-        unitCostTHB: calculateUnitCostTHB(trade),
+        unitCostUSD: calculateUnitCostUSD(trade),
         remainingQuantity: trade.quantity,
         originalQuantity: trade.quantity,
-        fxRateTHB: trade.fxRateTHB,
       });
     } else if (trade.type === 'SELL') {
       const symbolLots = lotsByKey[key] || [];
-
-      // Validate before processing
       const validation = validateSellLots(trade, symbolLots);
-      if (!validation.valid) {
-        throw new Error(validation.message!);
-      }
-
+      if (!validation.valid) throw new Error(validation.message!);
       const { result, updatedLots } = processSellTrade(trade, symbolLots);
       lotsByKey[key] = updatedLots;
       gains.push(result);
     }
   }
 
-  // Flatten remaining lots across all providers
   const remainingLots: FifoLot[] = Object.values(lotsByKey).flat();
-
   return { gains, remainingLots };
 }
 
-// ─── Taxable gain computation (Thai law: losses cannot offset gains) ─────────
+// ─── Remittance tax calculation (Thai law) ───────────────────────────────
 
 /**
- * SRP: Separate taxable gain from net gain.
- * Per Thai Revenue Code Section 40(4)(g) and PwC Thai Tax 2024/25:
- * "Capital losses cannot be offset against capital gains."
- *
- * This function splits gains into:
- * - taxableGainTHB: Sum of only positive realizedGainTHB
- * - excludedLossesTHB: Absolute value of all negative realizedGainTHB (not deductible)
+ * Apply a remittance to a realized gain result.
+ * Per Thai Revenue Code: only the gain portion is taxable,
+ * converted at the exchange rate on the remittance date.
  */
-export function computeTaxableGains(gains: RealizedGainResult[]): {
+export function applyRemittance(
+  gainResult: RealizedGainResult,
+  remittance: RemittanceRecord
+): RealizedGainResult {
+  if (remittance.amountUSD <= 0) {
+    throw new Error('Remittance amount must be positive');
+  }
+  if (remittance.sellTradeId !== gainResult.sellTradeId) {
+    throw new Error('Remittance does not match sell trade');
+  }
+
+  const newTotalRemitted = gainResult.totalRemittedUSD + remittance.amountUSD;
+  if (newTotalRemitted > gainResult.sellRevenueUSD) {
+    throw new Error(
+      `Remittance exceeds remaining proceeds. Available: $${(gainResult.sellRevenueUSD - gainResult.totalRemittedUSD).toFixed(2)}`
+    );
+  }
+
+  // Only the gain portion is taxable — gainPercent × amountUSD
+  const taxableUSD = remittance.amountUSD * gainResult.gainPercent;
+  const taxableTHB = taxableUSD * remittance.fxRateTHB;
+
+  return {
+    ...gainResult,
+    totalRemittedUSD: newTotalRemitted,
+    remainingProceedsUSD: gainResult.sellRevenueUSD - newTotalRemitted,
+    remittances: [...gainResult.remittances, remittance],
+    taxableGainTHB: gainResult.taxableGainTHB + taxableTHB,
+  };
+}
+
+/**
+ * SRP: Separate taxable gain from net gain (Thai law: losses cannot offset).
+ */
+export function computeTaxableGainsTHB(gains: RealizedGainResult[]): {
   taxableGainTHB: number;
   excludedLossesTHB: number;
 } {
@@ -252,27 +207,22 @@ export function computeTaxableGains(gains: RealizedGainResult[]): {
   let excludedLossesTHB = 0;
 
   for (const g of gains) {
-    if (g.realizedGainTHB > 0) {
-      taxableGainTHB += g.realizedGainTHB;
-    } else if (g.realizedGainTHB < 0) {
-      excludedLossesTHB += Math.abs(g.realizedGainTHB);
+    if (g.gainUSD > 0) {
+      taxableGainTHB += g.taxableGainTHB; // Only remitted gains count
+    } else if (g.gainUSD < 0) {
+      excludedLossesTHB += Math.abs(g.gainUSD); // Loss in USD for display
     }
-    // realizedGainTHB === 0 → neither taxable nor loss
   }
 
   return { taxableGainTHB, excludedLossesTHB };
 }
 
-// ─── Tax summary ─────────────────────────────────────────────────────────────
+// ─── Tax summary ─────────────────────────────────────────────────────────
 
-/**
- * Compute a tax summary for a given year.
- * SRP: This function only aggregates — it delegates FIFO computation to computeAllRealizedGains
- *      and taxable split to computeTaxableGains.
- */
 export function computeTaxSummary(
   trades: TradeTransaction[],
-  taxYear: number
+  taxYear: number,
+  allGains: RealizedGainResult[] = []
 ): TaxSummary {
   const yearTrades = trades.filter(t => {
     const year = parseInt(t.date.substring(0, 4), 10);
@@ -281,30 +231,55 @@ export function computeTaxSummary(
 
   const { gains } = computeAllRealizedGains(yearTrades);
 
-  const totalRevenueTHB = gains.reduce((sum, g) => sum + g.sellRevenueTHB, 0);
-  const totalCostBasisTHB = gains.reduce((sum, g) => sum + g.buyCostBasisTHB, 0);
-  const netRealizedGainTHB = gains.reduce((sum, g) => sum + g.realizedGainTHB, 0);
+  // Apply remittances from existing gain results (retain remittance history)
+  const gainMap = new Map<string, RealizedGainResult>();
+  for (const g of allGains) gainMap.set(g.sellTradeId, g);
+  const mergedGains = gains.map(g => gainMap.get(g.sellTradeId) || g);
 
-  const { taxableGainTHB, excludedLossesTHB } = computeTaxableGains(gains);
+  // Filter gains where remittances occurred in this tax year
+  const yearGains = mergedGains.filter(g =>
+    g.remittances.some(r => r.remitDate.startsWith(String(taxYear)))
+  );
+
+  const totalRevenueUSD = yearGains.reduce((s, g) => s + g.sellRevenueUSD, 0);
+  const totalCostBasisUSD = yearGains.reduce((s, g) => s + g.buyCostBasisUSD, 0);
+  const netGainUSD = yearGains.reduce((s, g) => s + g.gainUSD, 0);
+  const totalRemittedUSD = yearGains.reduce((s, g) => s + g.totalRemittedUSD, 0);
+
+  const yearRemittances = mergedGains.flatMap(g =>
+    g.remittances.filter(r => r.remitDate.startsWith(String(taxYear)))
+  );
+
+  const taxableGainUSD = yearRemittances.reduce((s, r) => {
+    const gain = mergedGains.find(g => g.sellTradeId === r.sellTradeId);
+    return s + (gain ? r.amountUSD * gain.gainPercent : 0);
+  }, 0);
+
+  const taxableGainTHB = yearRemittances.reduce((s, r) => {
+    const gain = mergedGains.find(g => g.sellTradeId === r.sellTradeId);
+    return s + (gain ? r.amountUSD * gain.gainPercent * r.fxRateTHB : 0);
+  }, 0);
+
+  const { excludedLossesTHB } = computeTaxableGainsTHB(mergedGains);
 
   return {
     taxYear,
-    totalRevenueTHB,
-    totalCostBasisTHB,
-    netRealizedGainTHB,
+    totalRevenueUSD,
+    totalCostBasisUSD,
+    netGainUSD,
+    totalRemittedUSD,
+    taxableGainUSD,
     taxableGainTHB,
-    excludedLossesTHB,
+    excludedLossesUSD: excludedLossesTHB,
     totalTransactions: yearTrades.length,
     totalBuyCount: yearTrades.filter(t => t.type === 'BUY').length,
     totalSellCount: yearTrades.filter(t => t.type === 'SELL').length,
+    totalRemittanceCount: yearRemittances.length,
   };
 }
 
-// ─── Formatting utility ──────────────────────────────────────────────────────
+// ─── Formatting ──────────────────────────────────────────────────────────
 
-/**
- * Generate a human-readable gain/loss indicator string in THB.
- */
 export function formatGainIndicator(gainTHB: number): string {
   if (gainTHB > 0) return `+฿${gainTHB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   if (gainTHB < 0) return `-฿${Math.abs(gainTHB).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

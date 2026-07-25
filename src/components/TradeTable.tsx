@@ -83,18 +83,18 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                 <th>{t.colQty}</th>
                 <th>{t.colPrice}</th>
                 <th>{t.colFee}</th>
-                <th>{t.colFx}</th>
-                <th>{t.colTotal}</th>
-                <th>{t.colFifoGain}</th>
-                <th>{t.colTaxable}</th>
+                <th>{t.colTotal} (USD)</th>
+                <th>Gain (USD)</th>
+                <th>Remitted</th>
+                <th>Taxable THB</th>
                 <th>{t.colActions}</th>
               </tr>
             </thead>
             <tbody>
               {sortedTrades.map(trade => {
-                const totalTHB = trade.type === 'BUY'
-                  ? (trade.quantity * trade.priceUSD + trade.commissionUSD) * trade.fxRateTHB
-                  : (trade.quantity * trade.priceUSD - trade.commissionUSD) * trade.fxRateTHB;
+                const totalUSD = trade.type === 'BUY'
+                  ? (trade.quantity * trade.priceUSD + trade.commissionUSD)
+                  : (trade.quantity * trade.priceUSD - trade.commissionUSD);
 
                 const gain = trade.type === 'SELL' ? gainMap.get(trade.id) : null;
 
@@ -113,26 +113,26 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                     <td className="num">{trade.quantity}</td>
                     <td className="num">${trade.priceUSD.toFixed(2)}</td>
                     <td className="num">${trade.commissionUSD.toFixed(2)}</td>
-                    <td className="num">{trade.fxRateTHB.toFixed(2)}</td>
-                    <td className="num">฿{totalTHB.toFixed(2)}</td>
+                    <td className="num">${totalUSD.toFixed(2)}</td>
                     <td className="num gain-cell">
                       {gain ? (
-                        <span className={`gain-indicator ${gain.realizedGainTHB >= 0 ? 'gain-positive' : 'gain-negative'}`}>
-                          {formatGainIndicator(gain.realizedGainTHB)}
+                        <span className={`gain-indicator ${gain.gainUSD >= 0 ? 'gain-positive' : 'gain-negative'}`}>
+                          {gain.gainUSD >= 0 ? '+' : ''}${gain.gainUSD.toFixed(2)}
                         </span>
                       ) : (
                         <span className="gain-na">-</span>
                       )}
                     </td>
-                    <td className="taxable-cell">
-                      {trade.type === 'SELL' && gain ? (
-                        gain.realizedGainTHB > 0 ? (
-                          <span className="taxable-yes" title={t.taxableYes}>✅</span>
-                        ) : gain.realizedGainTHB < 0 ? (
-                          <span className="taxable-no" title={t.taxableNo}>❌</span>
-                        ) : (
-                          <span className="taxable-neutral">—</span>
-                        )
+                    <td className="num">
+                      {gain ? `$${gain.totalRemittedUSD.toFixed(2)} / $${gain.sellRevenueUSD.toFixed(2)}` : '-'}
+                    </td>
+                    <td className="num gain-cell">
+                      {gain && gain.taxableGainTHB > 0 ? (
+                        <span className="gain-indicator gain-positive">
+                          {formatGainIndicator(gain.taxableGainTHB)}
+                        </span>
+                      ) : gain && gain.gainUSD < 0 ? (
+                        <span className="taxable-no" title={t.taxableNo}>❌ Loss</span>
                       ) : (
                         <span className="gain-na">-</span>
                       )}

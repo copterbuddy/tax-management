@@ -53,7 +53,9 @@ export interface TaxSummary {
   taxYear: number;
   totalRevenueTHB: number;
   totalCostBasisTHB: number;
-  netRealizedGainTHB: number;
+  netRealizedGainTHB: number; // All gains minus all losses (legacy)
+  taxableGainTHB: number; // Only positive gains — per Thai law, losses cannot offset
+  excludedLossesTHB: number; // Sum of negative gains (absolute value) — not deductible
   totalTransactions: number;
   totalBuyCount: number;
   totalSellCount: number;
@@ -62,11 +64,15 @@ export interface TaxSummary {
       revenueTHB: number;
       costBasisTHB: number;
       gainTHB: number;
+      taxableGainTHB: number; // Only positive gains
+      excludedLossesTHB: number; // Losses not deductible
     };
     CRYPTO: {
       revenueTHB: number;
       costBasisTHB: number;
       gainTHB: number;
+      taxableGainTHB: number;
+      excludedLossesTHB: number;
     };
   };
 }

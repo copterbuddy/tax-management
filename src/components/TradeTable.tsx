@@ -80,6 +80,7 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                 <th>FX Rate</th>
                 <th>Total (THB)</th>
                 <th>FIFO Gain (THB)</th>
+                <th>Taxable</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -116,6 +117,19 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                         <span className={`gain-indicator ${gain.realizedGainTHB >= 0 ? 'gain-positive' : 'gain-negative'}`}>
                           {formatGainIndicator(gain.realizedGainTHB)}
                         </span>
+                      ) : (
+                        <span className="gain-na">-</span>
+                      )}
+                    </td>
+                    <td className="taxable-cell">
+                      {trade.type === 'SELL' && gain ? (
+                        gain.realizedGainTHB > 0 ? (
+                          <span className="taxable-yes" title="นำไปคิดภาษีได้">✅</span>
+                        ) : gain.realizedGainTHB < 0 ? (
+                          <span className="taxable-no" title="ขาดทุน — ไม่สามารถหักลบภาษีได้">❌</span>
+                        ) : (
+                          <span className="taxable-neutral">—</span>
+                        )
                       ) : (
                         <span className="gain-na">-</span>
                       )}

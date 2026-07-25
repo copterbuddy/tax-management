@@ -99,17 +99,26 @@ export function Dashboard() {
       {/* KPI Cards */}
       <div className="kpi-grid">
         <KpiCard
-          title="Net Realized Gain"
-          value={summary ? formatGainIndicator(summary.netRealizedGainTHB) : '฿0.00'}
-          subValue={summary ? `${summary.totalTransactions} transactions` : 'No data'}
+          title="Taxable Gain (เฉพาะกำไร)"
+          value={summary ? formatGainIndicator(summary.taxableGainTHB) : '฿0.00'}
+          subValue={summary ? `${summary.totalTransactions} transactions, ${summary.totalSellCount} sells` : 'No data'}
           variant={
-            summary?.netRealizedGainTHB > 0
+            summary?.taxableGainTHB > 0
               ? 'positive'
-              : summary?.netRealizedGainTHB < 0
-              ? 'negative'
               : 'neutral'
           }
           icon="💰"
+        />
+        <KpiCard
+          title="Excluded Losses (หักลบไม่ได้)"
+          value={summary ? `-฿${summary.excludedLossesTHB.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '฿0.00'}
+          subValue={summary?.excludedLossesTHB > 0 ? 'Losses cannot offset gains per Thai law' : 'No losses'}
+          variant={
+            summary?.excludedLossesTHB > 0
+              ? 'negative'
+              : 'neutral'
+          }
+          icon="⚠️"
         />
         <KpiCard
           title="Total Revenue (THB)"
@@ -124,25 +133,21 @@ export function Dashboard() {
           icon="📉"
         />
         <KpiCard
-          title="Stock Gain"
-          value={summary ? formatGainIndicator(summary.assetTypeBreakdown.FOREIGN_STOCK.gainTHB) : '฿0.00'}
+          title="Stock Taxable Gain"
+          value={summary ? formatGainIndicator(summary.assetTypeBreakdown.FOREIGN_STOCK.taxableGainTHB) : '฿0.00'}
           variant={
-            summary?.assetTypeBreakdown.FOREIGN_STOCK.gainTHB > 0
+            summary?.assetTypeBreakdown.FOREIGN_STOCK.taxableGainTHB > 0
               ? 'positive'
-              : summary?.assetTypeBreakdown.FOREIGN_STOCK.gainTHB < 0
-              ? 'negative'
               : 'neutral'
           }
           icon="🏢"
         />
         <KpiCard
-          title="Crypto Gain"
-          value={summary ? formatGainIndicator(summary.assetTypeBreakdown.CRYPTO.gainTHB) : '฿0.00'}
+          title="Crypto Taxable Gain"
+          value={summary ? formatGainIndicator(summary.assetTypeBreakdown.CRYPTO.taxableGainTHB) : '฿0.00'}
           variant={
-            summary?.assetTypeBreakdown.CRYPTO.gainTHB > 0
+            summary?.assetTypeBreakdown.CRYPTO.taxableGainTHB > 0
               ? 'positive'
-              : summary?.assetTypeBreakdown.CRYPTO.gainTHB < 0
-              ? 'negative'
               : 'neutral'
           }
           icon="₿"

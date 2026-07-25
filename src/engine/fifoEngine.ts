@@ -234,11 +234,42 @@ export function computeAllRealizedGains(
   return { gains, remainingLots };
 }
 
+// ─── Taxable gain computation (Thai law: losses cannot offset gains) ─────────
+
+/**
+ * SRP: Separate taxable gain from net gain.
+ * Per Thai Revenue Code Section 40(4)(g) and PwC Thai Tax 2024/25:
+ * "Capital losses cannot be offset against capital gains."
+ *
+ * This function splits gains into:
+ * - taxableGainTHB: Sum of only positive realizedGainTHB
+ * - excludedLossesTHB: Absolute value of all negative realizedGainTHB (not deductible)
+ */
+export function computeTaxableGains(gains: RealizedGainResult[]): {
+  taxableGainTHB: number;
+  excludedLossesTHB: number;
+} {
+  let taxableGainTHB = 0;
+  let excludedLossesTHB = 0;
+
+  for (const g of gains) {
+    if (g.realizedGainTHB > 0) {
+      taxableGainTHB += g.realizedGainTHB;
+    } else if (g.realizedGainTHB < 0) {
+      excludedLossesTHB += Math.abs(g.realizedGainTHB);
+    }
+    // realizedGainTHB === 0 → neither taxable nor loss
+  }
+
+  return { taxableGainTHB, excludedLossesTHB };
+}
+
 // ─── Tax summary ─────────────────────────────────────────────────────────────
 
 /**
  * Compute a tax summary for a given year.
- * SRP: This function only aggregates — it delegates FIFO computation to computeAllRealizedGains.
+ * SRP: This function only aggregates — it delegates FIFO computation to computeAllRealizedGains
+ *      and taxable split to computeTaxableGains.
  */
 export function computeTaxSummary(
   trades: TradeTransaction[],
@@ -255,19 +286,28 @@ export function computeTaxSummary(
   const totalCostBasisTHB = gains.reduce((sum, g) => sum + g.buyCostBasisTHB, 0);
   const netRealizedGainTHB = gains.reduce((sum, g) => sum + g.realizedGainTHB, 0);
 
+  const { taxableGainTHB, excludedLossesTHB } = computeTaxableGains(gains);
+
   const stockGains = gains.filter(g => g.assetType === 'FOREIGN_STOCK');
   const cryptoGains = gains.filter(g => g.assetType === 'CRYPTO');
+
+  const stockTaxable = computeTaxableGains(stockGains);
+  const cryptoTaxable = computeTaxableGains(cryptoGains);
 
   const assetTypeBreakdown = {
     FOREIGN_STOCK: {
       revenueTHB: stockGains.reduce((s, g) => s + g.sellRevenueTHB, 0),
       costBasisTHB: stockGains.reduce((s, g) => s + g.buyCostBasisTHB, 0),
       gainTHB: stockGains.reduce((s, g) => s + g.realizedGainTHB, 0),
+      taxableGainTHB: stockTaxable.taxableGainTHB,
+      excludedLossesTHB: stockTaxable.excludedLossesTHB,
     },
     CRYPTO: {
       revenueTHB: cryptoGains.reduce((s, g) => s + g.sellRevenueTHB, 0),
       costBasisTHB: cryptoGains.reduce((s, g) => s + g.buyCostBasisTHB, 0),
       gainTHB: cryptoGains.reduce((s, g) => s + g.realizedGainTHB, 0),
+      taxableGainTHB: cryptoTaxable.taxableGainTHB,
+      excludedLossesTHB: cryptoTaxable.excludedLossesTHB,
     },
   };
 
@@ -276,6 +316,8 @@ export function computeTaxSummary(
     totalRevenueTHB,
     totalCostBasisTHB,
     netRealizedGainTHB,
+    taxableGainTHB,
+    excludedLossesTHB,
     totalTransactions: yearTrades.length,
     totalBuyCount: yearTrades.filter(t => t.type === 'BUY').length,
     totalSellCount: yearTrades.filter(t => t.type === 'SELL').length,

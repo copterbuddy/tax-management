@@ -28,6 +28,43 @@
 
 ## 🔴 P0 — Critical (Must Do)
 
+### TASK-011: Capital Losses Not Deductible (แยกกำไร-ขาดทุน)
+
+**Priority:** 🔴 P0  
+**Effort:** M (4 files)  
+**Status:** ✅ ทำเสร็จแล้ว  
+**Depends on:** TASK-000 ✅  
+**Source:** PwC Thai Tax 2024/25 — "Capital losses cannot be offset against capital gains"
+
+**User Story:**
+> As a Thai investor filing ภ.ง.ด.90, I want only my capital gains (not losses) to count toward my taxable income, because Thai Revenue Code Section 40(4)(g) does not allow loss offsetting.
+
+**Acceptance Criteria:**
+| # | Condition |
+|---|---|
+| AC1 | Engine: `computeTaxableGains()` sums only `realizedGainTHB > 0` → `taxableGainTHB` |
+| AC2 | Engine: Sum of negative gains → `excludedLossesTHB` (absolute value) |
+| AC3 | `TaxSummary` type gains 2 new fields: `taxableGainTHB`, `excludedLossesTHB` |
+| AC4 | KPI: `Net Realized Gain` → `Taxable Gain (เฉพาะกำไร)` — ใช้ `taxableGainTHB` |
+| AC5 | KPI: เพิ่มการ์ดใหม่ `Excluded Losses` — แสดงยอดขาดทุนที่หักลบไม่ได้ (สีแดง) |
+| AC6 | TradeTable: คอลัมน์ FIFO Gain แสดงตามจริง, เพิ่มคอลัมน์ `Taxable` แสดง ✅/❌ |
+| AC7 | ทุกที่ที่แสดง net gain ต้องใช้ `taxableGainTHB` ไม่ใช่ `netRealizedGainTHB` |
+
+**Technical Notes:**
+| File | Action |
+|---|---|
+| `src/types/trade.ts` | เพิ่ม `taxableGainTHB: number`, `excludedLossesTHB: number` ใน `TaxSummary` |
+| `src/engine/fifoEngine.ts` | เพิ่ม `computeTaxableGains()` — OCP: แยกฟังก์ชันใหม่ ไม่แก้ของเดิม |
+| `src/components/Dashboard.tsx` | เปลี่ยน KPI Net → Taxable Gain, เพิ่ม KPI Excluded Losses |
+| `src/components/TradeTable.tsx` | เพิ่มคอลัมน์ Taxable (✅/❌) |
+
+**Edge Cases:**
+- EC1: ปีที่มีแต่ขาดทุนอย่างเดียว → taxableGainTHB = 0, excludedLossesTHB = sum of losses
+- EC2: ปีที่มีแต่กำไร → taxableGainTHB = netRealizedGainTHB, excludedLossesTHB = 0
+- EC3: กำไร 0 บาท (ราคาเท่าทุน) → not taxable, not a loss
+
+---
+
 ### TASK-001: Replace US Tax Brackets with Thai Tax Brackets
 
 **Priority:** 🔴 P0  
@@ -240,8 +277,8 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 
 | Priority | Count | Done | Pending | Tasks |
 |---|---|---|---|---|
-| 🔴 P0 | 3 | 1 | 2 | TASK-000 ✅, TASK-001 ⬜, TASK-002 ⬜ |
+| 🔴 P0 | 4 | 2 | 2 | TASK-000 ✅, TASK-011 ✅, TASK-001 ⬜, TASK-002 ⬜ |
 | 🟡 P1 | 2 | 0 | 2 | TASK-003 ⬜, TASK-004 ⬜ |
 | 🟢 P2 | 3 | 0 | 3 | TASK-005 ⬜, TASK-006 ⬜, TASK-007 ⬜ |
 | ⚪ P3 | 3 | 0 | 3 | TASK-008 ⬜, TASK-009 ⬜, TASK-010 ⬜ |
-| **Total** | **11** | **1** | **10** | |
+| **Total** | **12** | **2** | **10** | |

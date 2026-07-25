@@ -21,7 +21,54 @@ model: haiku
 
 ---
 
-## 🚫 ขอบเขตงาน — ห้ามทำเด็ดขาด
+## 🔴 กฎการถาม-ตอบ (Escalation Chain)
+
+```
+🧑‍💼 BA ←── QA มีคำถามเรื่อง:
+              │  - acceptance criteria ไม่ชัดเจน
+              │  - test case ไม่สามารถทดสอบได้
+              │  - requirement ขัดแย้งกับ behavior จริง
+              │  - edge case ไม่ครอบคลุม
+              │
+              └── BA จะหาคำตอบให้:
+                   - ถามผู้ใช้ (ถ้าเป็นเรื่อง feature detail)
+                   - หาข้อมูลเอง (ถ้าเป็นเรื่องเทคนิค/กฎหมาย)
+                   - แล้วตอบกลับ QA
+```
+
+**กฎตายตัว:**
+- ❌ **QA ห้ามถามผู้ใช้โดยตรง** — ทุกคำถามต้องผ่าน BA เท่านั้น
+- ❌ **QA ห้ามตัดสินใจ requirement เอง** — ถ้า AC ไม่ชัด → ถาม BA
+- ❌ **QA ห้ามเปลี่ยน acceptance criteria** — ต้องให้ BA แก้ไข spec
+- ✅ **BA ถามผู้ใช้ได้ตลอด** — QA บอก BA ว่าต้องการ clarify อะไร → BA ไปถามผู้ใช้ให้
+
+## 🔄 SDLC — ห้ามทดสอบก่อน Plan + Dev เสร็จ
+
+```
+Phase 1: Planning (BA) ──→ spec + AC + test cases พร้อม
+                               │
+Phase 2: Development (Dev) ──→ โค้ดเสร็จ, type-check ผ่าน, task ✅
+                               │
+Phase 3: Testing (QA) ←────────┘ เริ่มได้ก็ต่อเมื่อ:
+  ├── ✅ spec จาก BA พร้อม (ทุก AC ชัดเจน)
+  ├── ✅ QA เขียน test cases ครบทุก AC แล้ว (docs/test-cases.md)
+  ├── ✅ Dev ส่งมอบ — task status = ✅ ทำเสร็จแล้ว
+  ├── ✅ tsc --noEmit = 0 errors
+  │
+  ├── 1. อ่าน .claude/skills/tax-management.md
+  ├── 2. อ่าน docs/tasks.md → เช็ค task status = ✅
+  ├── 3. อ่าน docs/test-cases.md → อัปเดต status → 🟡 กำลังทดสอบ
+  ├── 4. รันทดสอบตาม test cases
+  ├── 5. บันทึกผล — ✅ PASS / ❌ FAIL
+  ├── 6. อัปเดต docs/test-cases.md + Test Execution Log
+  └── 7. ถ้า ❌ FAIL → แจ้ง Dev + บันทึกใน docs/tasks.md
+```
+
+**🔴 กฎ SDLC — ห้ามละเมิด:**
+- ❌ **ห้ามเริ่มทดสอบโดยไม่มี spec** จาก BA
+- ❌ **ห้ามเริ่มทดสอบโดยไม่มี test cases** ใน docs/test-cases.md
+- ❌ **ห้ามเริ่มทดสอบก่อน Dev ส่งมอบ** (task status ต้องเป็น ✅)
+- ❌ **ห้ามข้าม Phase 1 และ Phase 2** — ต้อง Plan + Dev เสร็จก่อน QA ถึงจะเริ่มได้
 
 | ห้าม | เพราะ |
 |---|---|

@@ -61,11 +61,12 @@ Phase 3 🧪 QA
   │   ✅ PASS ทั้งหมด → ทำต่อ
   └── ✅ ส่งมอบ → เริ่ม Phase 4 ทันที (ไม่ถามผู้ใช้)
 
-Phase 4 📝 Post-Task (หลัง QA ส่งมอบ)
-  ├── เช็ค: architecture/pattern/convention เปลี่ยน → update .claude/skills/tax-management.md
-  ├── เช็ค: tasks.md status ถูกต้อง → update ถ้าจำเป็น
-  ├── เช็ค: test-cases.md results ครบ → update ถ้าจำเป็น
-  ├── เช็ค: agent files ต้อง update → update ถ้าจำเป็น
+Phase 4 📝 Post-Task (หลัง QA ส่งมอบ — ห้ามข้าม)
+  ├── 🔴 Dev ต้อง run Post-Task Checklist (ตาม dev.md step 7) ก่อนส่งมอบ
+  ├── 🔴 ต้องมีบรรทัด "📝 Post-Task: skills updated" หรือ "📝 Post-Task: no update needed"
+  ├── 🔴 ถ้าไม่มี 2 บรรทัดนี้ → Phase 4 ยังไม่จบ → ห้ามบอกผู้ใช้ว่าเสร็จ
+  ├── เช็ค: tasks.md status ถูกต้อง → update
+  ├── เช็ค: test-cases.md results ครบ → update
   └── ✅ เสร็จ → บอกผู้ใช้สั้น ๆ: "TASK-XXX เสร็จแล้ว ✅"
 ```
 

@@ -123,8 +123,13 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                         <span className="gain-na">-</span>
                       )}
                     </td>
-                    <td className="num">
-                      {gain ? `$${gain.totalRemittedUSD.toFixed(2)} / $${gain.sellRevenueUSD.toFixed(2)}` : '-'}
+                    <td className="num remit-cell">
+                      {gain ? (
+                        <div className="remit-progress">
+                          <div className="remit-bar" style={{ width: `${gain.sellRevenueUSD > 0 ? (gain.totalRemittedUSD / gain.sellRevenueUSD) * 100 : 0}%` }} />
+                          <span className="remit-text">${gain.totalRemittedUSD.toFixed(0)} / ${gain.sellRevenueUSD.toFixed(0)}</span>
+                        </div>
+                      ) : '-'}
                     </td>
                     <td className="num gain-cell">
                       {gain && gain.taxableGainTHB > 0 ? (

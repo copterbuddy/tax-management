@@ -113,6 +113,21 @@
 
 ---
 
+### TASK-016: Remittance Log + Tabbed Dashboard
+
+**Priority:** 🟡 P1  
+**Effort:** S (2 files new/modified)  
+**Status:** ✅ ทำเสร็จแล้ว  
+**Depends on:** TASK-015 ✅
+
+**What was done:**
+- Dashboard แบ่งเป็น 2 tabs: Trade Log / Remittance Log
+- RemittanceLog component — แสดงทุกรายการ remit, filter ด้วย remit year, แสดงผลรวม
+- TradeTable Remitted column → progress bar (visual %)
+- ปุ่ม Record Remittance ย้ายไป Remittance Log tab
+
+---
+
 ### TASK-001: Replace US Tax Brackets with Thai Tax Brackets
 
 **Priority:** 🔴 P0  

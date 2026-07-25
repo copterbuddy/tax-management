@@ -16,6 +16,7 @@ import { KpiCard } from './KpiCard';
 import { TradeForm } from './TradeForm';
 import { TradeTable } from './TradeTable';
 import { RemitForm } from './RemitForm';
+import { RemittanceLog } from './RemittanceLog';
 
 export function Dashboard() {
   const dispatch = useAppDispatch();
@@ -31,6 +32,7 @@ export function Dashboard() {
   const [showForm, setShowForm] = useState(false);
   const [showRemitForm, setShowRemitForm] = useState(false);
   const [editingTrade, setEditingTrade] = useState<TradeTransaction | null>(null);
+  const [activeTab, setActiveTab] = useState<'trades' | 'remittances'>('trades');
 
   const summary = taxSummaries[selectedTaxYear];
 
@@ -94,9 +96,6 @@ export function Dashboard() {
           <p className="header-subtitle">{t.appSubtitle}</p>
         </div>
         <div className="header-right">
-          <button className="btn btn-primary" onClick={() => setShowRemitForm(true)}>
-            🏦 Record Remittance
-          </button>
           <div className="lang-switcher">
             <button
               className="lang-btn"
@@ -156,15 +155,37 @@ export function Dashboard() {
         />
       </div>
 
-      {/* Trade Table */}
-      <TradeTable
-        trades={trades}
-        gains={gains}
-        selectedYear={selectedTaxYear}
-        onEdit={handleEditTrade}
-        onDelete={handleDeleteTrade}
-        onAddNew={() => setShowForm(true)}
-      />
+      {/* Tabs: Trade Log | Remittance Log */}
+      <div className="tab-nav">
+        <button
+          className={`tab-btn ${activeTab === 'trades' ? 'active' : ''}`}
+          onClick={() => setActiveTab('trades')}
+        >
+          📊 Trade Log
+        </button>
+        <button
+          className={`tab-btn ${activeTab === 'remittances' ? 'active' : ''}`}
+          onClick={() => setActiveTab('remittances')}
+        >
+          🏦 Remittance Log
+        </button>
+      </div>
+
+      {activeTab === 'trades' ? (
+        <TradeTable
+          trades={trades}
+          gains={gains}
+          selectedYear={selectedTaxYear}
+          onEdit={handleEditTrade}
+          onDelete={handleDeleteTrade}
+          onAddNew={() => setShowForm(true)}
+        />
+      ) : (
+        <RemittanceLog
+          gains={gains}
+          onRecordRemit={() => setShowRemitForm(true)}
+        />
+      )}
 
       {/* Trade Form Modal */}
       {(showForm || editingTrade) && (

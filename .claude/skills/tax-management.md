@@ -35,7 +35,9 @@ description: Thai Tax Tracker — Remittance-based FIFO capital gains calculator
 | Trade Tracking | BUY/SELL foreign stocks with provider (Dime/Liberator/FinansiaSyrus) |
 | FIFO Engine | USD-based — lots matched by `symbol\|provider`, no cross-provider matching |
 | Remittance Tax | Taxable only when funds brought into Thailand (remittance-based) |
+| Remittance Log | Dedicated tab with history, year filter, totals |
 | Gain% Method | Only gain portion taxable; cost basis return is tax-free |
+| Progress Bar | Visual indicator of remitted portion per trade |
 | Loss Rules | Losses cannot offset gains (มาตรา 40(4)(g)) |
 | Multi-Language | EN/TH with localStorage persistence |
 | Data | localStorage persistence (trades + gains/remittances) |
@@ -60,10 +62,11 @@ src/
 │   ├── tradeSlice.ts          ← Trade CRUD + remittance actions + gains persistence
 │   └── taxSlice.ts            ← Income tax calculation (US brackets — TASK-001 pending)
 ├── components/
-│   ├── Dashboard.tsx          ← Main page: KPI + table + TradeForm + RemitForm orchestration
-│   ├── TradeTable.tsx         ← Trade list (USD-based, remitted status, sortable)
+│   ├── Dashboard.tsx          ← Main page: KPI + tabs (Trade/Remittance) + modals
+│   ├── TradeTable.tsx         ← Trade list (USD, progress bar, sortable)
 │   ├── TradeForm.tsx          ← Add/Edit trade (USD only, no FX rate)
-│   ├── RemitForm.tsx          ← 🆕 Record remittance + calculate taxable gain preview
+│   ├── RemitForm.tsx          ← Record remittance + taxable gain preview
+│   ├── RemittanceLog.tsx      ← 🆕 Remittance history table + year filter + totals
 │   └── KpiCard.tsx            ← Reusable KPI display card
 ├── App.tsx                    ← Root component
 ├── main.tsx                   ← Entry: LanguageProvider > Provider > StrictMode

@@ -105,7 +105,11 @@ Phase 2: Development (Dev) ←──┘ เริ่มได้ก็ต่อ�
   ├── 4. เขียนโค้ดตาม SOLID
   ├── 5. รัน npx tsc --noEmit → 0 errors
   ├── 6. อัปเดต docs/tasks.md → ✅ ทำเสร็จแล้ว
-  └── 7. สรุป + ส่งมอบ
+  ├── 7. สรุป + ส่งมอบ
+  └── 8. 🆕 Post-Task Check:
+        ├── architecture/pattern เปลี่ยน → update .claude/skills/tax-management.md
+        ├── API/type เปลี่ยน → update .claude/skills/tax-management.md
+        └── ไม่มีอะไรเปลี่ยน → ไม่ต้อง update
 
 Phase 3: Testing (QA) — เริ่มหลังจากนี้
 ```

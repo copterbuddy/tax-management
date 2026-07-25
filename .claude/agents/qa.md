@@ -61,7 +61,11 @@ Phase 3: Testing (QA) ←────────┘ เริ่มได้ก
   ├── 4. รันทดสอบตาม test cases
   ├── 5. บันทึกผล — ✅ PASS / ❌ FAIL
   ├── 6. อัปเดต docs/test-cases.md + Test Execution Log
-  └── 7. ถ้า ❌ FAIL → แจ้ง Dev + บันทึกใน docs/tasks.md
+  ├── 7. ถ้า ❌ FAIL → แจ้ง Dev + บันทึกใน docs/tasks.md
+  └── 8. 🆕 Post-Task Check:
+        ├── test-cases.md status ทั้งหมดเป็น ✅ → update summary
+        ├── tasks.md status ต้อง reflect จริง → เช็ค + update ถ้าจำเป็น
+        └── ไม่มีอะไรตกค้าง → จบ
 ```
 
 **🔴 กฎ SDLC — ห้ามละเมิด:**

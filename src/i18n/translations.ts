@@ -15,13 +15,12 @@ export interface TranslationDict {
 
   // KPI cards
   taxableGain: string;
+  totalGainTitle: string;
   excludedLosses: string;
   excludedLossesSub: string;
   excludedLossesSubNone: string;
   totalRevenue: string;
   totalCostBasis: string;
-  stockTaxableGain: string;
-  cryptoTaxableGain: string;
   transactionsCount: string;
   sellsCount: string;
   noData: string;
@@ -53,7 +52,6 @@ export interface TranslationDict {
   formEditTitle: string;
   formDate: string;
   formSymbol: string;
-  formAssetType: string;
   formTradeType: string;
   formProvider: string;
   formQuantity: string;
@@ -65,10 +63,6 @@ export interface TranslationDict {
   formCancel: string;
   formSubmit: string;
   formUpdate: string;
-
-  // Asset type options
-  assetForeignStock: string;
-  assetCrypto: string;
 
   // Trade type values
   tradeTypeBuy: string;
@@ -85,10 +79,6 @@ export interface TranslationDict {
 
   // Validation
   validationError: string;
-
-  // Asset badges (short form)
-  badgeStock: string;
-  badgeCrypto: string;
 }
 
 export type TranslationMap = Record<Lang, TranslationDict>;
@@ -103,13 +93,12 @@ const translations: TranslationMap = {
     langLabel: 'ภาษา',
 
     taxableGain: 'กำไรที่ต้องเสียภาษี (เฉพาะกำไร)',
+    totalGainTitle: 'กำไรที่ต้องเสียภาษี',
     excludedLosses: 'ขาดทุนที่หักลบไม่ได้',
     excludedLossesSub: 'ขาดทุนไม่สามารถหักลบกับกำไรได้ตามกฎหมายไทย',
     excludedLossesSubNone: 'ไม่มีขาดทุน',
     totalRevenue: 'รายได้รวม (บาท)',
     totalCostBasis: 'ต้นทุนรวม (บาท)',
-    stockTaxableGain: 'กำไรหุ้น (ที่ต้องเสียภาษี)',
-    cryptoTaxableGain: 'กำไรคริปโต (ที่ต้องเสียภาษี)',
     transactionsCount: 'รายการ',
     sellsCount: 'รายการขาย',
     noData: 'ไม่มีข้อมูล',
@@ -139,7 +128,6 @@ const translations: TranslationMap = {
     formEditTitle: 'แก้ไขรายการ',
     formDate: 'วันที่',
     formSymbol: 'สัญลักษณ์',
-    formAssetType: 'ประเภทสินทรัพย์',
     formTradeType: 'ประเภทรายการ',
     formProvider: 'โบรกเกอร์',
     formQuantity: 'จำนวน',
@@ -152,9 +140,6 @@ const translations: TranslationMap = {
     formSubmit: 'เพิ่มรายการ',
     formUpdate: 'แก้ไขรายการ',
 
-    assetForeignStock: 'หุ้นต่างประเทศ',
-    assetCrypto: 'คริปโต',
-
     tradeTypeBuy: 'ซื้อ',
     tradeTypeSell: 'ขาย',
 
@@ -166,9 +151,6 @@ const translations: TranslationMap = {
     taxableNo: '❌ ขาดทุน — หักลบไม่ได้',
 
     validationError: 'เกิดข้อผิดพลาด',
-
-    badgeStock: 'หุ้น',
-    badgeCrypto: 'คริปโต',
   },
 
   en: {
@@ -178,13 +160,12 @@ const translations: TranslationMap = {
     langLabel: 'Language',
 
     taxableGain: 'Taxable Gain (Gains Only)',
+    totalGainTitle: 'Taxable Gain',
     excludedLosses: 'Excluded Losses (Not Deductible)',
     excludedLossesSub: 'Losses cannot offset gains per Thai law',
     excludedLossesSubNone: 'No losses',
     totalRevenue: 'Total Revenue (THB)',
     totalCostBasis: 'Total Cost Basis (THB)',
-    stockTaxableGain: 'Stock Taxable Gain',
-    cryptoTaxableGain: 'Crypto Taxable Gain',
     transactionsCount: 'transactions',
     sellsCount: 'sells',
     noData: 'No data',
@@ -214,7 +195,6 @@ const translations: TranslationMap = {
     formEditTitle: 'Edit Trade',
     formDate: 'Date',
     formSymbol: 'Symbol',
-    formAssetType: 'Asset Type',
     formTradeType: 'Trade Type',
     formProvider: 'Provider (Broker)',
     formQuantity: 'Quantity',
@@ -227,9 +207,6 @@ const translations: TranslationMap = {
     formSubmit: 'Add Trade',
     formUpdate: 'Update Trade',
 
-    assetForeignStock: 'Foreign Stock',
-    assetCrypto: 'Crypto',
-
     tradeTypeBuy: 'Buy',
     tradeTypeSell: 'Sell',
 
@@ -241,9 +218,6 @@ const translations: TranslationMap = {
     taxableNo: '❌ Loss — not deductible',
 
     validationError: 'Validation Error',
-
-    badgeStock: 'STK',
-    badgeCrypto: 'CRYPTO',
   },
 };
 

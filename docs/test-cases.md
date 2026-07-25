@@ -605,6 +605,229 @@
 
 ---
 
+---
+
+## 🔴 TASK-013: Remove CRYPTO + Simplify to Single Asset Type
+
+**Reference Spec:** BA Spec — Remove CRYPTO  
+**Task Status:** ⬜ ยังไม่ได้ทำ (QA test cases ready — waiting for Dev)  
+**Test Status:** ⬜ ยังไม่ได้ทดสอบ
+
+---
+
+### 📦 Group 1: Type System Cleanup
+
+#### TC-013-001: AssetType type removed
+
+**Covers:** AC1  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis
+
+**Check:** `grep "AssetType" src/types/trade.ts` → 0 matches
+
+---
+
+#### TC-013-002: assetType field removed from TradeTransaction
+
+**Covers:** AC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis
+
+**Check:** `TradeTransaction` interface ไม่มี `assetType` field
+
+---
+
+#### TC-013-003: assetType field removed from RealizedGainResult
+
+**Covers:** AC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis
+
+**Check:** `RealizedGainResult` interface ไม่มี `assetType` field
+
+---
+
+#### TC-013-004: assetTypeBreakdown removed from TaxSummary
+
+**Covers:** AC3  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis
+
+**Check:** `TaxSummary` interface ไม่มี `assetTypeBreakdown` field
+
+---
+
+### 📦 Group 2: Engine Cleanup
+
+#### TC-013-005: computeAllRealizedGains works without assetType
+
+**Covers:** AC4  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Input:** Sample trades without `assetType` field  
+**Expected:** FIFO computation works correctly, `gains[]` ไม่มี `assetType` field
+
+---
+
+#### TC-013-006: computeTaxSummary returns simplified result
+
+**Covers:** AC3, AC4  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Check:** `TaxSummary` ไม่มี `assetTypeBreakdown`, มีแค่ aggregate fields
+
+---
+
+#### TC-013-007: No assetType reference anywhere in engine
+
+**Covers:** AC4  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis
+
+**Check:** `grep -i "assettype\|asset_type\|FOREIGN_STOCK\|CRYPTO" src/engine/fifoEngine.ts` → 0 matches
+
+---
+
+### 📦 Group 3: Storage Migration
+
+#### TC-013-008: CRYPTO trades filtered from loaded data
+
+**Covers:** AC8  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Input:** localStorage มี trades: 2 FOREIGN_STOCK + 1 CRYPTO  
+**Expected:** `loadTrades()` return 2 trades, CRYPTO หายไป
+
+---
+
+#### TC-013-009: All-CRYPTO empty → clean empty state
+
+**Covers:** EC1  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Input:** localStorage มีแต่ CRYPTO trades  
+**Expected:** `loadTrades()` return `[]` — empty state ปกติ
+
+---
+
+#### TC-013-010: No assetType in persisted trades after save
+
+**Covers:** AC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Setup:** สร้าง BUY trade ใหม่ (ไม่มี assetType field) → dispatch addTrade  
+**Expected:** localStorage data ไม่มี `assetType` field
+
+---
+
+### 📦 Group 4: UI Cleanup
+
+#### TC-013-011: TradeForm — no Asset Type dropdown
+
+**Covers:** AC5  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Check:** `grep -i "asset.?type\|FOREIGN_STOCK\|CRYPTO" src/components/TradeForm.tsx` → 0 matches
+
+---
+
+#### TC-013-012: TradeTable — no asset badge
+
+**Covers:** AC6  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Check:** `grep -i "STK\|CRYPTO\|asset.?type\|badgeStock\|badgeCrypto" src/components/TradeTable.tsx` → 0 matches
+
+---
+
+#### TC-013-013: Dashboard — no Crypto KPI
+
+**Covers:** AC7  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Check:** `grep -i "crypto\|CRYPTO" src/components/Dashboard.tsx` → 0 matches
+
+---
+
+#### TC-013-014: Dashboard — "Stock Taxable Gain" renamed to "Taxable Gain"
+
+**Covers:** AC7  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Check:** KPI title = `t.taxableGain` (ไม่ใช่ `t.stockTaxableGain`)
+
+---
+
+### 📦 Group 5: Translation Cleanup
+
+#### TC-013-015: Crypto translation keys removed
+
+**Covers:** AC9  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis
+
+**Check:** `TranslationDict` ไม่มี keys: `assetCrypto`, `assetForeignStock`, `cryptoTaxableGain`, `stockTaxableGain`, `badgeStock`, `badgeCrypto`
+
+---
+
+#### TC-013-016: Translation file has no CRYPTO/FOREIGN_STOCK strings
+
+**Covers:** AC9  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis
+
+**Check:** `grep -i "crypto\|foreign_stock\|คริปโต\|หุ้นต่างประเทศ" src/i18n/translations.ts` → 0 matches
+
+---
+
+### 📦 Group 6: Global Cleanup
+
+#### TC-013-017: No CRYPTO or FOREIGN_STOCK left in entire src/
+
+**Covers:** AC10  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis
+
+**Check:** `grep -r "CRYPTO\|FOREIGN_STOCK\|AssetType\|assetType" src/` → 0 matches
+
+---
+
+#### TC-013-018: tsc --noEmit passes
+
+**Covers:** AC10  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Compile check
+
+**Run:** `npx tsc --noEmit` → 0 errors
+
+---
+
+## 📐 Traceability Matrix (TASK-013)
+
+| AC | Test Cases |
+|---|---|
+| AC1 — ลบ AssetType type | TC-013-001 |
+| AC2 — ลบ assetType field | TC-013-002, 003, 010 |
+| AC3 — ลบ assetTypeBreakdown | TC-013-004, 006 |
+| AC4 — ลบจาก engine | TC-013-005, 006, 007 |
+| AC5 — ลบ dropdown จาก form | TC-013-011 |
+| AC6 — ลบ badge จาก table | TC-013-012 |
+| AC7 — ลบ Crypto KPI, rename Stock | TC-013-013, 014 |
+| AC8 — Filter out CRYPTO | TC-013-008, 009 |
+| AC9 — ลบ translation keys | TC-013-015, 016 |
+| AC10 — Clean codebase | TC-013-017, 018 |
+
+---
+
 ## 🔜 Next: TASK-001 Test Cases (Thai Tax Brackets)
 
 Will be added when Dev completes TASK-001 implementation.

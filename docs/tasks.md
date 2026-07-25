@@ -81,6 +81,20 @@
 
 ---
 
+### TASK-013: Remove CRYPTO + Simplify to Single Asset Type
+
+**Priority:** 🔴 P0  
+**Effort:** M (7 files)  
+**Status:** ✅ ทำเสร็จแล้ว  
+**Depends on:** None
+
+**User Story:**
+> As a user, I want to remove the crypto feature and simplify the app to a single asset type (foreign stocks only), because I only invest in foreign stocks.
+
+**Spec:** See BA Spec — ลบ `AssetType` ทั้งหมด, filter out CRYPTO from localStorage, simplify KPI
+
+---
+
 ### TASK-001: Replace US Tax Brackets with Thai Tax Brackets
 
 **Priority:** 🔴 P0  

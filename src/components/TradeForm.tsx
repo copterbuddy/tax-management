@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { TradeTransaction, AssetType, TradeType, ProviderType } from '../types/trade';
+import type { TradeTransaction, TradeType, ProviderType } from '../types/trade';
 import { useLanguage } from '../i18n/LanguageContext';
 
 // OCP: Centralized provider list — add new providers here only
@@ -21,7 +21,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
   const { t } = useLanguage();
   const [date, setDate] = useState('');
   const [symbol, setSymbol] = useState('');
-  const [assetType, setAssetType] = useState<AssetType>('FOREIGN_STOCK');
   const [type, setType] = useState<TradeType>('BUY');
   const [provider, setProvider] = useState<ProviderType>('Dime');
   const [quantity, setQuantity] = useState('');
@@ -36,7 +35,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
     if (trade) {
       setDate(trade.date);
       setSymbol(trade.symbol);
-      setAssetType(trade.assetType);
       setType(trade.type);
       setProvider(trade.provider);
       setQuantity(trade.quantity.toString());
@@ -47,7 +45,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
     } else {
       setDate(new Date().toISOString().substring(0, 10));
       setSymbol('');
-      setAssetType('FOREIGN_STOCK');
       setType('BUY');
       setProvider('Dime');
       setQuantity('');
@@ -92,7 +89,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
       id: trade?.id || generateId(),
       date,
       symbol: symbol.trim().toUpperCase(),
-      assetType,
       type,
       provider,
       quantity: Number(quantity),
@@ -149,17 +145,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
           </div>
 
           <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="trade-asset-type">{t.formAssetType}</label>
-              <select
-                id="trade-asset-type"
-                value={assetType}
-                onChange={e => setAssetType(e.target.value as AssetType)}
-              >
-                <option value="FOREIGN_STOCK">{t.assetForeignStock}</option>
-                <option value="CRYPTO">{t.assetCrypto}</option>
-              </select>
-            </div>
             <div className="form-group">
               <label htmlFor="trade-type">{t.formTradeType}</label>
               <select

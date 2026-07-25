@@ -1,4 +1,3 @@
-export type AssetType = 'FOREIGN_STOCK' | 'CRYPTO';
 export type TradeType = 'BUY' | 'SELL';
 export type ProviderType = 'Dime' | 'Liberator' | 'FinansiaSyrus';
 
@@ -6,11 +5,10 @@ export interface TradeTransaction {
   id: string;
   date: string; // YYYY-MM-DD
   symbol: string;
-  assetType: AssetType;
   type: TradeType;
   provider: ProviderType;
   quantity: number;
-  priceUSD: number; // Unit price in USD (or foreign currency)
+  priceUSD: number; // Unit price in USD
   commissionUSD: number; // Total commission in USD
   fxRateTHB: number; // Exchange rate to THB on trade date
   notes?: string;
@@ -40,7 +38,6 @@ export interface RealizedGainResult {
   sellTradeId: string;
   sellDate: string;
   symbol: string;
-  assetType: AssetType;
   provider: ProviderType;
   quantity: number;
   sellRevenueTHB: number; // Total THB revenue from sell after deducting commission
@@ -59,20 +56,4 @@ export interface TaxSummary {
   totalTransactions: number;
   totalBuyCount: number;
   totalSellCount: number;
-  assetTypeBreakdown: {
-    FOREIGN_STOCK: {
-      revenueTHB: number;
-      costBasisTHB: number;
-      gainTHB: number;
-      taxableGainTHB: number; // Only positive gains
-      excludedLossesTHB: number; // Losses not deductible
-    };
-    CRYPTO: {
-      revenueTHB: number;
-      costBasisTHB: number;
-      gainTHB: number;
-      taxableGainTHB: number;
-      excludedLossesTHB: number;
-    };
-  };
 }

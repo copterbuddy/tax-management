@@ -148,24 +148,14 @@ export function Dashboard() {
           icon="📉"
         />
         <KpiCard
-          title={t.stockTaxableGain}
-          value={summary ? formatGainIndicator(summary.assetTypeBreakdown.FOREIGN_STOCK.taxableGainTHB) : '฿0.00'}
+          title={t.totalGainTitle}
+          value={summary ? formatGainIndicator(summary.taxableGainTHB) : '฿0.00'}
           variant={
-            summary?.assetTypeBreakdown.FOREIGN_STOCK.taxableGainTHB > 0
+            summary?.taxableGainTHB > 0
               ? 'positive'
               : 'neutral'
           }
           icon="🏢"
-        />
-        <KpiCard
-          title={t.cryptoTaxableGain}
-          value={summary ? formatGainIndicator(summary.assetTypeBreakdown.CRYPTO.taxableGainTHB) : '฿0.00'}
-          variant={
-            summary?.assetTypeBreakdown.CRYPTO.taxableGainTHB > 0
-              ? 'positive'
-              : 'neutral'
-          }
-          icon="₿"
         />
       </div>
 

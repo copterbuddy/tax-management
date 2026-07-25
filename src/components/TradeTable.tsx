@@ -16,10 +16,6 @@ function translateTradeType(type: string, t: any): string {
   return type === 'BUY' ? t.tradeTypeBuy : t.tradeTypeSell;
 }
 
-function translateAssetTypeBadge(type: string, t: any): string {
-  return type === 'FOREIGN_STOCK' ? t.badgeStock : t.badgeCrypto;
-}
-
 export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAddNew }: TradeTableProps) {
   const { t, lang } = useLanguage();
   const [sortField, setSortField] = useState<'date' | 'symbol'>('date');
@@ -107,9 +103,6 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                     <td>{trade.date}</td>
                     <td>
                       <span className="symbol-badge">{trade.symbol}</span>
-                      <span className={`asset-type asset-${trade.assetType.toLowerCase()}`}>
-                        {translateAssetTypeBadge(trade.assetType, t)}
-                      </span>
                     </td>
                     <td>{trade.provider}</td>
                     <td>

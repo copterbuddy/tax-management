@@ -14,13 +14,22 @@ export interface TradeState {
 }
 
 // SRP: Migration logic isolated from loading logic.
-// When new required fields are added to TradeTransaction, add migration steps here.
 function migrateTrade(trade: TradeTransaction): TradeTransaction {
+  let migrated = { ...trade };
   // Migrate: trades created before Provider feature → default to 'Dime'
-  if (!trade.provider) {
-    return { ...trade, provider: 'Dime' as ProviderType };
+  if (!migrated.provider) {
+    migrated.provider = 'Dime' as ProviderType;
   }
-  return trade;
+  // Migrate: strip assetType from old trades (removed feature)
+  if ('assetType' in migrated) {
+    delete (migrated as any).assetType;
+  }
+  return migrated;
+}
+
+// SRP: Filter out CRYPTO trades (feature removed)
+function filterCrypto(trades: TradeTransaction[]): TradeTransaction[] {
+  return trades.filter(t => (t as any).assetType !== 'CRYPTO');
 }
 
 function loadTrades(): TradeTransaction[] {
@@ -28,7 +37,8 @@ function loadTrades(): TradeTransaction[] {
     const data = localStorage.getItem(STORAGE_KEY);
     if (data) {
       const raw = JSON.parse(data) as TradeTransaction[];
-      return raw.map(migrateTrade);
+      const migrated = raw.map(migrateTrade);
+      return filterCrypto(migrated);
     }
   } catch (e) {
     console.error('Failed to load trades from localStorage:', e);

@@ -168,7 +168,6 @@ export function processSellTrade(
     sellTradeId: sell.id,
     sellDate: sell.date,
     symbol: sell.symbol,
-    assetType: sell.assetType,
     provider: sell.provider,
     quantity: sell.quantity,
     sellRevenueTHB,
@@ -288,29 +287,6 @@ export function computeTaxSummary(
 
   const { taxableGainTHB, excludedLossesTHB } = computeTaxableGains(gains);
 
-  const stockGains = gains.filter(g => g.assetType === 'FOREIGN_STOCK');
-  const cryptoGains = gains.filter(g => g.assetType === 'CRYPTO');
-
-  const stockTaxable = computeTaxableGains(stockGains);
-  const cryptoTaxable = computeTaxableGains(cryptoGains);
-
-  const assetTypeBreakdown = {
-    FOREIGN_STOCK: {
-      revenueTHB: stockGains.reduce((s, g) => s + g.sellRevenueTHB, 0),
-      costBasisTHB: stockGains.reduce((s, g) => s + g.buyCostBasisTHB, 0),
-      gainTHB: stockGains.reduce((s, g) => s + g.realizedGainTHB, 0),
-      taxableGainTHB: stockTaxable.taxableGainTHB,
-      excludedLossesTHB: stockTaxable.excludedLossesTHB,
-    },
-    CRYPTO: {
-      revenueTHB: cryptoGains.reduce((s, g) => s + g.sellRevenueTHB, 0),
-      costBasisTHB: cryptoGains.reduce((s, g) => s + g.buyCostBasisTHB, 0),
-      gainTHB: cryptoGains.reduce((s, g) => s + g.realizedGainTHB, 0),
-      taxableGainTHB: cryptoTaxable.taxableGainTHB,
-      excludedLossesTHB: cryptoTaxable.excludedLossesTHB,
-    },
-  };
-
   return {
     taxYear,
     totalRevenueTHB,
@@ -321,7 +297,6 @@ export function computeTaxSummary(
     totalTransactions: yearTrades.length,
     totalBuyCount: yearTrades.filter(t => t.type === 'BUY').length,
     totalSellCount: yearTrades.filter(t => t.type === 'SELL').length,
-    assetTypeBreakdown,
   };
 }
 

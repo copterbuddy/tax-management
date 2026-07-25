@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { TradeTransaction, TradeType, ProviderType } from '../types/trade';
 import { useLanguage } from '../i18n/LanguageContext';
 
@@ -19,6 +19,22 @@ function generateId(): string {
 
 export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormProps) {
   const { t } = useLanguage();
+
+  // Date constraints: new trades limited to last 5 years, edits keep original date
+  const dateConstraints = useMemo(() => {
+    const today = new Date().toISOString().substring(0, 10); // YYYY-MM-DD
+    const fiveYearsAgo = new Date();
+    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+    const minDate = fiveYearsAgo.toISOString().substring(0, 10);
+
+    if (trade) {
+      // Editing: allow original date even if > 5 years old
+      return { min: trade.date < minDate ? trade.date : minDate, max: today };
+    }
+    // New trade: limit to last 5 years
+    return { min: minDate, max: today };
+  }, [trade]);
+
   const [date, setDate] = useState('');
   const [symbol, setSymbol] = useState('');
   const [type, setType] = useState<TradeType>('BUY');
@@ -125,6 +141,8 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
                 id="trade-date"
                 type="date"
                 value={date}
+                min={dateConstraints.min}
+                max={dateConstraints.max}
                 onChange={e => setDate(e.target.value)}
                 className={errors.date ? 'input-error' : ''}
               />

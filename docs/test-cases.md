@@ -332,6 +332,279 @@
 
 ---
 
+---
+
+## 🟡 TASK-012: Multi-Language Support EN/TH
+
+**Reference Spec:** BA Spec — Multi-Language EN/TH  
+**Task Status:** ⬜ ยังไม่ได้ทำ (QA test cases ready — waiting for Dev)  
+**Test Status:** ⬜ ยังไม่ได้ทดสอบ
+
+---
+
+### 📦 Group 1: Language Provider & Context (`src/i18n/`)
+
+---
+
+#### TC-012-001: LanguageProvider wraps entire app
+
+**Covers:** AC1  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Check:** `main.tsx` — `<LanguageProvider>` ครอบ `<Provider store={store}><App /></Provider>`
+
+---
+
+#### TC-012-002: Default language = TH when localStorage empty
+
+**Covers:** AC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Setup:** `localStorage.removeItem('lang')`  
+**Expected:** ครั้งแรกที่โหลด → `lang === 'th'`
+
+---
+
+#### TC-012-003: Default language from localStorage
+
+**Covers:** AC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Setup:** `localStorage.setItem('lang', 'en')`  
+**Expected:** โหลดแอพ → `lang === 'en'`
+
+---
+
+#### TC-012-004: Fallback to TH for unknown lang value
+
+**Covers:** EC1  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Setup:** `localStorage.setItem('lang', 'fr')`  
+**Expected:** `lang === 'th'` (fallback)
+
+---
+
+#### TC-012-005: setLang() updates localStorage + context
+
+**Covers:** AC4  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Setup:** เริ่มที่ `th` → เรียก `setLang('en')`  
+**Expected:** `localStorage.getItem('lang') === 'en'`, UI re-render
+
+---
+
+#### TC-012-006: useLanguage() returns { t, lang, setLang }
+
+**Covers:** AC7  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test / Static analysis
+
+**Check:** hook returns 3 properties — `t` (function), `lang` (string), `setLang` (function)
+
+---
+
+#### TC-012-007: t() returns correct translation for both languages
+
+**Covers:** AC7  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test
+
+**Scenario:**
+- `t('buy')` with `lang='th'` → `'ซื้อ'`
+- `t('buy')` with `lang='en'` → `'Buy'`
+- `t('sell')` with `lang='th'` → `'ขาย'`
+
+---
+
+#### TC-012-008: All translation keys exist in both EN and TH
+
+**Covers:** AC8, EC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis / TypeScript
+
+**Check:** `TranslationDict` type — ทุก key ต้องมีทั้ง `en` และ `th`  
+**Verify:** `npx tsc --noEmit` → 0 errors → แปลว่าไม่มี key ไหนหาย
+
+---
+
+### 📦 Group 2: Language Switcher UI
+
+---
+
+#### TC-012-009: Switcher appears at top-right header
+
+**Covers:** AC3  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Check:** Header มีปุ่มหรือ toggle สำหรับเปลี่ยนภาษา อยู่ขวาบน
+
+---
+
+#### TC-012-010: Switcher shows current language
+
+**Covers:** AC3  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / UI
+
+**Scenario:** เปิดแอพด้วยภาษา TH → switcher แสดง 🇹🇭 TH (active)  
+**Expected:** EN แสดงเป็นตัวเลือกที่สลับได้
+
+---
+
+#### TC-012-011: Click switcher → language changes immediately
+
+**Covers:** AC4  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / UI
+
+**Scenario:** กด EN → UI เปลี่ยนเป็นภาษาอังกฤษทันที (ไม่ต้อง reload)  
+**Expected:** KPI titles, table headers, form labels เปลี่ยนทั้งหมด
+
+---
+
+### 📦 Group 3: UI Label Translations
+
+---
+
+#### TC-012-012: Dashboard KPI titles translated
+
+**Covers:** AC5  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification + Manual
+
+**Expected TH:** "กำไรที่ต้องเสียภาษี", "ขาดทุนที่หักลบไม่ได้", "รายได้รวม", "ต้นทุนรวม"  
+**Expected EN:** "Taxable Gain", "Excluded Losses", "Total Revenue", "Total Cost Basis"
+
+---
+
+#### TC-012-013: TradeTable headers translated
+
+**Covers:** AC5  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Expected TH:** "วันที่", "สัญลักษณ์", "Provider", "ประเภท", "จำนวน", "ราคา", "ค่าธรรมเนียม", "FX", "รวม", "FIFO Gain", "คิดภาษี", "จัดการ"  
+**Expected EN:** "Date", "Symbol", "Provider", "Type", "Qty", "Price", "Fee", "FX", "Total", "FIFO Gain", "Taxable", "Actions"
+
+---
+
+#### TC-012-014: TradeForm labels + buttons translated
+
+**Covers:** AC5  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Expected TH:** "วันที่", "สัญลักษณ์", "ประเภทสินทรัพย์", "ประเภท", "Provider", "จำนวน", "ราคาต่อหน่วย", "ค่าธรรมเนียม", "อัตราแลกเปลี่ยน", "หมายเหตุ", "ยกเลิก", "เพิ่มรายการ", "แก้ไขรายการ"  
+**Expected EN:** Same as current labels
+
+---
+
+#### TC-012-015: Buttons translated
+
+**Covers:** AC5  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Expected TH:** "+ เพิ่มรายการ" (Add Trade), "ยกเลิก" (Cancel), "บันทึก" (Save)
+
+---
+
+### 📦 Group 4: Data Value Translations
+
+---
+
+#### TC-012-016: Trade type (BUY/SELL) translated
+
+**Covers:** AC6  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / UI
+
+**Expected TH:** BUY → "ซื้อ", SELL → "ขาย"  
+**Expected EN:** BUY → "Buy", SELL → "Sell"
+
+---
+
+#### TC-012-017: Asset type translated
+
+**Covers:** AC6  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / UI
+
+**Expected TH:** FOREIGN_STOCK → "หุ้นต่างประเทศ", CRYPTO → "คริปโต"  
+**Expected EN:** FOREIGN_STOCK → "Foreign Stock", CRYPTO → "Crypto"
+
+---
+
+#### TC-012-018: Taxable indicator translated
+
+**Covers:** AC6  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Expected TH:** Tooltip "✅ นำไปคิดภาษีได้" / "❌ ขาดทุน — ไม่สามารถหักลบภาษีได้"  
+**Expected EN:** "✅ Taxable" / "❌ Loss — not deductible"
+
+---
+
+### 📦 Group 5: Non-Translated (Stay EN)
+
+---
+
+#### TC-012-019: Validation errors stay in English
+
+**Covers:** AC5 (ขอบเขต)  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification
+
+**Check:** Error messages ("Insufficient lots...", "Quantity must be positive") ยังเป็น EN ทั้ง TH และ EN mode
+
+---
+
+#### TC-012-020: Trade data (symbol, date, numbers) unchanged
+
+**Covers:** AC5 (ขอบเขต)  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / UI
+
+**Check:** Symbol (AAPL), วันที่ (2026-01-10), ตัวเลข (quantity, price) ไม่ถูกแปล
+
+---
+
+## 📋 Test Execution Log
+
+| Date | Tester | TC Range | Result | Notes |
+|---|---|---|---|---|
+| — | — | — | — | รอ Dev ส่งมอบ |
+
+---
+
+## 📐 Traceability Matrix (TASK-012)
+
+| AC | Test Cases |
+|---|---|
+| AC1 — LanguageProvider wraps app | TC-012-001 |
+| AC2 — Default TH / localStorage | TC-012-002, TC-012-003, TC-012-004 |
+| AC3 — Switcher top-right | TC-012-009, TC-012-010 |
+| AC4 — Switch → update localStorage + re-render | TC-012-005, TC-012-011 |
+| AC5 — UI labels translated | TC-012-012, TC-012-013, TC-012-014, TC-012-015 |
+| AC6 — Data values translated | TC-012-016, TC-012-017, TC-012-018 |
+| AC7 — useLanguage hook | TC-012-006, TC-012-007 |
+| AC8 — Typed keys | TC-012-008 |
+| EC1 — Unknown lang fallback | TC-012-004 |
+| EC2 — Missing key → compile error | TC-012-008 |
+| ขอบเขต — Errors stay EN | TC-012-019 |
+| ขอบเขต — Data unchanged | TC-012-020 |
+
+---
+
 ## 🔜 Next: TASK-001 Test Cases (Thai Tax Brackets)
 
 Will be added when Dev completes TASK-001 implementation.

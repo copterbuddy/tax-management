@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import type { TradeTransaction, AssetType, TradeType, ProviderType } from '../types/trade';
+import { useLanguage } from '../i18n/LanguageContext';
 
 // OCP: Centralized provider list — add new providers here only
 const PROVIDER_OPTIONS: ProviderType[] = ['Dime', 'Liberator', 'FinansiaSyrus'];
@@ -17,6 +18,7 @@ function generateId(): string {
 }
 
 export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormProps) {
+  const { t } = useLanguage();
   const [date, setDate] = useState('');
   const [symbol, setSymbol] = useState('');
   const [assetType, setAssetType] = useState<AssetType>('FOREIGN_STOCK');
@@ -112,17 +114,17 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
     onSubmit(tradeData);
   };
 
-  return (
+    return (
     <div className="trade-form-overlay">
       <div className="trade-form-modal">
         <div className="trade-form-header">
-          <h2>{trade ? 'Edit Trade' : 'Add New Trade'}</h2>
+          <h2>{trade ? t.formEditTitle : t.formAddTitle}</h2>
           <button className="btn-close" onClick={onCancel} aria-label="Close">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="trade-form">
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="trade-date">Date</label>
+              <label htmlFor="trade-date">{t.formDate}</label>
               <input
                 id="trade-date"
                 type="date"
@@ -133,7 +135,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
               {errors.date && <span className="error-msg">{errors.date}</span>}
             </div>
             <div className="form-group">
-              <label htmlFor="trade-symbol">Symbol</label>
+              <label htmlFor="trade-symbol">{t.formSymbol}</label>
               <input
                 id="trade-symbol"
                 type="text"
@@ -148,32 +150,32 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="trade-asset-type">Asset Type</label>
+              <label htmlFor="trade-asset-type">{t.formAssetType}</label>
               <select
                 id="trade-asset-type"
                 value={assetType}
                 onChange={e => setAssetType(e.target.value as AssetType)}
               >
-                <option value="FOREIGN_STOCK">Foreign Stock</option>
-                <option value="CRYPTO">Crypto</option>
+                <option value="FOREIGN_STOCK">{t.assetForeignStock}</option>
+                <option value="CRYPTO">{t.assetCrypto}</option>
               </select>
             </div>
             <div className="form-group">
-              <label htmlFor="trade-type">Trade Type</label>
+              <label htmlFor="trade-type">{t.formTradeType}</label>
               <select
                 id="trade-type"
                 value={type}
                 onChange={e => setType(e.target.value as TradeType)}
               >
-                <option value="BUY">Buy</option>
-                <option value="SELL">Sell</option>
+                <option value="BUY">{t.tradeTypeBuy}</option>
+                <option value="SELL">{t.tradeTypeSell}</option>
               </select>
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="trade-provider">Provider (Broker)</label>
+              <label htmlFor="trade-provider">{t.formProvider}</label>
               <select
                 id="trade-provider"
                 value={provider}
@@ -188,7 +190,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="trade-quantity">Quantity</label>
+              <label htmlFor="trade-quantity">{t.formQuantity}</label>
               <input
                 id="trade-quantity"
                 type="number"
@@ -202,7 +204,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
               {errors.quantity && <span className="error-msg">{errors.quantity}</span>}
             </div>
             <div className="form-group">
-              <label htmlFor="trade-price">Unit Price (USD)</label>
+              <label htmlFor="trade-price">{t.formPrice}</label>
               <input
                 id="trade-price"
                 type="number"
@@ -219,7 +221,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="trade-commission">Fee (USD)</label>
+              <label htmlFor="trade-commission">{t.formFee}</label>
               <input
                 id="trade-commission"
                 type="number"
@@ -233,7 +235,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
               {errors.commissionUSD && <span className="error-msg">{errors.commissionUSD}</span>}
             </div>
             <div className="form-group">
-              <label htmlFor="trade-fx">FX Rate (THB)</label>
+              <label htmlFor="trade-fx">{t.formFxRate}</label>
               <input
                 id="trade-fx"
                 type="number"
@@ -249,13 +251,13 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
           </div>
 
           <div className="form-group">
-            <label htmlFor="trade-notes">Notes (optional)</label>
+            <label htmlFor="trade-notes">{t.formNotes}</label>
             <input
               id="trade-notes"
               type="text"
               value={notes}
               onChange={e => setNotes(e.target.value)}
-              placeholder="e.g. Broker reference"
+              placeholder={t.formNotesPlaceholder}
             />
           </div>
 
@@ -264,9 +266,9 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
           )}
 
           <div className="form-actions">
-            <button type="button" className="btn btn-secondary" onClick={onCancel}>Cancel</button>
+            <button type="button" className="btn btn-secondary" onClick={onCancel}>{t.formCancel}</button>
             <button type="submit" className="btn btn-primary">
-              {trade ? 'Update Trade' : 'Add Trade'}
+              {trade ? t.formUpdate : t.formSubmit}
             </button>
           </div>
         </form>

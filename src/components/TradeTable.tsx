@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { TradeTransaction, RealizedGainResult } from '../types/trade';
 import { formatGainIndicator } from '../engine/fifoEngine';
+import { useLanguage } from '../i18n/LanguageContext';
 
 interface TradeTableProps {
   trades: TradeTransaction[];
@@ -11,11 +12,20 @@ interface TradeTableProps {
   onAddNew: () => void;
 }
 
+function translateTradeType(type: string, t: any): string {
+  return type === 'BUY' ? t.tradeTypeBuy : t.tradeTypeSell;
+}
+
+function translateAssetTypeBadge(type: string, t: any): string {
+  return type === 'FOREIGN_STOCK' ? t.badgeStock : t.badgeCrypto;
+}
+
 export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAddNew }: TradeTableProps) {
+  const { t, lang } = useLanguage();
   const [sortField, setSortField] = useState<'date' | 'symbol'>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
-  const yearTrades = trades.filter(t => t.date.startsWith(String(selectedYear)));
+  const yearTrades = trades.filter(tc => tc.date.startsWith(String(selectedYear)));
   const gainMap = new Map<string, RealizedGainResult>();
   for (const g of gains) {
     gainMap.set(g.sellTradeId, g);
@@ -37,29 +47,29 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
-  const totalBuys = yearTrades.filter(t => t.type === 'BUY').length;
-  const totalSells = yearTrades.filter(t => t.type === 'SELL').length;
+  const totalBuys = yearTrades.filter(tc => tc.type === 'BUY').length;
+  const totalSells = yearTrades.filter(tc => tc.type === 'SELL').length;
 
   return (
     <div className="trade-table-section">
       <div className="trade-table-header">
         <div className="trade-table-title">
-          <h2>Trade History — {selectedYear}</h2>
+          <h2>{t.tradeHistory} — {selectedYear}</h2>
           <span className="trade-count">
-            {yearTrades.length} trade{yearTrades.length !== 1 ? 's' : ''}
-            ({totalBuys} buys / {totalSells} sells)
+            {yearTrades.length} {t.trades}
+            ({totalBuys} {t.buys} / {totalSells} {t.sells})
           </span>
         </div>
         <button className="btn btn-primary" onClick={onAddNew}>
-          + Add Trade
+          {t.addTrade}
         </button>
       </div>
 
       {yearTrades.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📊</div>
-          <p>No trades recorded for {selectedYear}</p>
-          <p className="empty-hint">Click "Add Trade" to enter your first transaction.</p>
+          <p>{t.noTrades} {selectedYear}</p>
+          <p className="empty-hint">{t.noTradesHint}</p>
         </div>
       ) : (
         <div className="table-wrapper">
@@ -67,21 +77,21 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
             <thead>
               <tr>
                 <th className="sortable" onClick={() => handleSort('date')}>
-                  Date {sortField === 'date' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                  {t.colDate} {sortField === 'date' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                 </th>
                 <th className="sortable" onClick={() => handleSort('symbol')}>
-                  Symbol {sortField === 'symbol' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                  {t.colSymbol} {sortField === 'symbol' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                 </th>
-                <th>Provider</th>
-                <th>Type</th>
-                <th>Qty</th>
-                <th>Price (USD)</th>
-                <th>Fee (USD)</th>
-                <th>FX Rate</th>
-                <th>Total (THB)</th>
-                <th>FIFO Gain (THB)</th>
-                <th>Taxable</th>
-                <th>Actions</th>
+                <th>{t.colProvider}</th>
+                <th>{t.colType}</th>
+                <th>{t.colQty}</th>
+                <th>{t.colPrice}</th>
+                <th>{t.colFee}</th>
+                <th>{t.colFx}</th>
+                <th>{t.colTotal}</th>
+                <th>{t.colFifoGain}</th>
+                <th>{t.colTaxable}</th>
+                <th>{t.colActions}</th>
               </tr>
             </thead>
             <tbody>
@@ -98,13 +108,13 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                     <td>
                       <span className="symbol-badge">{trade.symbol}</span>
                       <span className={`asset-type asset-${trade.assetType.toLowerCase()}`}>
-                        {trade.assetType === 'FOREIGN_STOCK' ? 'STK' : 'CRYPTO'}
+                        {translateAssetTypeBadge(trade.assetType, t)}
                       </span>
                     </td>
                     <td>{trade.provider}</td>
                     <td>
                       <span className={`trade-type-badge ${trade.type.toLowerCase()}`}>
-                        {trade.type}
+                        {translateTradeType(trade.type, t)}
                       </span>
                     </td>
                     <td className="num">{trade.quantity}</td>
@@ -124,9 +134,9 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                     <td className="taxable-cell">
                       {trade.type === 'SELL' && gain ? (
                         gain.realizedGainTHB > 0 ? (
-                          <span className="taxable-yes" title="นำไปคิดภาษีได้">✅</span>
+                          <span className="taxable-yes" title={t.taxableYes}>✅</span>
                         ) : gain.realizedGainTHB < 0 ? (
-                          <span className="taxable-no" title="ขาดทุน — ไม่สามารถหักลบภาษีได้">❌</span>
+                          <span className="taxable-no" title={t.taxableNo}>❌</span>
                         ) : (
                           <span className="taxable-neutral">—</span>
                         )
@@ -138,14 +148,14 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                       <button
                         className="btn-icon btn-edit"
                         onClick={() => onEdit(trade)}
-                        title="Edit trade"
+                        title={lang === 'th' ? 'แก้ไขรายการ' : 'Edit trade'}
                       >
                         ✏️
                       </button>
                       <button
                         className="btn-icon btn-delete"
                         onClick={() => onDelete(trade.id)}
-                        title="Delete trade"
+                        title={lang === 'th' ? 'ลบรายการ' : 'Delete trade'}
                       >
                         🗑️
                       </button>

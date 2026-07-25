@@ -65,6 +65,22 @@
 
 ---
 
+### TASK-012: Multi-Language Support EN/TH
+
+**Priority:** 🟡 P1  
+**Effort:** M (6 files: 2 new, 4 modified)  
+**Status:** ✅ ทำเสร็จแล้ว  
+**Depends on:** None  
+**QA Test Cases:** ✅ 20 cases written, 17 executed — all PASS
+
+**User Story:**
+> As a Thai investor, I want the app in Thai by default but switchable to English, so I can use it in my preferred language.
+
+**Spec:** See BA Spec — Custom `useContext` + typed JSON, localStorage persistence, TH default  
+**QA:** 20 test cases ready — Dev must wait for QA test cases before starting
+
+---
+
 ### TASK-001: Replace US Tax Brackets with Thai Tax Brackets
 
 **Priority:** 🔴 P0  
@@ -278,7 +294,7 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 | Priority | Count | Done | Pending | Tasks |
 |---|---|---|---|---|
 | 🔴 P0 | 4 | 2 | 2 | TASK-000 ✅, TASK-011 ✅, TASK-001 ⬜, TASK-002 ⬜ |
-| 🟡 P1 | 2 | 0 | 2 | TASK-003 ⬜, TASK-004 ⬜ |
+| 🟡 P1 | 3 | 1 | 2 | TASK-012 ✅, TASK-003 ⬜, TASK-004 ⬜ |
 | 🟢 P2 | 3 | 0 | 3 | TASK-005 ⬜, TASK-006 ⬜, TASK-007 ⬜ |
 | ⚪ P3 | 3 | 0 | 3 | TASK-008 ⬜, TASK-009 ⬜, TASK-010 ⬜ |
-| **Total** | **12** | **2** | **10** | |
+| **Total** | **13** | **3** | **10** | |

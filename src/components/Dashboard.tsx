@@ -87,18 +87,11 @@ export function Dashboard() {
         <div className="header-right">
           <div className="lang-switcher">
             <button
-              className={`lang-btn ${lang === 'th' ? 'active' : ''}`}
-              onClick={() => handleLangSwitch('th')}
-              title="ภาษาไทย"
+              className="lang-btn"
+              onClick={() => handleLangSwitch(lang === 'th' ? 'en' : 'th')}
+              title={lang === 'th' ? 'Switch to English' : 'เปลี่ยนเป็นภาษาไทย'}
             >
-              🇹🇭 TH
-            </button>
-            <button
-              className={`lang-btn ${lang === 'en' ? 'active' : ''}`}
-              onClick={() => handleLangSwitch('en')}
-              title="English"
-            >
-              🇬🇧 EN
+              {lang === 'th' ? 'EN' : 'TH'}
             </button>
           </div>
         </div>

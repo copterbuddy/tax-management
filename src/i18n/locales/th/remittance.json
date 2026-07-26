@@ -7,6 +7,7 @@
   "colSymbol": "สัญลักษณ์",
   "colProvider": "โบรกเกอร์",
   "colAmount": "จำนวน (USD)",
+  "colAmountTHB": "จำนวน (THB)",
   "colFxRate": "อัตราแลกเปลี่ยน",
   "colGainPercent": "กำไร %",
   "colTaxable": "ภาษี (THB)",

@@ -7,6 +7,7 @@
   "colSymbol": "Symbol",
   "colProvider": "Provider",
   "colAmount": "Amount (USD)",
+  "colAmountTHB": "Amount (THB)",
   "colFxRate": "FX Rate",
   "colGainPercent": "Gain %",
   "colTaxable": "Taxable (THB)",

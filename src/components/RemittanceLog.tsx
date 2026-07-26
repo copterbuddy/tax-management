@@ -21,6 +21,7 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
       provider: g.provider,
       sellDate: g.sellDate,
       gainPercent: g.gainPercent,
+      amountTHB: r.amountUSD * r.fxRateTHB,
       taxableTHB: r.amountUSD * g.gainPercent * r.fxRateTHB,
     }))
   );
@@ -36,6 +37,7 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
   if (!years.includes(remitYear)) years.unshift(remitYear);
 
   const totalRemitted = yearRemittances.reduce((s, r) => s + r.amountUSD, 0);
+  const totalRemittedTHB = yearRemittances.reduce((s, r) => s + r.amountTHB, 0);
   const totalTaxable = yearRemittances.reduce((s, r) => s + r.taxableTHB, 0);
 
   return (
@@ -86,6 +88,7 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
                 <th>{t('remittance:colSymbol')}</th>
                 <th>{t('remittance:colProvider')}</th>
                 <th>{t('remittance:colAmount')}</th>
+                <th>{t('remittance:colAmountTHB')}</th>
                 <th>{t('remittance:colFxRate')}</th>
                 <th>{t('remittance:colGainPercent')}</th>
                 <th>{t('remittance:colTaxable')}</th>
@@ -100,6 +103,7 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
                   <td><span className="symbol-badge">{r.symbol}</span></td>
                   <td>{r.provider}</td>
                   <td className="num">${r.amountUSD.toFixed(2)}</td>
+                  <td className="num">฿{r.amountTHB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   <td className="num">{r.fxRateTHB.toFixed(2)}</td>
                   <td className="num">{(r.gainPercent * 100).toFixed(1)}%</td>
                   <td className="num gain-cell">
@@ -147,6 +151,7 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
               <tr className="summary-row">
                 <td colSpan={3}><strong>{t('common:total')} ({yearRemittances.length} {t('remittance:remittanceCount')})</strong></td>
                 <td className="num"><strong>${totalRemitted.toFixed(2)}</strong></td>
+                <td className="num"><strong>฿{totalRemittedTHB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                 <td></td>
                 <td></td>
                 <td className="num gain-cell">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { RealizedGainResult } from '../types/trade';
+import { useTranslation } from 'react-i18next';
 
 interface RemittanceLogProps {
   gains: RealizedGainResult[];
@@ -7,6 +8,7 @@ interface RemittanceLogProps {
 }
 
 export function RemittanceLog({ gains, onRecordRemit }: RemittanceLogProps) {
+  const { t } = useTranslation();
   const [remitYear, setRemitYear] = useState<number>(new Date().getFullYear());
 
   // Flatten all remittances with their parent gain info
@@ -27,7 +29,7 @@ export function RemittanceLog({ gains, onRecordRemit }: RemittanceLogProps) {
   ).sort((a, b) => b.remitDate.localeCompare(a.remitDate));
 
   // Collect remittance years
-  const years = [...new Set(allRemittances.map(r => parseInt(r.remitDate.substring(0, 4))))]
+  const years = [...new Set(allRemittances.map(r => Number.parseInt(r.remitDate.substring(0, 4), 10)))]
     .sort((a, b) => b - a);
   if (!years.includes(remitYear)) years.unshift(remitYear);
 
@@ -38,20 +40,20 @@ export function RemittanceLog({ gains, onRecordRemit }: RemittanceLogProps) {
     <div className="trade-table-section">
       <div className="trade-table-header">
         <div className="trade-table-title">
-          <h2>Remittance Log — {remitYear}</h2>
+          <h2>{t('remittance:remittanceLog')} — {remitYear}</h2>
           <span className="trade-count">
-            {yearRemittances.length} remittance{yearRemittances.length !== 1 ? 's' : ''}
+            {yearRemittances.length} {t('remittance:remittanceCount')}
           </span>
         </div>
         <button className="btn btn-primary" onClick={onRecordRemit}>
-          🏦 Record Remittance
+          {t('remittance:recordRemit')}
         </button>
       </div>
 
       {/* Remittance Year Filter */}
       {years.length > 1 && (
         <div className="year-filter" style={{ marginBottom: '0.75rem' }}>
-          <label htmlFor="remit-year-select">Remittance Year:</label>
+          <label htmlFor="remit-year-select">{t('remittance:remitYear')}:</label>
           <select
             id="remit-year-select"
             value={remitYear}
@@ -67,10 +69,10 @@ export function RemittanceLog({ gains, onRecordRemit }: RemittanceLogProps) {
       {yearRemittances.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">🏦</div>
-          <p>No remittances recorded for {remitYear}</p>
-          <p className="empty-hint">When you remit funds from a stock sale into Thailand, record it here.</p>
+          <p>{t('remittance:noRemittances')} {remitYear}</p>
+          <p className="empty-hint">{t('remittance:noRemittancesHint')}</p>
           <button className="btn btn-primary" onClick={onRecordRemit}>
-            🏦 Record Remittance
+            {t('remittance:recordRemit')}
           </button>
         </div>
       ) : (
@@ -78,14 +80,14 @@ export function RemittanceLog({ gains, onRecordRemit }: RemittanceLogProps) {
           <table className="trade-table">
             <thead>
               <tr>
-                <th>Remit Date</th>
-                <th>Symbol</th>
-                <th>Provider</th>
-                <th>Amount (USD)</th>
-                <th>FX Rate</th>
-                <th>Gain %</th>
-                <th>Taxable (THB)</th>
-                <th>Notes</th>
+                <th>{t('remittance:colRemitDate')}</th>
+                <th>{t('remittance:colSymbol')}</th>
+                <th>{t('remittance:colProvider')}</th>
+                <th>{t('remittance:colAmount')}</th>
+                <th>{t('remittance:colFxRate')}</th>
+                <th>{t('remittance:colGainPercent')}</th>
+                <th>{t('remittance:colTaxable')}</th>
+                <th>{t('remittance:colNotes')}</th>
               </tr>
             </thead>
             <tbody>
@@ -108,7 +110,7 @@ export function RemittanceLog({ gains, onRecordRemit }: RemittanceLogProps) {
             </tbody>
             <tfoot>
               <tr className="summary-row">
-                <td colSpan={3}><strong>Total ({yearRemittances.length} remittances)</strong></td>
+                <td colSpan={3}><strong>{t('common:total')} ({yearRemittances.length} {t('remittance:remittanceCount')})</strong></td>
                 <td className="num"><strong>${totalRemitted.toFixed(2)}</strong></td>
                 <td></td>
                 <td></td>

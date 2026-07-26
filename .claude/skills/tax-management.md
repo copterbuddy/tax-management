@@ -7,7 +7,7 @@ description: Thai Tax Tracker — Remittance-based FIFO capital gains calculator
 
 > **Invoke:** `/tax-management`  
 > **Purpose:** Teach Claude the project architecture, conventions, and how to add features correctly.  
-> **Last updated:** 2026-07-26 (TASK-017: UX/UI Improvement — Design System + Dark Mode)
+> **Last updated:** 2026-07-26 (TASK-018: Production-Ready Backend — i18next, Zod, react-hook-form, ErrorBoundary, Thai Tax Brackets)
 
 ---
 
@@ -23,10 +23,13 @@ description: Thai Tax Tracker — Remittance-based FIFO capital gains calculator
 | Language | TypeScript 6.0 (strict) |
 | Build | Vite 8.1 |
 | State | Redux Toolkit 2.12 |
-| i18n | Custom `useContext` + typed JSON (EN/TH) |
+| i18n | `i18next` + `react-i18next` — namespaced JSON (EN/TH), localStorage persistence |
+| Validation | `zod` — runtime schema validation for localStorage + form inputs |
+| Forms | `react-hook-form` + `@hookform/resolvers` — type-safe, less boilerplate |
+| Error Handling | `react-error-boundary` — graceful fallback UI on render errors |
 | Linter | Oxlint |
 | Package Manager | npm |
-| Entry | `src/main.tsx` → `App.tsx` → `Dashboard` |
+| Entry | `src/main.tsx` → `AppErrorBoundary` → `ThemeProvider` → `Provider` → `App` → `Dashboard` |
 
 ### Features
 
@@ -39,11 +42,12 @@ description: Thai Tax Tracker — Remittance-based FIFO capital gains calculator
 | Gain% Method | Only gain portion taxable; cost basis return is tax-free |
 | Progress Bar | Visual indicator of remitted portion per trade |
 | Loss Rules | Losses cannot offset gains (มาตรา 40(4)(g)) |
-| Multi-Language | EN/TH with localStorage persistence |
+| Multi-Language | EN/TH with i18next — namespaced JSON, no inline `lang === 'th'` conditions |
 | Theme | Light/Dark mode with CSS custom properties + localStorage persistence |
-| UI Components | Tooltip (ⓘ), ConfirmDialog, KPI Cards (5 variants), responsive table→cards |
-| Data | localStorage persistence (trades + gains/remittances) |
+| UI Components | Tooltip (ⓘ), ConfirmDialog, KPI Cards (5 variants), responsive table→cards, ErrorBoundary |
+| Data | localStorage persistence (trades + gains/remittances) — validated with Zod on load |
 | 5-Year Limit | New trades limited to last 5 calendar years |
+| Thai Tax | Progressive 0-35% brackets, ฿160k default deduction |
 
 ---
 
@@ -56,27 +60,33 @@ src/
 ├── engine/
 │   └── fifoEngine.ts          ← Pure functions: USD FIFO, remittance tax, validation
 ├── i18n/
-│   ├── translations.ts        ← Typed translation dictionary (EN/TH, ~50 keys)
-│   └── LanguageContext.tsx     ← Provider + useLanguage hook + localStorage
+│   ├── index.ts               ← i18next setup + language detection + persistence
+│   └── locales/
+│       ├── th/ {common,trade,remittance}.json
+│       └── en/ {common,trade,remittance}.json
+├── validation/
+│   └── schemas.ts             ← Zod schemas + safeParse for localStorage validation
 ├── context/
-│   └── ThemeContext.tsx        ← 🆕 Theme provider + useTheme hook (light/dark)
+│   └── ThemeContext.tsx        ← Theme provider + useTheme hook (light/dark)
+├── constants.ts               ← Centralized: STORAGE_KEYS, PROVIDER_OPTIONS, DATE_LIMITS, VALIDATION, THAI_TAX
 ├── store/
-│   ├── index.ts               ← configureStore
+│   ├── index.ts               ← configureStore (trade + tax reducers)
 │   ├── hooks.ts               ← useAppDispatch / useAppSelector
-│   ├── tradeSlice.ts          ← Trade CRUD + remittance actions + gains persistence
-│   └── taxSlice.ts            ← Income tax calculation (US brackets — TASK-001 pending)
+│   ├── tradeSlice.ts          ← Trade CRUD + remittance actions + gains persistence (zod-validated)
+│   └── taxSlice.ts            ← Thai progressive tax calculator (0-35%)
 ├── components/
-│   ├── Dashboard.tsx          ← Main page: KPI + tabs (Trade/Remittance) + modals
-│   ├── TradeTable.tsx         ← Trade list (USD, progress bar, sortable, card view on mobile)
-│   ├── TradeForm.tsx          ← Add/Edit trade (USD only, no FX rate)
-│   ├── RemitForm.tsx          ← Record remittance + taxable gain preview
-│   ├── RemittanceLog.tsx      ← Remittance history table + year filter + totals
-│   ├── KpiCard.tsx            ← Reusable KPI display card (variants, tooltip, subValue2)
-│   ├── Tooltip.tsx            ← 🆕 Info tooltip (click/ESC/click-outside)
-│   └── ConfirmDialog.tsx      ← 🆕 Confirmation dialog (danger variant, ESC close)
+│   ├── Dashboard.tsx          ← Main page: KPI + tabs + modals (i18next, no inline lang)
+│   ├── TradeTable.tsx         ← Trade list (USD, progress bar, responsive cards, i18next)
+│   ├── TradeForm.tsx          ← Add/Edit trade (react-hook-form + zodResolver, i18next)
+│   ├── RemitForm.tsx          ← Record remittance (react-hook-form + zodResolver, i18next)
+│   ├── RemittanceLog.tsx      ← Remittance history table + year filter (i18next)
+│   ├── KpiCard.tsx            ← Reusable KPI display card
+│   ├── Tooltip.tsx            ← Info tooltip (click/ESC/click-outside)
+│   ├── ConfirmDialog.tsx      ← Confirmation dialog (danger variant, ESC close)
+│   └── ErrorBoundary.tsx      ← App-level error boundary with fallback UI
 ├── App.tsx                    ← Root component
-├── main.tsx                   ← Entry: ThemeProvider > LanguageProvider > Provider > StrictMode
-├── App.css / index.css        ← 🆕 Design system tokens (light + dark mode)
+├── main.tsx                   ← Entry: ErrorBoundary > ThemeProvider > Provider > StrictMode
+├── App.css / index.css        ← Design system tokens (light + dark mode) + error boundary styles
 └── assets/                    ← Static images
 ```
 
@@ -118,6 +128,12 @@ Dashboard re-renders
 6. **Losses not deductible** — Negative gains excluded from taxable income (มาตรา 40(4)(g)).
 7. **DIP via callbacks** — `TradeForm` validation injected as `onValidate` prop.
 8. **Gains persisted separately** — Remittance history survives trade edits via `localStorage` key `tax_tracker_gains`.
+9. **i18next namespaced** — Translation keys in `common:`, `trade:`, `remittance:` namespaces — no `lang === 'th'` conditions.
+10. **Zod runtime validation** — localStorage data validated on load; invalid/corrupt data → fallback to `[]`.
+11. **react-hook-form + zod** — Form state managed declaratively; validation via `zodResolver`.
+12. **Error Boundary** — Catches render errors, shows fallback UI — app doesn't white-screen.
+13. **Constants centralized** — `src/constants.ts` is single source for storage keys, providers, validation limits, tax constants.
+14. **Thai Tax Brackets** — Progressive 0-35%, personal allowance ฿60k + expense deduction ฿100k = ฿160k default.
 
 ---
 
@@ -227,23 +243,53 @@ interface TaxSummary {
 | `setSelectedTaxYear(year)` | Filter trade table by sell year |
 | `setDisplayTaxYear(year)` | Filter KPI by remittance year |
 
-**Persistence:** `localStorage` — trades (key: `tax_tracker_trades`), gains+remittances (key: `tax_tracker_gains`)
+**Persistence:** `localStorage` — trades (key: `tax_tracker_trades`), gains+remittances (key: `tax_tracker_gains`). Data validated with zod on load — invalid/corrupt data → fallback `[]`.
+
+## 🔧 Store API (`src/store/taxSlice.ts`)
+
+| Action | Purpose |
+|---|---|
+| `setAnnualIncome(amount)` | Set annual income (บาท) |
+| `setDeductions(amount)` | Set deductions (default: ฿160,000) |
+| `calculateTax()` | Compute Thai progressive tax (0-35%) |
+| `saveCalculation()` | Save calculation to history |
+| `deleteHistoryItem(id)` | Remove one history entry |
+| `clearHistory()` | Clear all history |
 
 ---
 
 ## 🔧 How To: Add a New Provider
 
 1. `src/types/trade.ts` — Add to `ProviderType` union
-2. `src/components/TradeForm.tsx` — Add to `PROVIDER_OPTIONS` array
-3. Done. OCP in action.
+2. `src/constants.ts` — Add to `PROVIDER_OPTIONS` array
+3. Done. TradeForm + zod schema auto-pick it up.
 
 ## 🔧 How To: Add a New Data Field
 
 1. `src/types/trade.ts` — Add field to interface
-2. `src/store/tradeSlice.ts` — Add migration in `migrateTrade()`
-3. `src/components/TradeForm.tsx` — Add input + state + validation
-4. `src/components/TradeTable.tsx` — Add column if visible
-5. `npx tsc --noEmit` — Must pass
+2. `src/validation/schemas.ts` — Add field to zod schema
+3. `src/store/tradeSlice.ts` — Add migration in `migrateTrade()`
+4. `src/components/TradeForm.tsx` — Add field to `tradeFormSchema` + JSX input
+5. `src/components/TradeTable.tsx` — Add column if visible
+6. `npx tsc --noEmit` — Must pass
+
+## 🔧 How To: Add a New Translation Key
+
+1. Add key to relevant namespace JSON: `common.json`, `trade.json`, or `remittance.json` (both `th/` and `en/`)
+2. Use in component: `const { t } = useTranslation(); t('namespace:key')`
+3. No `lang === 'th' ? ... : ...` — use `t()` for all user-facing text
+
+## 🔧 How To: Add a New Validation Rule
+
+1. `src/validation/schemas.ts` — Add to relevant zod schema (`.min()`, `.max()`, `.refine()`, etc.)
+2. `src/constants.ts` — Add constant if value is reusable (in `VALIDATION` object)
+3. Existing forms auto-apply new rules via `zodResolver`
+
+## 🔧 How To: Add a New Language
+
+1. `src/i18n/locales/<lang>/` — Create `common.json`, `trade.json`, `remittance.json`
+2. `src/i18n/index.ts` — Add to `resources`, update `SupportedLang` type
+3. Done — language switcher auto-detects new locale
 
 ## 🔧 How To: Modify FIFO Engine
 
@@ -298,6 +344,11 @@ const updated = applyRemittance(gains[0], remit)
 10. **Type check before commit** — `npx tsc --noEmit` must pass
 11. **Follow SOLID** — SRP, OCP, LSP, ISP, DIP
 12. **Post-Task Checklist** — Dev must verify skills.md is up-to-date after every task
+13. **i18n via `t()`** — NEVER use `lang === 'th' ? '...' : '...'` — always use `t('namespace:key')`
+14. **Constants in `constants.ts`** — No magic strings for storage keys, providers, validation limits
+15. **Forms via react-hook-form** — No manual `useState` for form fields; use `register()` + `zodResolver`
+16. **Data validated on load** — localStorage → JSON.parse → zod schema → fallback `[]` on failure
+17. **Thai tax only** — `taxSlice.ts` uses Thai progressive brackets (0-35%), ฿160k default deduction
 
 ---
 

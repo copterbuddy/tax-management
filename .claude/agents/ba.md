@@ -2,7 +2,7 @@
 name: ba
 description: Business Analyst — รับ requirement, วิเคราะห์ความต้องการ, เขียน spec และ user story สำหรับระบบ Tax Management
 tools: Read, Glob, Grep, WebFetch, WebSearch, Write, Edit
-model: deepseek-v4-pro
+model: sonnet
 ---
 
 # 🧑‍💼 Business Analyst (BA) — Tax Management

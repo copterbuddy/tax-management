@@ -9,9 +9,11 @@ import {
   setSelectedTaxYear,
 } from '../store/tradeSlice';
 import { formatGainIndicator, validateSellLots } from '../engine/fifoEngine';
-import { useLanguage } from '../i18n/LanguageContext';
-import type { Lang } from '../i18n/translations';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
+import type { SupportedLang } from '../i18n/index';
+import i18next from 'i18next';
+import { persistLanguage } from '../i18n/index';
 import { KpiCard } from './KpiCard';
 import { TradeForm } from './TradeForm';
 import { TradeTable } from './TradeTable';
@@ -21,7 +23,7 @@ import { RemittanceLog } from './RemittanceLog';
 
 export function Dashboard() {
   const dispatch = useAppDispatch();
-  const { t, lang, setLang } = useLanguage();
+  const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const {
     trades,
@@ -88,32 +90,43 @@ export function Dashboard() {
     setShowRemitForm(false);
   }, [dispatch]);
 
-  const handleLangSwitch = useCallback((next: Lang) => {
-    setLang(next);
-  }, [setLang]);
+  const handleLangSwitch = useCallback((next: SupportedLang) => {
+    i18next.changeLanguage(next);
+    persistLanguage(next);
+  }, []);
 
-  // Data freshness: find most recent date in trades
+  const currentLang = i18next.language as SupportedLang;
+
+  // Data freshness
   const lastUpdated = useMemo(() => {
     if (trades.length === 0) return null;
     const dates = trades.map(tc => tc.date).sort().reverse();
     return dates[0];
   }, [trades]);
 
+  // Number formatter respecting locale
+  const fmtUSD = useCallback((n: number) =>
+    n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+  []);
+
+  // KPI labels are now all from translation keys — no inline lang conditions
+  const remitCount = summary?.totalRemittanceCount ?? 0;
+
   return (
     <div className="dashboard">
       {/* Header */}
       <header className="dashboard-header">
         <div className="header-left">
-          <h1>{t.appTitle}</h1>
-          <p className="header-subtitle">{t.appSubtitle}</p>
+          <h1>{t('common:appTitle')}</h1>
+          <p className="header-subtitle">{t('common:appSubtitle')}</p>
         </div>
         <div className="header-right">
           {/* Theme Toggle */}
           <button
             className="theme-toggle"
             onClick={toggleTheme}
-            title={theme === 'light' ? 'เปลี่ยนเป็นโหมดกลางคืน' : 'Switch to light mode'}
-            aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            title={theme === 'light' ? t('common:switchToDark') : t('common:switchToLight')}
+            aria-label={theme === 'light' ? t('common:switchToDark') : t('common:switchToLight')}
           >
             {theme === 'light' ? '🌙' : '☀️'}
           </button>
@@ -121,16 +134,16 @@ export function Dashboard() {
           {/* Language Switcher */}
           <div className="lang-switcher">
             <button
-              className={`lang-btn${lang === 'th' ? ' active' : ''}`}
+              className={`lang-btn${currentLang === 'th' ? ' active' : ''}`}
               onClick={() => handleLangSwitch('th')}
-              title="ภาษาไทย"
+              title={t('common:thaiLabel')}
             >
               TH
             </button>
             <button
-              className={`lang-btn${lang === 'en' ? ' active' : ''}`}
+              className={`lang-btn${currentLang === 'en' ? ' active' : ''}`}
               onClick={() => handleLangSwitch('en')}
-              title="English"
+              title={t('common:englishLabel')}
             >
               EN
             </button>
@@ -140,7 +153,7 @@ export function Dashboard() {
 
       {/* Year Filter + Data Freshness */}
       <div className="year-filter">
-        <label htmlFor="year-select">{t.taxYear}:</label>
+        <label htmlFor="year-select">{t('common:taxYear')}:</label>
         <select
           id="year-select"
           value={selectedTaxYear}
@@ -153,73 +166,88 @@ export function Dashboard() {
         {lastUpdated && (
           <span className="data-freshness">
             <span className="fresh-dot" />
-            {lang === 'th' ? 'ข้อมูลล่าสุด' : 'Last updated'}: {lastUpdated}
+            {t('common:lastUpdated')}: {lastUpdated}
           </span>
         )}
       </div>
 
-      {/* KPI Cards — เรียงตามความสำคัญ (F-pattern) */}
+      {/* KPI Cards */}
       <div className="kpi-grid">
         <KpiCard
-          title={lang === 'th' ? 'ภาษีที่ต้องจ่าย (ประมาณการ)' : 'Est. Tax Payable'}
+          title={t('common:kpiEstTax')}
           value={summary ? formatGainIndicator(summary.taxableGainTHB) : '฿0.00'}
-          subValue={summary ? `≈ $${summary.taxableGainUSD.toFixed(2)} USD` : undefined}
-          subValue2={summary && summary.totalRemittanceCount > 0
-            ? `${lang === 'th' ? 'จาก' : 'From'} ${summary.totalRemittanceCount} ${lang === 'th' ? 'รายการนำเข้า' : 'remittance(s)'}`
+          subValue={summary ? `≈ $${fmtUSD(summary.taxableGainUSD)} USD` : undefined}
+          subValue2={remitCount > 0
+            ? `${t('common:kpiRemitFrom')} ${remitCount} ${remitCount === 1 ? t('common:kpiRemitCountSingular') : t('common:kpiRemitCountPlural')}`
             : undefined}
           variant={summary?.taxableGainTHB > 0 ? 'highlight' : 'neutral'}
           icon="💰"
-          tooltip={lang === 'th'
-            ? 'คำนวณจากส่วนกำไรของเงินที่นำเข้าไทย × อัตราแลกเปลี่ยน ณ วันที่นำเข้า\nเฉพาะส่วนกำไรที่ต้องเสียภาษีตามประมวลรัษฎากร ป.161/2566'
-            : 'Calculated from the gain portion of funds remitted to Thailand × FX rate on remittance date\nOnly the gain portion is taxable per Revenue Code'}
+          tooltip={t('common:tooltipEstTax')}
         />
         <KpiCard
-          title={lang === 'th' ? 'นำเงินเข้าแล้ว (USD)' : 'Total Remitted (USD)'}
-          value={summary ? `$${summary.totalRemittedUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '$0.00'}
-          subValue={summary ? `${summary.totalSellCount} ${lang === 'th' ? 'รายการขาย' : 'sell trades'}` : undefined}
+          title={t('common:kpiRemitted')}
+          value={summary ? `$${fmtUSD(summary.totalRemittedUSD)}` : '$0.00'}
+          subValue={summary ? `${summary.totalSellCount} ${t('common:sellsCount')}` : undefined}
           variant="neutral"
           icon="🏦"
-          tooltip={lang === 'th'
-            ? 'ยอดเงินที่โอนเข้าประเทศไทยแล้ว (ทั้งเงินต้นและกำไร)\nใช้คำนวณภาษีตามหลักเกณฑ์การนำเงินเข้า'
-            : 'Total funds brought into Thailand (cost basis + gain)\nUsed to calculate tax per remittance rules'}
+          tooltip={t('common:tooltipRemitted')}
         />
         <KpiCard
-          title={lang === 'th' ? 'กำไร/ขาดทุน สุทธิ (USD)' : 'Net Gain/Loss (USD)'}
-          value={summary ? `$${summary.netGainUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '$0.00'}
+          title={t('common:kpiNetGain')}
+          value={summary ? `$${fmtUSD(summary.netGainUSD)}` : '$0.00'}
           subValue={summary?.netGainUSD !== 0 && summary
-            ? `${summary.totalBuyCount} ${lang === 'th' ? 'ซื้อ' : 'buys'} / ${summary.totalSellCount} ${lang === 'th' ? 'ขาย' : 'sells'}`
+            ? `${summary.totalBuyCount} ${t('common:buys')} / ${summary.totalSellCount} ${t('common:sells')}`
             : undefined}
           variant={summary?.netGainUSD > 0 ? 'positive' : summary?.netGainUSD < 0 ? 'negative' : 'neutral'}
           icon="📈"
-          tooltip={lang === 'th'
-            ? 'กำไรรวมทุกการขาย (USD) — ยังไม่หักส่วนที่นำเข้า\nและยังไม่คำนวณภาษี ขาดทุนหักลบกับกำไรไม่ได้'
-            : 'Total realized gain from all sells (USD)\nLosses cannot offset gains per Thai tax law'}
+          tooltip={t('common:tooltipNetGain')}
         />
         <KpiCard
-          title={lang === 'th' ? 'ยังไม่นำเข้า (USD)' : 'Not Yet Remitted (USD)'}
-          value={summary ? `$${(summary.totalRevenueUSD - summary.totalRemittedUSD).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '$0.00'}
-          subValue={lang === 'th' ? 'เงินอยู่ในบัญชีต่างประเทศ — ยังไม่ต้องเสียภาษี' : 'Funds still offshore — not yet taxable'}
+          title={t('common:kpiNotRemitted')}
+          value={summary ? `$${fmtUSD(summary.totalRevenueUSD - summary.totalRemittedUSD)}` : '$0.00'}
+          subValue={t('common:kpiNotRemittedSub')}
           variant="neutral"
           icon="🌏"
-          tooltip={lang === 'th'
-            ? 'เงินที่ได้จากการขายแต่ยังอยู่ในบัญชีต่างประเทศ\nยังไม่ต้องเสียภาษีจนกว่าจะโอนเข้าไทย'
-            : 'Sale proceeds still in foreign accounts\nNot taxable until remitted to Thailand'}
+          tooltip={t('common:tooltipNotRemitted')}
         />
       </div>
 
-      {/* Tabs: Trade Log | Remittance Log */}
+      {/* Provider KPI Row */}
+      {summary?.providerBreakdown && summary.providerBreakdown.length > 0 && (
+        <div className="kpi-grid kpi-provider-row">
+          {summary.providerBreakdown.map(pb => {
+            const pctText = summary.taxableGainTHB > 0
+              ? ` (${((pb.taxableGainTHB / summary.taxableGainTHB) * 100).toFixed(0)}%)`
+              : '';
+            return (
+              <KpiCard
+                key={pb.provider}
+                title={`🏢 ${pb.provider}`}
+                value={formatGainIndicator(pb.taxableGainTHB)}
+                subValue={`$${fmtUSD(pb.totalRemittedUSD)} remitted${pctText}`}
+                subValue2={pb.sellCount > 0
+                  ? `${pb.sellCount} sell${pb.sellCount !== 1 ? 's' : ''} | Net: ${pb.netGainUSD >= 0 ? '+' : ''}$${fmtUSD(pb.netGainUSD)}`
+                  : t('common:noData')}
+                variant={pb.taxableGainTHB > 0 ? 'positive' : pb.taxableGainTHB < 0 ? 'negative' : 'neutral'}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* Tabs */}
       <div className="tab-nav">
         <button
           className={`tab-btn ${activeTab === 'trades' ? 'active' : ''}`}
           onClick={() => setActiveTab('trades')}
         >
-          📊 {lang === 'th' ? 'บันทึกซื้อขาย' : 'Trade Log'}
+          📊 {t('common:tabTrades')}
         </button>
         <button
           className={`tab-btn ${activeTab === 'remittances' ? 'active' : ''}`}
           onClick={() => setActiveTab('remittances')}
         >
-          🏦 {lang === 'th' ? 'บันทึกนำเงินเข้า' : 'Remittance Log'}
+          🏦 {t('common:tabRemittances')}
         </button>
       </div>
 
@@ -249,6 +277,7 @@ export function Dashboard() {
             setEditingTrade(null);
           }}
           onValidate={handleValidate}
+          remainingLots={remainingLots}
         />
       )}
 
@@ -263,9 +292,9 @@ export function Dashboard() {
       {/* Confirm Delete Dialog */}
       {deleteConfirmId && (
         <ConfirmDialog
-          message={lang === 'th' ? 'คุณแน่ใจหรือไม่ว่าต้องการลบรายการนี้?' : 'Are you sure you want to delete this trade?'}
-          confirmLabel={lang === 'th' ? 'ลบรายการ' : 'Delete'}
-          cancelLabel={lang === 'th' ? 'ยกเลิก' : 'Cancel'}
+          message={t('common:confirmDelete')}
+          confirmLabel={t('common:delete')}
+          cancelLabel={t('common:cancel')}
           onConfirm={confirmDelete}
           onCancel={() => setDeleteConfirmId(null)}
           danger

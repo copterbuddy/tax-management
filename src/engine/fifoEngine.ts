@@ -262,6 +262,22 @@ export function computeTaxSummary(
 
   const { excludedLossesTHB } = computeTaxableGainsTHB(mergedGains);
 
+  // Provider breakdown — per-provider KPI
+  const providers = ['Dime', 'Liberator', 'FinansiaSyrus'] as const;
+  const providerBreakdown = providers.map(prov => {
+    const provGains = yearGains.filter(g => g.provider === prov);
+    const provRemitTHB = provGains.reduce((s, g) => s + g.taxableGainTHB, 0);
+    const provRemitUSD = provGains.reduce((s, g) => s + g.totalRemittedUSD, 0);
+    const provNetUSD = provGains.reduce((s, g) => s + g.gainUSD, 0);
+    return {
+      provider: prov,
+      taxableGainTHB: provRemitTHB,
+      totalRemittedUSD: provRemitUSD,
+      netGainUSD: provNetUSD,
+      sellCount: provGains.length,
+    };
+  });
+
   return {
     taxYear,
     totalRevenueUSD,
@@ -275,6 +291,7 @@ export function computeTaxSummary(
     totalBuyCount: yearTrades.filter(t => t.type === 'BUY').length,
     totalSellCount: yearTrades.filter(t => t.type === 'SELL').length,
     totalRemittanceCount: yearRemittances.length,
+    providerBreakdown,
   };
 }
 

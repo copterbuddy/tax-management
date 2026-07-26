@@ -59,6 +59,14 @@ export interface RealizedGainResult {
   taxableGainTHB: number; // Sum of (remitUSD × gainPercent × remitFX) across all remittances
 }
 
+export interface ProviderBreakdown {
+  provider: ProviderType;
+  taxableGainTHB: number;
+  totalRemittedUSD: number;
+  netGainUSD: number;
+  sellCount: number;
+}
+
 export interface TaxSummary {
   taxYear: number;
   totalRevenueUSD: number;
@@ -72,4 +80,5 @@ export interface TaxSummary {
   totalBuyCount: number;
   totalSellCount: number;
   totalRemittanceCount: number;
+  providerBreakdown: ProviderBreakdown[]; // Per-provider KPI
 }

@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import type { TradeTransaction, RealizedGainResult } from '../types/trade';
+import { useState, useEffect } from 'react';
+import type { TradeTransaction, RealizedGainResult, ProviderType } from '../types/trade';
 import { formatGainIndicator } from '../engine/fifoEngine';
-import { useLanguage } from '../i18n/LanguageContext';
+import { PROVIDER_OPTIONS } from '../constants';
+import { useTranslation } from 'react-i18next';
 
 interface TradeTableProps {
   trades: TradeTransaction[];
@@ -12,22 +13,30 @@ interface TradeTableProps {
   onAddNew: () => void;
 }
 
-function translateTradeType(type: string, t: any): string {
-  return type === 'BUY' ? t.tradeTypeBuy : t.tradeTypeSell;
-}
+type SortField = 'date' | 'symbol' | 'provider';
 
 export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAddNew }: TradeTableProps) {
-  const { t, lang } = useLanguage();
-  const [sortField, setSortField] = useState<'date' | 'symbol'>('date');
+  const { t } = useTranslation();
+  const [sortField, setSortField] = useState<SortField>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [providerFilter, setProviderFilter] = useState<ProviderType | 'All'>('All');
+
+  // Reset filter when year changes
+  useEffect(() => {
+    setProviderFilter('All');
+  }, [selectedYear]);
 
   const yearTrades = trades.filter(tc => tc.date.startsWith(String(selectedYear)));
+  const filteredTrades = providerFilter === 'All'
+    ? yearTrades
+    : yearTrades.filter(tc => tc.provider === providerFilter);
+
   const gainMap = new Map<string, RealizedGainResult>();
   for (const g of gains) {
     gainMap.set(g.sellTradeId, g);
   }
 
-  const handleSort = (field: 'date' | 'symbol') => {
+  const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     } else {
@@ -36,38 +45,61 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
     }
   };
 
-  const sortedTrades = [...yearTrades].sort((a, b) => {
-    const cmp = sortField === 'date'
-      ? a.date.localeCompare(b.date)
-      : a.symbol.localeCompare(b.symbol);
+  const sortedTrades = [...filteredTrades].sort((a, b) => {
+    let cmp: number;
+    if (sortField === 'date') {
+      cmp = a.date.localeCompare(b.date);
+    } else if (sortField === 'symbol') {
+      cmp = a.symbol.localeCompare(b.symbol);
+    } else {
+      cmp = a.provider.localeCompare(b.provider);
+    }
     return sortDir === 'asc' ? cmp : -cmp;
   });
 
   const totalBuys = yearTrades.filter(tc => tc.type === 'BUY').length;
   const totalSells = yearTrades.filter(tc => tc.type === 'SELL').length;
 
+  const translateTradeType = (type: string) =>
+    type === 'BUY' ? t('trade:tradeTypeBuy') : t('trade:tradeTypeSell');
+
   return (
     <div className="trade-table-section">
       <div className="trade-table-header">
         <div className="trade-table-title">
-          <h2>{t.tradeHistory} — {selectedYear}</h2>
+          <h2>{t('trade:tradeHistory')} — {selectedYear}</h2>
           <span className="trade-count">
-            {yearTrades.length} {t.trades}
-            ({totalBuys} {t.buys} / {totalSells} {t.sells})
+            {yearTrades.length} {t('trade:trades')}
+            ({totalBuys} {t('common:buys')} / {totalSells} {t('common:sells')})
+            {providerFilter !== 'All' && ` | ${providerFilter}: ${filteredTrades.length}`}
           </span>
         </div>
-        <button className="btn btn-primary" onClick={onAddNew}>
-          {t.addTrade}
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {/* Provider Filter */}
+          <select
+            value={providerFilter}
+            onChange={e => setProviderFilter(e.target.value as ProviderType | 'All')}
+            className="provider-filter"
+            aria-label="Filter by provider"
+          >
+            <option value="All">🏢 All Providers</option>
+            {PROVIDER_OPTIONS.map(p => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+          <button className="btn btn-primary" onClick={onAddNew}>
+            {t('trade:addTrade')}
+          </button>
+        </div>
       </div>
 
       {yearTrades.length === 0 ? (
         <div className="empty-state">
           <div className="empty-icon">📊</div>
-          <p>{t.noTrades} {selectedYear}</p>
-          <p className="empty-hint">{t.noTradesHint}</p>
+          <p>{t('trade:noTrades')} {selectedYear}</p>
+          <p className="empty-hint">{t('trade:noTradesHint')}</p>
           <button className="btn btn-primary" onClick={onAddNew}>
-            {lang === 'th' ? '➕ เพิ่มรายการแรก' : '➕ Add First Trade'}
+            {t('trade:addFirstTrade')}
           </button>
         </div>
       ) : (
@@ -76,21 +108,23 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
             <thead>
               <tr>
                 <th className="sortable" onClick={() => handleSort('date')}>
-                  {t.colDate} {sortField === 'date' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                  {t('trade:colDate')} {sortField === 'date' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                 </th>
                 <th className="sortable" onClick={() => handleSort('symbol')}>
-                  {t.colSymbol} {sortField === 'symbol' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                  {t('trade:colSymbol')} {sortField === 'symbol' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                 </th>
-                <th className="col-optional col-provider">{t.colProvider}</th>
-                <th>{t.colType}</th>
-                <th className="num">{t.colQty}</th>
-                <th className="num col-optional col-price">{t.colPrice}</th>
-                <th className="num col-optional col-fee">{t.colFee}</th>
-                <th className="num">{t.colTotal} (USD)</th>
-                <th className="num">Gain (USD)</th>
-                <th className="num col-optional col-remitted">Remitted</th>
-                <th className="num">Taxable THB</th>
-                <th>{t.colActions}</th>
+                <th className="sortable col-optional col-provider" onClick={() => handleSort('provider')}>
+                  {t('trade:colProvider')} {sortField === 'provider' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+                </th>
+                <th>{t('trade:colType')}</th>
+                <th className="num">{t('trade:colQty')}</th>
+                <th className="num col-optional col-price">{t('trade:colPrice')}</th>
+                <th className="num col-optional col-fee">{t('trade:colFee')}</th>
+                <th className="num">{t('trade:colTotal')}</th>
+                <th className="num">{t('trade:colGain')}</th>
+                <th className="num col-optional col-remitted">{t('trade:colRemitted')}</th>
+                <th className="num">{t('trade:colTaxable')}</th>
+                <th>{t('common:actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -110,7 +144,7 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                     <td className="col-optional col-provider">{trade.provider}</td>
                     <td>
                       <span className={`trade-type-badge ${trade.type.toLowerCase()}`}>
-                        {translateTradeType(trade.type, t)}
+                        {translateTradeType(trade.type)}
                       </span>
                     </td>
                     <td className="num">{trade.quantity}</td>
@@ -140,7 +174,7 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                           {formatGainIndicator(gain.taxableGainTHB)}
                         </span>
                       ) : gain && gain.gainUSD < 0 ? (
-                        <span className="taxable-no" title={t.taxableNo}>❌ Loss</span>
+                        <span className="taxable-no" title={t('trade:taxableNo')}>❌ {t('trade:loss')}</span>
                       ) : (
                         <span className="gain-na">-</span>
                       )}
@@ -149,14 +183,14 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                       <button
                         className="btn-icon btn-edit"
                         onClick={() => onEdit(trade)}
-                        title={lang === 'th' ? 'แก้ไขรายการ' : 'Edit trade'}
+                        title={t('common:edit')}
                       >
                         ✏️
                       </button>
                       <button
                         className="btn-icon btn-delete"
                         onClick={() => onDelete(trade.id)}
-                        title={lang === 'th' ? 'ลบรายการ' : 'Delete trade'}
+                        title={t('common:delete')}
                       >
                         🗑️
                       </button>
@@ -167,7 +201,7 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
             </tbody>
           </table>
 
-          {/* Mobile Card View (<640px) */}
+          {/* Mobile Card View */}
           <div className="trade-cards">
             {sortedTrades.map(trade => {
               const totalUSD = trade.type === 'BUY'
@@ -181,41 +215,41 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                   <div className="trade-card-header">
                     <span className="symbol-badge">{trade.symbol}</span>
                     <span className={`trade-type-badge ${trade.type.toLowerCase()}`}>
-                      {translateTradeType(trade.type, t)}
+                      {translateTradeType(trade.type)}
                     </span>
                     <span className="trade-card-provider">{trade.provider}</span>
                     <div className="trade-card-actions">
-                      <button className="btn-icon btn-edit" onClick={() => onEdit(trade)} title={lang === 'th' ? 'แก้ไข' : 'Edit'}>✏️</button>
-                      <button className="btn-icon btn-delete" onClick={() => onDelete(trade.id)} title={lang === 'th' ? 'ลบ' : 'Delete'}>🗑️</button>
+                      <button className="btn-icon btn-edit" onClick={() => onEdit(trade)} title={t('common:edit')}>✏️</button>
+                      <button className="btn-icon btn-delete" onClick={() => onDelete(trade.id)} title={t('common:delete')}>🗑️</button>
                     </div>
                   </div>
                   <div className="trade-card-body">
                     <div className="trade-card-row">
-                      <span className="card-label">{t.colDate}</span>
+                      <span className="card-label">{t('trade:colDate')}</span>
                       <span className="card-value">{trade.date}</span>
                     </div>
                     <div className="trade-card-row">
-                      <span className="card-label">{t.colQty}</span>
+                      <span className="card-label">{t('trade:colQty')}</span>
                       <span className="card-value">{trade.quantity} × ${trade.priceUSD.toFixed(2)}</span>
                     </div>
                     <div className="trade-card-row">
-                      <span className="card-label">{t.colFee}</span>
+                      <span className="card-label">{t('trade:colFee')}</span>
                       <span className="card-value">${trade.commissionUSD.toFixed(2)}</span>
                     </div>
                     <div className="trade-card-row">
-                      <span className="card-label">{t.colTotal} (USD)</span>
+                      <span className="card-label">{t('trade:colTotal')}</span>
                       <span className="card-value">${totalUSD.toFixed(2)}</span>
                     </div>
                     {gain && (
                       <>
                         <div className="trade-card-row">
-                          <span className="card-label">Gain (USD)</span>
+                          <span className="card-label">{t('trade:gainLabel')}</span>
                           <span className={`card-value ${gain.gainUSD >= 0 ? 'gain-positive' : 'gain-negative'}`}>
                             {gain.gainUSD >= 0 ? '+' : ''}${gain.gainUSD.toFixed(2)}
                           </span>
                         </div>
                         <div className="trade-card-row">
-                          <span className="card-label">Remitted</span>
+                          <span className="card-label">{t('trade:remittedLabel')}</span>
                           <span className="card-value">
                             <div className="remit-progress" style={{ display: 'inline-flex', width: 120 }}>
                               <div className="remit-bar" style={{ width: `${gain.sellRevenueUSD > 0 ? (gain.totalRemittedUSD / gain.sellRevenueUSD) * 100 : 0}%` }} />
@@ -224,9 +258,9 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                           </span>
                         </div>
                         <div className="trade-card-row">
-                          <span className="card-label">Taxable THB</span>
+                          <span className="card-label">{t('trade:taxableLabel')}</span>
                           <span className="card-value gain-positive">
-                            {gain.taxableGainTHB > 0 ? formatGainIndicator(gain.taxableGainTHB) : '❌ Loss'}
+                            {gain.taxableGainTHB > 0 ? formatGainIndicator(gain.taxableGainTHB) : `❌ ${t('trade:loss')}`}
                           </span>
                         </div>
                       </>

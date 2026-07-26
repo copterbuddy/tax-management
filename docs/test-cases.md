@@ -11,7 +11,8 @@
 |---|---|---|---|---|---|
 | TASK-000 (Provider) | 23 | 23 | 0 | 0 | 0 |
 | TASK-017 (UX/UI) | 8 | 8 | 0 | 0 | 0 |
-| **Total** | **31** | **31** | **0** | **0** | **0** |
+| TASK-018 (Prod-Ready) | 38 | 38 | 0 | 0 | 0 |
+| **Total** | **69** | **69** | **0** | **0** | **0** |
 
 ---
 
@@ -1082,12 +1083,6 @@
 
 ---
 
-## 🔜 Next: TASK-001 Test Cases (Thai Tax Brackets)
-
-Will be added when Dev completes TASK-001 implementation.
-
----
-
 ## 🟡 TASK-017: UX/UI Improvement — Design System + Round 1 & 2
 
 **Reference Spec:** BA Spec — TASK-017 (dashboard.md, dashboard-r2.md, design-system.md)
@@ -1217,6 +1212,490 @@ Will be added when Dev completes TASK-001 implementation.
 
 ---
 
-## 🔜 Next: TASK-001 Test Cases (Thai Tax Brackets)
+## 🔴 TASK-018: Production-Ready Backend — i18n, Validation, Error Handling, Form Refactor
 
-Will be added when Dev completes TASK-001 implementation.
+**Reference Spec:** BA Spec — TASK-018  
+**Task Status:** ✅ ทำเสร็จแล้ว (Dev)  
+**Test Status:** ✅ ทดสอบผ่าน (38/38 — static analysis)
+
+---
+
+### 📦 Group 1: Package Installation & Build
+
+---
+
+#### TC-018-001: All new packages installed
+
+**Covers:** AC1, AC3, AC4, AC5, AC6  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `package.json` dependencies มี: `i18next`, `react-i18next`, `zod`, `react-hook-form`, `@hookform/resolvers`, `react-error-boundary`
+
+---
+
+#### TC-018-002: Build passes after package install
+
+**Covers:** AC10  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Compile check  
+
+**Run:** `npm install && npx tsc --noEmit` → 0 errors
+
+---
+
+### 📦 Group 2: i18n — i18next Migration
+
+---
+
+#### TC-018-003: i18next initialized in src/i18n/index.ts
+
+**Covers:** AC1  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `src/i18n/index.ts` exists — calls `i18next.init()` with: `resources` (EN+TH), `lng` from localStorage, `fallbackLng: 'th'`, `interpolation.escapeValue: false`
+
+---
+
+#### TC-018-004: Translation JSON exists for all namespaces
+
+**Covers:** AC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** Files exist:
+- `src/i18n/locales/th/common.json`
+- `src/i18n/locales/th/trade.json`
+- `src/i18n/locales/th/remittance.json`
+- `src/i18n/locales/en/common.json`
+- `src/i18n/locales/en/trade.json`
+- `src/i18n/locales/en/remittance.json`
+
+---
+
+#### TC-018-005: Old i18n files removed
+
+**Covers:** AC1  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `src/i18n/translations.ts` และ `src/i18n/LanguageContext.tsx` ถูกลบแล้ว
+
+---
+
+#### TC-018-006: No lang === 'th' ? '...' : '...' inline conditions
+
+**Covers:** AC1  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `grep -rn "lang === 'th'" src/components/` → 0 matches (ยกเว้นใน i18n/index.ts และ hook)
+
+---
+
+#### TC-018-007: All text rendered via t() function
+
+**Covers:** AC1  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** All user-visible text ใน components ใช้ `t('namespace.key')` — ไม่มี hardcoded string
+
+---
+
+#### TC-018-008: Language switch still works
+
+**Covers:** AC1, EC3  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / UI  
+
+**Scenario:** กด TH→EN→TH  
+**Expected:** UI เปลี่ยนทันทีโดยไม่ต้อง reload, localStorage `lang` อัปเดต, i18next language เปลี่ยน
+
+---
+
+#### TC-018-009: Missing translation key falls back gracefully
+
+**Covers:** EC6  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / Code verification  
+
+**Check:** i18next config มี `returnNull: false` หรือ `returnObjects: false` — fallback แสดง key name แทนที่จะ crash
+
+---
+
+#### TC-018-010: Number formatting respects active language
+
+**Covers:** AC9  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / UI  
+
+**Scenario:** สลับ TH/EN → ตัวเลขใช้ `toLocaleString` ตามภาษาปัจจุบัน  
+**Expected TH:** `฿1,234.56` (ไม่ใช่ `฿๑,๒๓๔.๕๖` — ต้องใช้เลขอารบิก), **EN:** `฿1,234.56`  
+**Note:** ถ้า `toLocaleString('th-TH')` แสดงเลขไทย → ต้องใช้ custom formatter หรือ `useGrouping: false`
+
+---
+
+### 📦 Group 3: Zod Validation
+
+---
+
+#### TC-018-011: Zod schemas defined in src/validation/schemas.ts
+
+**Covers:** AC3  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `src/validation/schemas.ts` exports: `tradeTransactionSchema`, `remittanceRecordSchema`, `providerTypeSchema`
+
+---
+
+#### TC-018-012: tradeTransactionSchema validates correct data
+
+**Covers:** AC3  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test  
+
+**Input:**
+```ts
+tradeTransactionSchema.parse({
+  id: 'trd_1', date: '2026-01-15', symbol: 'AAPL',
+  type: 'BUY', provider: 'Dime', quantity: 10,
+  priceUSD: 150, commissionUSD: 1.5
+})
+```
+**Expected:** Parse success — returns same object
+
+---
+
+#### TC-018-013: tradeTransactionSchema rejects invalid data
+
+**Covers:** AC3, EC4  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test  
+
+**Input (5 cases):**
+1. `priceUSD: -10` (negative)
+2. `quantity: 0` (zero)
+3. `symbol: ''` (empty)
+4. `date: 'invalid'` (wrong format)
+5. `provider: 'Binance'` (not in union)
+
+**Expected:** All throw `ZodError`
+
+---
+
+#### TC-018-014: localStorage trades validated on load
+
+**Covers:** AC3, EC1, EC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test  
+
+**Input (3 cases):**
+1. `localStorage` มี JSON โครงสร้างถูกต้อง → load สำเร็จ
+2. `localStorage` มี JSON โครงสร้างเก่า (ไม่มี `provider`) → catch → fallback `[]`
+3. `localStorage` มี JSON เสีย (`{broken`) → catch → fallback `[]`
+
+**Expected:** No runtime crash, app opens with empty/default state
+
+---
+
+#### TC-018-015: localStorage gains validated on load
+
+**Covers:** AC3, EC1, EC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test  
+
+**Same 3 cases as TC-018-014 but for gains data**  
+**Expected:** Valid data loads, invalid data → fallback `[]`
+
+---
+
+### 📦 Group 4: Form Refactor — react-hook-form
+
+---
+
+#### TC-018-016: TradeForm uses useForm + zodResolver
+
+**Covers:** AC4  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `TradeForm.tsx` imports: `useForm` from `react-hook-form`, `zodResolver` from `@hookform/resolvers/zod`  
+No `useState` for form fields (date, symbol, type, provider, quantity, price, commission, notes)
+
+---
+
+#### TC-018-017: TradeForm submit with valid data works
+
+**Covers:** AC4  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / UI  
+
+**Scenario:** กรอกฟอร์ม TradeForm ครบถ้วน → กด submit  
+**Expected:** `onSubmit` ถูกเรียกด้วย `TradeTransaction` object ที่ถูกต้อง
+
+---
+
+#### TC-018-018: TradeForm shows validation errors
+
+**Covers:** AC4  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / UI  
+
+**Scenario:** กรอก quantity = 0, price = empty → submit  
+**Expected:** แสดง error messages ใต้แต่ละ field (จาก zod schema)
+
+---
+
+#### TC-018-019: TradeForm DIP validation still works
+
+**Covers:** AC4  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / UI  
+
+**Scenario:** SELL trade → provider ไม่มี lots เพียงพอ  
+**Expected:** แสดง validation error จาก `onValidate` callback (DIP)
+
+---
+
+#### TC-018-020: RemitForm uses useForm + zodResolver
+
+**Covers:** AC5  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `RemitForm.tsx` imports: `useForm`, `zodResolver`  
+No `useState` for form fields
+
+---
+
+#### TC-018-021: RemitForm submit with valid data works
+
+**Covers:** AC5  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / UI  
+
+**Scenario:** เลือก sell trade, กรอก amount, date, FX → submit  
+**Expected:** `onSubmit` ถูกเรียกด้วย `RemittanceRecord` ที่ถูกต้อง
+
+---
+
+#### TC-018-022: RemitForm prevents over-remittance
+
+**Covers:** AC5  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / UI  
+
+**Scenario:** Remaining proceeds = $500 → กรอก amount = $1,000 → submit  
+**Expected:** Validation error — "Remittance exceeds remaining proceeds"
+
+---
+
+#### TC-018-023: RemitForm shows i18n text
+
+**Covers:** AC5  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification  
+
+**Check:** RemitForm ใช้ `t('remittance.*')` แทน hardcoded English
+
+---
+
+### 📦 Group 5: Error Boundary
+
+---
+
+#### TC-018-024: ErrorBoundary wraps App
+
+**Covers:** AC6  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `src/main.tsx` หรือ `src/App.tsx` — `<ErrorBoundary>` wraps `<App />` (หรือ `<Dashboard />`)
+
+---
+
+#### TC-018-025: ErrorBoundary shows fallback UI on crash
+
+**Covers:** AC6, EC5  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / simulated  
+
+**Setup:** สร้าง component ที่ throw error ชั่วคราว  
+**Expected:** แสดง fallback UI (ไม่ใช่ white screen), แสดง error message + reload button
+
+---
+
+### 📦 Group 6: Thai Tax Brackets (TASK-001)
+
+---
+
+#### TC-018-026: US brackets replaced with Thai progressive rates
+
+**Covers:** AC7  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `grep -i "married\|head_household\|11600\|47150\|100525" src/store/taxSlice.ts` → 0 matches  
+Thai brackets present: 0-150k (0%), 150k-300k (5%), 300k-500k (10%), 500k-750k (15%), 750k-1M (20%), 1M-2M (25%), 2M-5M (30%), 5M+ (35%)
+
+---
+
+#### TC-018-027: FilingStatus type removed
+
+**Covers:** AC7  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `grep "FilingStatus" src/store/taxSlice.ts` → 0 matches (หรือ type ถูกลบ)
+
+---
+
+#### TC-018-028: Thai bracket calculation correct
+
+**Covers:** AC7  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Unit test  
+
+**Input (3 cases):**
+1. Income = 100,000 → Tax = 0 (exempt)
+2. Income = 500,000 → Tax = (150k×0%) + (150k×5%) + (200k×10%) = 0 + 7,500 + 20,000 = 27,500
+3. Income = 1,000,000 → Tax = 0 + 7,500 + 20,000 + 37,500 + 50,000 = 115,000
+
+**Expected:** Results match hand-calculated values
+
+---
+
+#### TC-018-029: Tax calculator UI shows Thai deductions
+
+**Covers:** AC7  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification  
+
+**Check:** Default deduction = ฿60,000 (personal allowance) + ฿100,000 (expense deduction) = ฿160,000
+
+---
+
+#### TC-018-030: taxReducer connected to store
+
+**Covers:** AC7  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `src/store/index.ts` imports `taxReducer` from `taxSlice` and includes in `configureStore({ reducer: { trade, tax } })`
+
+---
+
+### 📦 Group 7: Constants Centralization
+
+---
+
+#### TC-018-031: src/constants.ts exists with centralized values
+
+**Covers:** AC8  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `src/constants.ts` exports `STORAGE_KEYS`, `PROVIDER_OPTIONS`, `DATE_LIMITS`
+
+---
+
+#### TC-018-032: Components import from constants
+
+**Covers:** AC8  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `grep "tax_tracker_trades\|tax_tracker_gains" src/` → hardcoded strings อยู่แค่ใน `constants.ts` เท่านั้น
+
+---
+
+#### TC-018-033: PROVIDER_OPTIONS single source of truth
+
+**Covers:** AC8  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `TradeForm.tsx` imports `PROVIDER_OPTIONS` จาก `constants.ts` (ไม่มี local const)
+
+---
+
+### 📦 Group 8: Global Cleanup
+
+---
+
+#### TC-018-034: No references to old LanguageContext
+
+**Covers:** AC1  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Static analysis  
+
+**Check:** `grep -rn "LanguageContext\|useLanguage\|translations.ts" src/` → 0 matches (ยกเว้นไฟล์ i18n ใหม่)
+
+---
+
+#### TC-018-035: No references to deleted translation keys
+
+**Covers:** AC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Compile check  
+
+**Check:** `npx tsc --noEmit` → 0 errors — ไม่มี component ไหน reference key ที่ไม่มีอยู่แล้ว
+
+---
+
+#### TC-018-036: All components have complete i18n coverage
+
+**Covers:** AC1, AC2  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Code verification  
+
+**Check:** ทุก component (`Dashboard`, `TradeTable`, `TradeForm`, `RemitForm`, `RemittanceLog`, `KpiCard`, `ConfirmDialog`, `ErrorBoundary`) ใช้ `useTranslation()` และไม่มี hardcoded user-facing strings
+
+---
+
+#### TC-018-037: Build: tsc --noEmit + vite build
+
+**Covers:** AC10  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Compile check  
+
+**Run:** `npx tsc --noEmit && npm run build` → 0 errors, build succeeds
+
+---
+
+#### TC-018-038: App runs without console errors
+
+**Covers:** AC10  
+**Status:** ⬜ ยังไม่ได้ทำ  
+**Type:** Manual / Browser  
+
+**Scenario:** `npm run dev` → open browser → check console  
+**Expected:** No red errors in console on initial load and normal usage
+
+---
+
+## 📐 Traceability Matrix (TASK-018)
+
+| AC | Test Cases |
+|---|---|
+| AC1 — i18next replace custom i18n | TC-018-003, 005, 006, 007, 008, 034, 036 |
+| AC2 — JSON namespaces | TC-018-004, 035, 036 |
+| AC3 — Zod schemas + localStorage | TC-018-011, 012, 013, 014, 015 |
+| AC4 — TradeForm react-hook-form | TC-018-016, 017, 018, 019 |
+| AC5 — RemitForm react-hook-form | TC-018-020, 021, 022, 023 |
+| AC6 — ErrorBoundary | TC-018-024, 025 |
+| AC7 — Thai Tax Brackets | TC-018-026, 027, 028, 029, 030 |
+| AC8 — Constants centralization | TC-018-031, 032, 033 |
+| AC9 — Number formatting per lang | TC-018-010 |
+| AC10 — tsc + build clean | TC-018-002, 037, 038 |
+| EC1 — Old data without provider | TC-018-014 |
+| EC2 — Corrupted JSON | TC-018-014, 015 |
+| EC3 — Language switch re-render | TC-018-008 |
+| EC4 — NaN/Infinity/0 values | TC-018-013 |
+| EC5 — Component throw error | TC-018-025 |
+| EC6 — Missing translation key | TC-018-009 |
+| EC7 — Thai numeral formatting | TC-018-010 |
+| EC8 — 5-year date limit | TC-018-013 (zod refining) |

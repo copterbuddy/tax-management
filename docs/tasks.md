@@ -132,7 +132,8 @@
 
 **Priority:** 🔴 P0  
 **Effort:** M (3-5 files)  
-**Status:** ⬜ ยังไม่ได้ทำ  
+**Status:** ✅ ทำเสร็จแล้ว (absorbed into TASK-018)  
+**Completed:** 2026-07-26  
 **Depends on:** None
 
 **User Story:**
@@ -163,7 +164,8 @@
 
 **Priority:** 🔴 P0  
 **Effort:** S (1 file)  
-**Status:** ⬜ ยังไม่ได้ทำ  
+**Status:** ✅ ทำเสร็จแล้ว  
+**Completed:** 2026-07-26  
 **Depends on:** TASK-000 ✅
 
 **User Story:**
@@ -193,7 +195,8 @@
 
 **Priority:** 🟡 P1  
 **Effort:** M (2-3 files)  
-**Status:** ⬜ ยังไม่ได้ทำ  
+**Status:** ✅ ทำเสร็จแล้ว  
+**Completed:** 2026-07-26  
 **Depends on:** TASK-000 ✅
 
 **User Story:**
@@ -222,7 +225,8 @@
 
 **Priority:** 🟡 P1  
 **Effort:** S (1 file)  
-**Status:** ⬜ ยังไม่ได้ทำ  
+**Status:** ✅ ทำเสร็จแล้ว  
+**Completed:** 2026-07-26  
 **Depends on:** TASK-000 ✅
 
 **User Story:**
@@ -382,12 +386,34 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 
 ---
 
+### TASK-018: Production-Ready Backend — i18n, Validation, Error Handling, Form Refactor
+
+**Priority:** 🔴 P0
+**Effort:** XL (15+ files: 10 new, 10+ modified)
+**Status:** ✅ ทำเสร็จแล้ว
+**Completed:** 2026-07-26
+**Depends on:** TASK-012 ✅ (i18n context already exists)
+
+**User Story:**
+> As a developer, I want a production-ready codebase with proper i18n (no if/else), runtime validation, centralized error handling, and type-safe form management — so the app scales without accumulating technical debt.
+
+**Scope:**
+1. Replace custom i18n with `i18next` + `react-i18next` (ICU, pluralization, namespace)
+2. Add `zod` for runtime schema validation (localStorage data, form inputs)
+3. Add `react-hook-form` + `@hookform/resolvers` for form state management
+4. Add `react-error-boundary` for graceful error handling
+5. Implement TASK-001 (Thai Tax Brackets) — replace dead US code
+6. Centralize constants (storage keys, config)
+7. Remove all `lang === 'th' ? '...' : '...'` inline conditions — use translation keys
+
+---
+
 ## 📊 Summary
 
 | Priority | Count | Done | Pending | Tasks |
 |---|---|---|---|---|
-| 🔴 P0 | 4 | 2 | 2 | TASK-000 ✅, TASK-011 ✅, TASK-001 ⬜, TASK-002 ⬜ |
-| 🟡 P1 | 4 | 2 | 2 | TASK-012 ✅, TASK-017 ✅, TASK-003 ⬜, TASK-004 ⬜ |
+| 🔴 P0 | 5 | 5 | 0 | TASK-000 ✅, TASK-011 ✅, TASK-001 ✅, TASK-018 ✅, TASK-002 ✅ |
+| 🟡 P1 | 4 | 4 | 0 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅ |
 | 🟢 P2 | 3 | 0 | 3 | TASK-005 ⬜, TASK-006 ⬜, TASK-007 ⬜ |
 | ⚪ P3 | 3 | 0 | 3 | TASK-008 ⬜, TASK-009 ⬜, TASK-010 ⬜ |
-| **Total** | **14** | **4** | **10** | |
+| **Total** | **15** | **9** | **6** | |

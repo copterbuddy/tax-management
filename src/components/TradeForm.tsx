@@ -1,116 +1,123 @@
-import { useState, useEffect, useMemo } from 'react';
-import type { TradeTransaction, TradeType, ProviderType } from '../types/trade';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useEffect, useMemo } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import type { TradeTransaction, TradeType, ProviderType, FifoLot } from '../types/trade';
+import { PROVIDER_OPTIONS, DATE_LIMITS, VALIDATION } from '../constants';
+import { useTranslation } from 'react-i18next';
 
-// OCP: Centralized provider list — add new providers here only
-const PROVIDER_OPTIONS: ProviderType[] = ['Dime', 'Liberator', 'FinansiaSyrus'];
+// ─── Form Schema ───────────────────────────────────────────────────────────
+
+const tradeFormSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date'),
+  symbol: z.string().min(1, 'Symbol is required').max(VALIDATION.SYMBOL_MAX_LENGTH),
+  type: z.enum(['BUY', 'SELL']),
+  provider: z.enum(PROVIDER_OPTIONS as [string, ...string[]]),
+  quantity: z.number().positive('Must be positive').max(VALIDATION.QUANTITY_MAX),
+  priceUSD: z.number().min(VALIDATION.PRICE_MIN).max(VALIDATION.PRICE_MAX),
+  commissionUSD: z.number().min(0),
+  notes: z.string().optional(),
+});
+
+type TradeFormData = z.infer<typeof tradeFormSchema>;
+
+// ─── Props ─────────────────────────────────────────────────────────────────
 
 interface TradeFormProps {
   trade?: TradeTransaction | null;
   onSubmit: (trade: TradeTransaction) => void;
   onCancel: () => void;
-  /** DIP: Optional external validator — caller injects validation logic */
   onValidate?: (trade: TradeTransaction) => string | null;
+  /** DIP: Pass remaining lots for real-time provider availability display */
+  remainingLots?: FifoLot[];
 }
 
 function generateId(): string {
-  return `trd_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  return `trd_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 }
 
-export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormProps) {
-  const { t } = useLanguage();
+// ─── Component ─────────────────────────────────────────────────────────────
 
-  // Date constraints: new trades limited to last 5 years, edits keep original date
+export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots = [] }: TradeFormProps) {
+  const { t } = useTranslation();
+
   const dateConstraints = useMemo(() => {
-    const today = new Date().toISOString().substring(0, 10); // YYYY-MM-DD
+    const today = new Date().toISOString().substring(0, 10);
     const fiveYearsAgo = new Date();
-    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - 5);
+    fiveYearsAgo.setFullYear(fiveYearsAgo.getFullYear() - DATE_LIMITS.MAX_PAST_YEARS);
     const minDate = fiveYearsAgo.toISOString().substring(0, 10);
 
     if (trade) {
-      // Editing: allow original date even if > 5 years old
       return { min: trade.date < minDate ? trade.date : minDate, max: today };
     }
-    // New trade: limit to last 5 years
     return { min: minDate, max: today };
   }, [trade]);
 
-  const [date, setDate] = useState('');
-  const [symbol, setSymbol] = useState('');
-  const [type, setType] = useState<TradeType>('BUY');
-  const [provider, setProvider] = useState<ProviderType>('Dime');
-  const [quantity, setQuantity] = useState('');
-  const [priceUSD, setPriceUSD] = useState('');
-  const [commissionUSD, setCommissionUSD] = useState('');
-  const [notes, setNotes] = useState('');
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const {
+    register,
+    handleSubmit,
+    control,
+    reset,
+    watch,
+    setError,
+    formState: { errors },
+  } = useForm<TradeFormData>({
+    resolver: zodResolver(tradeFormSchema),
+    defaultValues: {
+      date: trade?.date ?? new Date().toISOString().substring(0, 10),
+      symbol: trade?.symbol ?? '',
+      type: (trade?.type as 'BUY' | 'SELL') ?? 'BUY',
+      provider: (trade?.provider as string) ?? 'Dime',
+      quantity: trade?.quantity ?? 0,
+      priceUSD: trade?.priceUSD ?? 0,
+      commissionUSD: trade?.commissionUSD ?? 0,
+      notes: trade?.notes ?? '',
+    },
+  });
 
+  // Reset form when trade prop changes (edit vs add)
   useEffect(() => {
-    if (trade) {
-      setDate(trade.date);
-      setSymbol(trade.symbol);
-      setType(trade.type);
-      setProvider(trade.provider);
-      setQuantity(trade.quantity.toString());
-      setPriceUSD(trade.priceUSD.toString());
-      setCommissionUSD(trade.commissionUSD.toString());
-      setNotes(trade.notes || '');
-    } else {
-      setDate(new Date().toISOString().substring(0, 10));
-      setSymbol('');
-      setType('BUY');
-      setProvider('Dime');
-      setQuantity('');
-      setPriceUSD('');
-      setCommissionUSD('0');
-      setNotes('');
-    }
-    setErrors({});
-    setValidationError(null);
-  }, [trade]);
+    reset({
+      date: trade?.date ?? new Date().toISOString().substring(0, 10),
+      symbol: trade?.symbol ?? '',
+      type: (trade?.type as 'BUY' | 'SELL') ?? 'BUY',
+      provider: (trade?.provider as string) ?? 'Dime',
+      quantity: trade?.quantity ?? 0,
+      priceUSD: trade?.priceUSD ?? 0,
+      commissionUSD: trade?.commissionUSD ?? 0,
+      notes: trade?.notes ?? '',
+    });
+  }, [trade, reset]);
 
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (!date) newErrors.date = 'Date is required';
-    if (!symbol.trim()) newErrors.symbol = 'Symbol is required';
-    if (!quantity || isNaN(Number(quantity)) || Number(quantity) <= 0) {
-      newErrors.quantity = 'Quantity must be a positive number';
-    }
-    if (!priceUSD || isNaN(Number(priceUSD)) || Number(priceUSD) <= 0) {
-      newErrors.priceUSD = 'Price must be a positive number';
-    }
-    if (commissionUSD === '' || isNaN(Number(commissionUSD)) || Number(commissionUSD) < 0) {
-      newErrors.commissionUSD = 'Fee must be a non-negative number';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setValidationError(null);
-
-    if (!validate()) return;
-
+  const onFormSubmit = (data: TradeFormData) => {
     const tradeData: TradeTransaction = {
       id: trade?.id || generateId(),
-      date,
-      symbol: symbol.trim().toUpperCase(),
-      type,
-      provider,
-      quantity: Number(quantity),
-      priceUSD: Number(priceUSD),
-      commissionUSD: Number(commissionUSD),
-      notes: notes.trim() || undefined,
+      date: data.date,
+      symbol: data.symbol.trim().toUpperCase(),
+      type: data.type as TradeType,
+      provider: data.provider as ProviderType,
+      quantity: Number(data.quantity),
+      priceUSD: Number(data.priceUSD),
+      commissionUSD: Number(data.commissionUSD),
+      notes: data.notes?.trim() || undefined,
     };
 
-    // DIP: Delegate business validation to the caller via injected callback
-    if (type === 'SELL' && onValidate) {
+    // Check real-time availability BEFORE calling onValidate
+    if (tradeData.type === 'SELL') {
+      const available = getAvailableQty(tradeData.symbol, tradeData.provider);
+      if (available !== null && tradeData.quantity > available) {
+        setError('quantity', {
+          message: `Insufficient lots — only ${available} shares of ${tradeData.symbol} available from ${tradeData.provider}`,
+        });
+        return;
+      }
+    }
+
+    // DIP: Delegate business validation via injected callback
+    if (tradeData.type === 'SELL' && onValidate) {
       const validationMessage = onValidate(tradeData);
       if (validationMessage) {
-        setValidationError(validationMessage);
+        setError('root', { message: validationMessage });
         return;
       }
     }
@@ -118,138 +125,179 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate }: TradeFormPr
     onSubmit(tradeData);
   };
 
-    return (
+  // ─── Real-time Provider Availability ────────────────────────────────────
+
+  const watchedType = watch('type');
+  const watchedSymbol = watch('symbol');
+  const watchedProvider = watch('provider');
+
+  const getAvailableQty = (sym: string, prov: string): number | null => {
+    if (!sym) return null;
+    const lots = remainingLots.filter(
+      l => l.symbol === sym.toUpperCase() && l.provider === prov
+    );
+    return lots.length > 0 ? lots.reduce((sum, l) => sum + l.remainingQuantity, 0) : 0;
+  };
+
+  const currentAvailableQty = watchedType === 'SELL'
+    ? getAvailableQty(watchedSymbol, watchedProvider)
+    : null;
+
+  const hasQuantityError = !!errors.quantity || (watchedType === 'SELL' && currentAvailableQty !== null && currentAvailableQty === 0);
+
+  return (
     <div className="trade-form-overlay">
       <div className="trade-form-modal">
         <div className="trade-form-header">
-          <h2>{trade ? t.formEditTitle : t.formAddTitle}</h2>
-          <button className="btn-close" onClick={onCancel} aria-label="Close">&times;</button>
+          <h2>{trade ? t('trade:formEditTitle') : t('trade:formAddTitle')}</h2>
+          <button className="btn-close" onClick={onCancel} aria-label={t('common:close')}>&times;</button>
         </div>
-        <form onSubmit={handleSubmit} className="trade-form">
+        <form onSubmit={handleSubmit(onFormSubmit)} className="trade-form">
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="trade-date">{t.formDate}</label>
+              <label htmlFor="trade-date">{t('trade:formDate')}</label>
               <input
                 id="trade-date"
                 type="date"
-                value={date}
                 min={dateConstraints.min}
                 max={dateConstraints.max}
-                onChange={e => setDate(e.target.value)}
+                {...register('date')}
                 className={errors.date ? 'input-error' : ''}
               />
-              {errors.date && <span className="error-msg">{errors.date}</span>}
+              {errors.date && <span className="error-msg">{errors.date.message}</span>}
             </div>
             <div className="form-group">
-              <label htmlFor="trade-symbol">{t.formSymbol}</label>
+              <label htmlFor="trade-symbol">{t('trade:formSymbol')}</label>
               <input
                 id="trade-symbol"
                 type="text"
-                value={symbol}
-                onChange={e => setSymbol(e.target.value)}
                 placeholder="e.g. AAPL"
+                {...register('symbol')}
                 className={errors.symbol ? 'input-error' : ''}
               />
-              {errors.symbol && <span className="error-msg">{errors.symbol}</span>}
+              {errors.symbol && <span className="error-msg">{errors.symbol.message}</span>}
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="trade-type">{t.formTradeType}</label>
-              <select
-                id="trade-type"
-                value={type}
-                onChange={e => setType(e.target.value as TradeType)}
-              >
-                <option value="BUY">{t.tradeTypeBuy}</option>
-                <option value="SELL">{t.tradeTypeSell}</option>
-              </select>
+              <label htmlFor="trade-type">{t('trade:formTradeType')}</label>
+              <Controller
+                name="type"
+                control={control}
+                render={({ field }) => (
+                  <select id="trade-type" {...field}>
+                    <option value="BUY">{t('trade:tradeTypeBuy')}</option>
+                    <option value="SELL">{t('trade:tradeTypeSell')}</option>
+                  </select>
+                )}
+              />
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="trade-provider">{t.formProvider}</label>
-              <select
-                id="trade-provider"
-                value={provider}
-                onChange={e => setProvider(e.target.value as ProviderType)}
-              >
-                {PROVIDER_OPTIONS.map(p => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
+              <label htmlFor="trade-provider">{t('trade:formProvider')}</label>
+              <Controller
+                name="provider"
+                control={control}
+                render={({ field }) => (
+                  <select id="trade-provider" {...field}>
+                    {PROVIDER_OPTIONS.map(p => {
+                      const label = p === 'Dime' ? t('trade:providerDime') :
+                                    p === 'Liberator' ? t('trade:providerLiberator') :
+                                    t('trade:providerFinansiaSyrus');
+                      const availQty = watchedType === 'SELL' && watchedSymbol
+                        ? getAvailableQty(watchedSymbol, p)
+                        : null;
+                      const availText = availQty !== null
+                        ? ` (${availQty} ${watchedSymbol} ${t('common:available') ?? 'available'})`
+                        : '';
+                      return (
+                        <option key={p} value={p}>{label}{availText}</option>
+                      );
+                    })}
+                  </select>
+                )}
+              />
+              {watchedType === 'SELL' && watchedSymbol && currentAvailableQty !== null && currentAvailableQty === 0 && (
+                <span className="error-msg">
+                  {t('common:noLotsAvailable') ?? `No ${watchedSymbol} lots available from ${watchedProvider}`}
+                </span>
+              )}
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="trade-quantity">{t.formQuantity}</label>
+              <label htmlFor="trade-quantity">{t('trade:formQuantity')}</label>
               <input
                 id="trade-quantity"
                 type="number"
                 step="any"
                 min="0"
-                value={quantity}
-                onChange={e => setQuantity(e.target.value)}
                 placeholder="e.g. 10"
+                {...register('quantity', { valueAsNumber: true })}
                 className={errors.quantity ? 'input-error' : ''}
               />
-              {errors.quantity && <span className="error-msg">{errors.quantity}</span>}
+              {errors.quantity && <span className="error-msg">{errors.quantity.message}</span>}
             </div>
             <div className="form-group">
-              <label htmlFor="trade-price">{t.formPrice}</label>
+              <label htmlFor="trade-price">{t('trade:formPrice')}</label>
               <input
                 id="trade-price"
                 type="number"
                 step="any"
                 min="0"
-                value={priceUSD}
-                onChange={e => setPriceUSD(e.target.value)}
                 placeholder="e.g. 185.50"
+                {...register('priceUSD', { valueAsNumber: true })}
                 className={errors.priceUSD ? 'input-error' : ''}
               />
-              {errors.priceUSD && <span className="error-msg">{errors.priceUSD}</span>}
+              {errors.priceUSD && <span className="error-msg">{errors.priceUSD.message}</span>}
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="trade-commission">{t.formFee}</label>
+              <label htmlFor="trade-commission">{t('trade:formFee')}</label>
               <input
                 id="trade-commission"
                 type="number"
                 step="any"
                 min="0"
-                value={commissionUSD}
-                onChange={e => setCommissionUSD(e.target.value)}
                 placeholder="e.g. 1.50"
+                {...register('commissionUSD', { valueAsNumber: true })}
                 className={errors.commissionUSD ? 'input-error' : ''}
               />
-              {errors.commissionUSD && <span className="error-msg">{errors.commissionUSD}</span>}
+              {errors.commissionUSD && <span className="error-msg">{errors.commissionUSD.message}</span>}
             </div>
           </div>
 
           <div className="form-group">
-            <label htmlFor="trade-notes">{t.formNotes}</label>
+            <label htmlFor="trade-notes">{t('trade:formNotes')}</label>
             <input
               id="trade-notes"
               type="text"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder={t.formNotesPlaceholder}
+              placeholder={t('trade:formNotesPlaceholder')}
+              {...register('notes')}
             />
           </div>
 
-          {validationError && (
-            <div className="validation-error">{validationError}</div>
+          {errors.root && (
+            <div className="validation-error">{errors.root.message}</div>
           )}
 
           <div className="form-actions">
-            <button type="button" className="btn btn-secondary" onClick={onCancel}>{t.formCancel}</button>
-            <button type="submit" className="btn btn-primary">
-              {trade ? t.formUpdate : t.formSubmit}
+            <button type="button" className="btn btn-secondary" onClick={onCancel}>
+              {t('trade:formCancel')}
+            </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={!!hasQuantityError}
+              title={hasQuantityError ? (t('common:insufficientLots') ?? 'Insufficient lots for this provider') : undefined}
+            >
+              {trade ? t('trade:formUpdate') : t('trade:formSubmit')}
             </button>
           </div>
         </form>

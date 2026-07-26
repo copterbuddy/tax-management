@@ -1,37 +1,41 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { TradeTransaction, RealizedGainResult, FifoLot, TaxSummary, RemittanceRecord, ProviderType } from '../types/trade';
+import type { TradeTransaction, RealizedGainResult, FifoLot, TaxSummary, RemittanceRecord } from '../types/trade';
 import { computeAllRealizedGains, computeTaxSummary, applyRemittance } from '../engine/fifoEngine';
-
-const STORAGE_KEY = 'tax_tracker_trades';
-const STORAGE_KEY_GAINS = 'tax_tracker_gains';
+import { STORAGE_KEYS } from '../constants';
+import { tradeArraySchema, gainsArraySchema, safeParse } from '../validation/schemas';
 
 // ─── Migration ───────────────────────────────────────────────────────────
 
 function migrateTrade(trade: TradeTransaction): TradeTransaction {
-  const migrated = { ...trade };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const migrated: any = { ...trade };
   if (!migrated.provider) {
-    migrated.provider = 'Dime' as ProviderType;
+    migrated.provider = 'Dime';
   }
   if ('assetType' in migrated) {
-    delete (migrated as any).assetType;
+    delete migrated.assetType;
   }
-  // Strip fxRateTHB from old trades (now unused)
   if ('fxRateTHB' in migrated) {
-    delete (migrated as any).fxRateTHB;
+    delete migrated.fxRateTHB;
   }
-  return migrated;
+  return migrated as TradeTransaction;
 }
 
 function filterCrypto(trades: TradeTransaction[]): TradeTransaction[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return trades.filter(t => (t as any).assetType !== 'CRYPTO');
 }
 
+// ─── Persistence ──────────────────────────────────────────────────────────
+
 function loadTrades(): TradeTransaction[] {
   try {
-    const data = localStorage.getItem(STORAGE_KEY);
+    const data = localStorage.getItem(STORAGE_KEYS.TRADES);
     if (data) {
-      return filterCrypto((JSON.parse(data) as TradeTransaction[]).map(migrateTrade));
+      const parsed = JSON.parse(data);
+      const validated = safeParse(tradeArraySchema, parsed, [] as TradeTransaction[]);
+      return filterCrypto(validated.map(t => migrateTrade(t as TradeTransaction)));
     }
   } catch (e) { console.error('Failed to load trades:', e); }
   return [];
@@ -39,19 +43,22 @@ function loadTrades(): TradeTransaction[] {
 
 function loadGains(): RealizedGainResult[] {
   try {
-    const data = localStorage.getItem(STORAGE_KEY_GAINS);
-    if (data) return JSON.parse(data) as RealizedGainResult[];
+    const data = localStorage.getItem(STORAGE_KEYS.GAINS);
+    if (data) {
+      const parsed = JSON.parse(data);
+      return safeParse(gainsArraySchema, parsed, [] as RealizedGainResult[]);
+    }
   } catch (e) { console.error('Failed to load gains:', e); }
   return [];
 }
 
 function saveTrades(trades: TradeTransaction[]): void {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(trades)); }
+  try { localStorage.setItem(STORAGE_KEYS.TRADES, JSON.stringify(trades)); }
   catch (e) { console.error('Failed to save trades:', e); }
 }
 
 function saveGains(gains: RealizedGainResult[]): void {
-  try { localStorage.setItem(STORAGE_KEY_GAINS, JSON.stringify(gains)); }
+  try { localStorage.setItem(STORAGE_KEYS.GAINS, JSON.stringify(gains)); }
   catch (e) { console.error('Failed to save gains:', e); }
 }
 
@@ -63,7 +70,7 @@ export interface TradeState {
   remainingLots: FifoLot[];
   selectedTaxYear: number;
   taxSummaries: Record<number, TaxSummary>;
-  displayTaxYear: number; // Which year's remittances to show
+  displayTaxYear: number;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -74,7 +81,6 @@ function getAvailableYears(trades: TradeTransaction[], gains: RealizedGainResult
     const year = parseInt(t.date.substring(0, 4), 10);
     if (!isNaN(year)) years.add(year);
   }
-  // Also include remittance years
   for (const g of gains) {
     for (const r of g.remittances) {
       const year = parseInt(r.remitDate.substring(0, 4), 10);
@@ -87,18 +93,16 @@ function getAvailableYears(trades: TradeTransaction[], gains: RealizedGainResult
 function recomputeGains(trades: TradeTransaction[], existingGains: RealizedGainResult[]): RealizedGainResult[] {
   const { gains: freshGains } = computeAllRealizedGains(trades);
 
-  // Merge remittance history from existing gains
   const oldGainMap = new Map<string, RealizedGainResult>();
   for (const g of existingGains) oldGainMap.set(g.sellTradeId, g);
 
   return freshGains.map(fg => {
     const old = oldGainMap.get(fg.sellTradeId);
     if (old && old.remittances.length > 0) {
-      // Re-apply remittances to the fresh gain result
       let result = { ...fg };
       for (const r of old.remittances) {
         try { result = applyRemittance(result, r); }
-        catch { /* skip invalid remittances (e.g. trade was edited) */ }
+        catch { /* skip invalid remittances */ }
       }
       return result;
     }
@@ -131,7 +135,7 @@ function buildInitialState(): TradeState {
     trades,
     gains,
     remainingLots,
-    selectedTaxYear, // For trade table filtering (sell year)
+    selectedTaxYear,
     displayTaxYear: selectedTaxYear,
     taxSummaries: recomputeSummaries(trades, gains),
   };

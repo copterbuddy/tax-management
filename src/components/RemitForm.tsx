@@ -1,5 +1,22 @@
-import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import type { RealizedGainResult, RemittanceRecord } from '../types/trade';
+import { useTranslation } from 'react-i18next';
+
+// ─── Form Schema ───────────────────────────────────────────────────────────
+
+const remitFormSchema = z.object({
+  sellTradeId: z.string().min(1, 'Please select a sell trade'),
+  amountUSD: z.number().positive('Amount must be positive'),
+  remitDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date is required'),
+  fxRateTHB: z.number().positive('FX rate must be positive'),
+  notes: z.string().optional(),
+});
+
+type RemitFormData = z.infer<typeof remitFormSchema>;
+
+// ─── Props ─────────────────────────────────────────────────────────────────
 
 interface RemitFormProps {
   gains: RealizedGainResult[];
@@ -8,154 +25,172 @@ interface RemitFormProps {
 }
 
 function generateId(): string {
-  return `rem_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+  return `rem_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 }
 
+// ─── Component ─────────────────────────────────────────────────────────────
+
 export function RemitForm({ gains, onSubmit, onCancel }: RemitFormProps) {
-  const [sellTradeId, setSellTradeId] = useState('');
-  const [amountUSD, setAmountUSD] = useState('');
-  const [remitDate, setRemitDate] = useState(new Date().toISOString().substring(0, 10));
-  const [fxRateTHB, setFxRateTHB] = useState('');
-  const [notes, setNotes] = useState('');
-  const [error, setError] = useState('');
+  const { t } = useTranslation();
 
-  const selectedGain = gains.find(g => g.sellTradeId === sellTradeId);
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setError,
+    formState: { errors },
+  } = useForm<RemitFormData>({
+    resolver: zodResolver(remitFormSchema),
+    defaultValues: {
+      sellTradeId: '',
+      amountUSD: 0,
+      remitDate: new Date().toISOString().substring(0, 10),
+      fxRateTHB: 0,
+      notes: '',
+    },
+  });
+
+  const sellTradeId = watch('sellTradeId');
+  const amountUSD = watch('amountUSD');
+  const fxRateTHB = watch('fxRateTHB');
+
   const sellTrades = gains.filter(g => g.remainingProceedsUSD > 0);
+  const selectedGain = gains.find(g => g.sellTradeId === sellTradeId);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const onFormSubmit = (data: RemitFormData) => {
+    const amount = Number(data.amountUSD);
 
-    if (!sellTradeId) { setError('Please select a sell trade'); return; }
-    if (!amountUSD || isNaN(Number(amountUSD)) || Number(amountUSD) <= 0) {
-      setError('Amount must be positive'); return;
-    }
-    if (!fxRateTHB || isNaN(Number(fxRateTHB)) || Number(fxRateTHB) <= 0) {
-      setError('FX rate must be positive'); return;
-    }
-    if (!remitDate) { setError('Date is required'); return; }
-
-    const amount = Number(amountUSD);
     if (selectedGain && amount > selectedGain.remainingProceedsUSD) {
-      setError(`Remittance exceeds remaining proceeds. Available: $${selectedGain.remainingProceedsUSD.toFixed(2)}`);
+      setError('amountUSD', {
+        message: `${t('remittance:remitExceeds')}: $${selectedGain.remainingProceedsUSD.toFixed(2)}`,
+      });
       return;
     }
 
     const remittance: RemittanceRecord = {
       id: generateId(),
-      sellTradeId,
+      sellTradeId: data.sellTradeId,
       amountUSD: amount,
-      remitDate,
-      fxRateTHB: Number(fxRateTHB),
-      notes: notes.trim() || undefined,
+      remitDate: data.remitDate,
+      fxRateTHB: Number(data.fxRateTHB),
+      notes: data.notes?.trim() || undefined,
     };
 
     onSubmit(remittance);
   };
 
+  const estimatedTaxable = selectedGain && amountUSD && fxRateTHB
+    ? Number(amountUSD) * selectedGain.gainPercent * Number(fxRateTHB)
+    : 0;
+
   return (
     <div className="trade-form-overlay">
       <div className="trade-form-modal">
         <div className="trade-form-header">
-          <h2>Record Remittance (นำเงินเข้าไทย)</h2>
-          <button className="btn-close" onClick={onCancel} aria-label="Close">&times;</button>
+          <h2>{t('remittance:remitFormTitle')}</h2>
+          <button className="btn-close" onClick={onCancel} aria-label={t('common:close')}>&times;</button>
         </div>
-        <form onSubmit={handleSubmit} className="trade-form">
+        <form onSubmit={handleSubmit(onFormSubmit)} className="trade-form">
           <div className="form-group">
-            <label htmlFor="remit-trade">Sell Trade</label>
+            <label htmlFor="remit-trade">{t('remittance:remitFormTrade')}</label>
             <select
               id="remit-trade"
-              value={sellTradeId}
-              onChange={e => setSellTradeId(e.target.value)}
+              {...register('sellTradeId')}
             >
-              <option value="">-- Select sell trade --</option>
+              <option value="">{t('remittance:remitFormSelect')}</option>
               {sellTrades.map(g => (
                 <option key={g.sellTradeId} value={g.sellTradeId}>
-                  {g.symbol} ({g.sellDate}) — Remaining: ${g.remainingProceedsUSD.toFixed(2)} | Gain: {g.gainUSD >= 0 ? '+' : ''}${g.gainUSD.toFixed(2)}
+                  {g.symbol} ({g.sellDate}) — {t('remittance:remitFormRemaining')}: ${g.remainingProceedsUSD.toFixed(2)} | {t('remittance:remitFormGain')}: {g.gainUSD >= 0 ? '+' : ''}${g.gainUSD.toFixed(2)}
                 </option>
               ))}
             </select>
           </div>
 
           {sellTrades.length === 0 && (
-            <p className="empty-hint">No sell trades with remaining proceeds. Add sell trades first.</p>
+            <p className="empty-hint">{t('remittance:remitFormNoSells')}</p>
           )}
 
           {selectedGain && (
             <div className="remit-info">
-              <span>Gain: ${selectedGain.gainUSD.toFixed(2)} ({(selectedGain.gainPercent * 100).toFixed(1)}%)</span>
-              <span>Remaining: ${selectedGain.remainingProceedsUSD.toFixed(2)}</span>
+              <span>{t('remittance:remitFormGain')}: ${selectedGain.gainUSD.toFixed(2)} ({(selectedGain.gainPercent * 100).toFixed(1)}%)</span>
+              <span>{t('remittance:remitFormRemaining')}: ${selectedGain.remainingProceedsUSD.toFixed(2)}</span>
             </div>
           )}
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="remit-date">Remittance Date (วันที่นำเข้า)</label>
+              <label htmlFor="remit-date">{t('remittance:remitFormDate')}</label>
               <input
                 id="remit-date"
                 type="date"
-                value={remitDate}
                 max={new Date().toISOString().substring(0, 10)}
-                onChange={e => setRemitDate(e.target.value)}
+                {...register('remitDate')}
+                className={errors.remitDate ? 'input-error' : ''}
               />
+              {errors.remitDate && <span className="error-msg">{errors.remitDate.message}</span>}
             </div>
             <div className="form-group">
-              <label htmlFor="remit-amount">Amount (USD)</label>
+              <label htmlFor="remit-amount">{t('remittance:remitFormAmount')}</label>
               <input
                 id="remit-amount"
                 type="number"
                 step="any"
                 min="0"
-                value={amountUSD}
-                onChange={e => setAmountUSD(e.target.value)}
                 placeholder="e.g. 1000"
+                {...register('amountUSD', { valueAsNumber: true })}
+                className={errors.amountUSD ? 'input-error' : ''}
               />
+              {errors.amountUSD && <span className="error-msg">{errors.amountUSD.message}</span>}
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
-              <label htmlFor="remit-fx">FX Rate (THB/USD on remittance date)</label>
+              <label htmlFor="remit-fx">{t('remittance:remitFormFx')}</label>
               <input
                 id="remit-fx"
                 type="number"
                 step="any"
                 min="0"
-                value={fxRateTHB}
-                onChange={e => setFxRateTHB(e.target.value)}
                 placeholder="e.g. 36.50"
+                {...register('fxRateTHB', { valueAsNumber: true })}
+                className={errors.fxRateTHB ? 'input-error' : ''}
               />
+              {errors.fxRateTHB && <span className="error-msg">{errors.fxRateTHB.message}</span>}
             </div>
           </div>
 
           <div className="form-group">
-            <label htmlFor="remit-notes">Notes (optional)</label>
+            <label htmlFor="remit-notes">{t('remittance:remitFormNotes')}</label>
             <input
               id="remit-notes"
               type="text"
-              value={notes}
-              onChange={e => setNotes(e.target.value)}
-              placeholder="e.g. Bank transfer reference"
+              placeholder={t('remittance:remitFormNotesPlaceholder')}
+              {...register('notes')}
             />
           </div>
 
-          {error && <div className="validation-error">{error}</div>}
+          {errors.root && <div className="validation-error">{errors.root.message}</div>}
 
           {selectedGain && amountUSD && !isNaN(Number(amountUSD)) && Number(amountUSD) > 0 && fxRateTHB && !isNaN(Number(fxRateTHB)) && (
             <div className="remit-preview">
               <p>
-                <strong>Estimated Taxable Gain:</strong>{' '}
+                <strong>{t('remittance:remitFormPreview')}:</strong>{' '}
                 ${(Number(amountUSD) * selectedGain.gainPercent).toFixed(2)} USD × {Number(fxRateTHB).toFixed(2)} THB/USD
                 {' = '}
-                ฿{(Number(amountUSD) * selectedGain.gainPercent * Number(fxRateTHB)).toFixed(2)}
+                ฿{estimatedTaxable.toFixed(2)}
               </p>
-              <p className="remit-note">Only the gain portion ({(selectedGain.gainPercent * 100).toFixed(1)}%) is taxable. Cost basis is not taxed.</p>
+              <p className="remit-note">{t('remittance:remitFormPreviewNote')} ({(selectedGain.gainPercent * 100).toFixed(1)}%)</p>
             </div>
           )}
 
           <div className="form-actions">
-            <button type="button" className="btn btn-secondary" onClick={onCancel}>Cancel</button>
-            <button type="submit" className="btn btn-primary">Record Remittance</button>
+            <button type="button" className="btn btn-secondary" onClick={onCancel}>
+              {t('remittance:remitFormCancel')}
+            </button>
+            <button type="submit" className="btn btn-primary">
+              {t('remittance:remitFormSubmit')}
+            </button>
           </div>
         </form>
       </div>

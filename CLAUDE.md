@@ -51,9 +51,50 @@
 
 **🔴 ห้าม spawn agent โดยไม่รายงาน — ผู้ใช้ต้องรู้ตลอดว่าใครทำงานอยู่**
 
+### 🔴🔴 กฎเหล็ก — ห้ามเขียนโค้ดก่อนผ่าน BA → UX → Dev → QA
+
+**ทุก feature, ทุกการเปลี่ยนแปลง, ทุกงาน — ต้องทำตามลำดับนี้เสมอ ห้ามข้ามขั้นตอนเด็ดขาด**
+
+```
+📥 User Request
+      │
+      ▼
+🧑‍💼 BA   — วิเคราะห์ requirement → เขียน spec doc → `docs/specs/<feature>.md`
+      │     (เอกสาร spec ต้องมี: Objective, Scope, Edge Cases, Acceptance Criteria)
+      ▼
+🎨 UX   — อ่าน spec จาก BA → ออกแบบ UI/UX → `docs/ux/screens/<screen>.md`
+      │     (เอกสาร UX ต้องมี: Layout, Component Placement, Interaction States)
+      ▼
+💻 Dev  — อ่าน spec + UX design → เขียนโค้ดตาม spec → `tsc --noEmit` ผ่าน
+      │     (ห้ามเขียนโค้ดที่ไม่มีอยู่ใน spec)
+      ▼
+🧪 QA   — อ่าน spec + AC → เขียน test cases → `docs/test-cases.md` → รันทดสอบ
+      │     (ต้องมี test case ครอบคลุมทุก AC)
+      ▼
+✅ Done — รายงานผลให้ผู้ใช้ทราบ
+```
+
+| ขั้น | Agent | Output ที่ต้องมี | สถานะ |
+|---|---|---|---|
+| 1 | `ba` | `docs/specs/<feature>.md` — spec + AC + Edge Cases | **ต้องทำก่อน** |
+| 2 | `ux` | `docs/ux/screens/<screen>.md` — ออกแบบหน้าจอ | **ต้องมี spec ก่อน** |
+| 3 | `dev` | โค้ดที่แก้ไข + `tsc --noEmit` ผ่าน | **ต้องมี spec + UX ก่อน** |
+| 4 | `qa` | test cases + ผลทดสอบ | **ต้องมีโค้ดก่อน** |
+
+**🚫 ห้าม:**
+- ห้ามเขียนโค้ดเองโดยไม่ผ่าน agent workflow
+- ห้ามข้ามขั้นตอน — ถึงแม้งานจะ "ง่าย" ก็ต้องทำตามลำดับ
+- ห้าม Dev เริ่มทำงานก่อน BA + UX เขียนเอกสารเสร็จ
+- ห้าม QA เริ่มก่อน Dev ส่งมอบโค้ด
+
+**✅ อนุญาต:**
+- Explore agent ใช้ค้นหาข้อมูลได้ตลอดเวลา (read-only)
+- BA + UX ทำงาน sequential หรือ parallel ก็ได้ (UX ต้องรอ BA spec)
+- ถามผู้ใช้เมื่อ requirement ไม่ชัด
+
 ### หลักการสำคัญ
 
-- **คุณเป็นคนตัดสินใจ** ว่าจะ spawn agent ตัวไหน — ไม่ต้องถามผู้ใช้ก่อน
+- **คุณเป็นคนตัดสินใจ** ว่าจะ spawn agent ตัวไหน — แต่ต้องทำตาม workflow ด้านบนเสมอ
 - **agent รับผิดชอบงานของตัวเอง** — system prompt ของมันกำหนดขอบเขตไว้แล้ว
 - **ทำงานแบบ sequential หรือ parallel ก็ได้** — งานอิสระ spawn พร้อมกันได้
 - **ถามผู้ใช้เมื่อจำเป็น** — requirement ไม่ชัด, ต้องการตัดสินใจ, PR พร้อม review
@@ -86,6 +127,7 @@
 
 | ไฟล์ | ใช้เมื่อไหร่ |
 |---|---|
+| `docs/specs/` | BA spec documents — requirement, AC, edge cases |
 | `.claude/skills/tax-management.md` | Architecture, type system, data flow, conventions |
 | `docs/tasks.md` | Task backlog — ติดตามสถานะงาน |
 | `docs/test-cases.md` | QA test cases |

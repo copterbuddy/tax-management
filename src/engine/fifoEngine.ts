@@ -184,7 +184,8 @@ export function applyRemittance(
   }
 
   // Only the gain portion is taxable — gainPercent × amountUSD
-  const taxableUSD = remittance.amountUSD * gainResult.gainPercent;
+  // Losses cannot create a negative taxable amount
+  const taxableUSD = Math.max(0, remittance.amountUSD * gainResult.gainPercent);
   const taxableTHB = taxableUSD * remittance.fxRateTHB;
 
   return {

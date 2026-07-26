@@ -259,8 +259,12 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                         </div>
                         <div className="trade-card-row">
                           <span className="card-label">{t('trade:taxableLabel')}</span>
-                          <span className="card-value gain-positive">
-                            {gain.taxableGainTHB > 0 ? formatGainIndicator(gain.taxableGainTHB) : `❌ ${t('trade:loss')}`}
+                          <span className={`card-value ${gain.taxableGainTHB > 0 ? 'gain-positive' : gain.gainUSD < 0 ? 'gain-negative' : ''}`}>
+                            {gain.taxableGainTHB > 0
+                              ? formatGainIndicator(gain.taxableGainTHB)
+                              : gain.gainUSD < 0
+                                ? `❌ ${t('trade:loss')}`
+                                : '-'}
                           </span>
                         </div>
                       </>

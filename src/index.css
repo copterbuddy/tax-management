@@ -880,14 +880,12 @@ a:hover {
 
 @media (max-width: 639px) {
   .trade-table { display: none; }
-}
-
-/* ── Mobile Trade Cards ──────────────────────────────────────────────────── */
-.trade-cards {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
+  .trade-cards {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
 }
 
 .trade-card {

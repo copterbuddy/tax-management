@@ -205,3 +205,40 @@ Claude: ตรวจ model ปัจจุบัน
   └── Sonnet/Haiku → "⚠️ session นี้ใช้ Sonnet แต่ BA phase ควรใช้ Opus
                        กรุณา /model opus แล้วเปิด session ใหม่ หรือบอกให้ทำ Sonnet ต่อ"
 ```
+
+---
+
+## 🐛 Bug Fixes / Debug Log
+
+> Log ของ bug ที่เจอระหว่าง dev + fix — อ่านก่อนแก้ CSS / table logic ที่คล้ายกัน
+
+### 2026-07-26 — Sell Flow: Mobile Cards แสดงซ้อนบน Desktop + Taxable Logic ผิด
+
+**Context:** ทดสอบ add SELL transaction 1 รายการ (AAPL 50 @ $200 ขายจาก BUY 100 @ $180) → FIFO คำนวณ gain +$999.00 ถูกต้อง — แต่เจอ 2 bugs ตามมา
+
+**Bug #1 — CSS Conflict (mobile cards แสดงบน desktop)**
+
+| | |
+|---|---|
+| **File** | [src/index.css:877-891](src/index.css#L877-L891) |
+| **Root cause** | `.trade-cards { display: flex }` อยู่นอก `@media` มี specificity เท่ากับ `.trade-cards { display: none }` ที่อยู่ใน `@media (min-width: 640px)` → source order ชนะ → mobile cards แสดงทุก viewport |
+| **Symptom** | Desktop view เห็นทั้ง table rows + card rows ซ้อนกันใต้ table |
+| **Fix** | ย้าย `.trade-cards` styling ทั้งหมดเข้า `@media (max-width: 639px)` block เดียวกับ `.trade-table { display: none }` |
+
+**Bug #2 — Mobile Card Taxable Logic ผิด**
+
+| | |
+|---|---|
+| **File** | [src/components/TradeTable.tsx:260-265](src/components/TradeTable.tsx#L260-L265) |
+| **Root cause** | ternary 2-way ไม่เช็ค `gainUSD < 0` ก่อน fallback → gain ที่ยังไม่ได้ remit (`taxableGainTHB === 0`) ถูกแสดง "❌ ขาดทุน" |
+| **Symptom** | SELL row ที่มีกำไร +$999 แต่ยังไม่ได้ remit → mobile card แสดง "❌ ขาดทุน" ทั้งที่จริงเป็น gain ที่ยังรอนำเข้า |
+| **Fix** | เปลี่ยนเป็น 3-way ternary ให้ตรงกับ column version (line 171-181): `taxableGainTHB > 0 → +฿xxx / gainUSD < 0 → ❌ ขาดทุน / else → '-'` พร้อม className เปลี่ยนตาม variant (positive/negative/neutral) |
+
+**Verification:**
+- `npx tsc --noEmit` → 0 errors ✓
+- Desktop (1036px): table แสดงอย่างเดียว, ไม่มี card ซ้อน ✓
+- SELL row "ภาษี (THB)" แสดง "-" (ถูก) แทน "❌ ขาดทุน" (ผิด) ✓
+
+**Lesson learned:**
+- CSS rules ใน `@media` vs นอก `@media` ที่ selector ตัวเดียวกัน → **specificity เท่ากัน** → source order ชนะ → mobile-specific styling ต้องห่อ `@media` เสมอ
+- Table column + mobile card ต้องแชร์ logic เดียวกัน — ถ้า column 3-way ternary แล้ว card ควรจะเหมือนกัน ไม่ใช่ simplify เป็น 2-way

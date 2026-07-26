@@ -7,7 +7,7 @@ description: Thai Tax Tracker — Remittance-based FIFO capital gains calculator
 
 > **Invoke:** `/tax-management`  
 > **Purpose:** Teach Claude the project architecture, conventions, and how to add features correctly.  
-> **Last updated:** 2026-07-26 (TASK-015: Remittance-based tax)
+> **Last updated:** 2026-07-26 (TASK-017: UX/UI Improvement — Design System + Dark Mode)
 
 ---
 
@@ -40,6 +40,8 @@ description: Thai Tax Tracker — Remittance-based FIFO capital gains calculator
 | Progress Bar | Visual indicator of remitted portion per trade |
 | Loss Rules | Losses cannot offset gains (มาตรา 40(4)(g)) |
 | Multi-Language | EN/TH with localStorage persistence |
+| Theme | Light/Dark mode with CSS custom properties + localStorage persistence |
+| UI Components | Tooltip (ⓘ), ConfirmDialog, KPI Cards (5 variants), responsive table→cards |
 | Data | localStorage persistence (trades + gains/remittances) |
 | 5-Year Limit | New trades limited to last 5 calendar years |
 
@@ -56,6 +58,8 @@ src/
 ├── i18n/
 │   ├── translations.ts        ← Typed translation dictionary (EN/TH, ~50 keys)
 │   └── LanguageContext.tsx     ← Provider + useLanguage hook + localStorage
+├── context/
+│   └── ThemeContext.tsx        ← 🆕 Theme provider + useTheme hook (light/dark)
 ├── store/
 │   ├── index.ts               ← configureStore
 │   ├── hooks.ts               ← useAppDispatch / useAppSelector
@@ -63,14 +67,16 @@ src/
 │   └── taxSlice.ts            ← Income tax calculation (US brackets — TASK-001 pending)
 ├── components/
 │   ├── Dashboard.tsx          ← Main page: KPI + tabs (Trade/Remittance) + modals
-│   ├── TradeTable.tsx         ← Trade list (USD, progress bar, sortable)
+│   ├── TradeTable.tsx         ← Trade list (USD, progress bar, sortable, card view on mobile)
 │   ├── TradeForm.tsx          ← Add/Edit trade (USD only, no FX rate)
 │   ├── RemitForm.tsx          ← Record remittance + taxable gain preview
-│   ├── RemittanceLog.tsx      ← 🆕 Remittance history table + year filter + totals
-│   └── KpiCard.tsx            ← Reusable KPI display card
+│   ├── RemittanceLog.tsx      ← Remittance history table + year filter + totals
+│   ├── KpiCard.tsx            ← Reusable KPI display card (variants, tooltip, subValue2)
+│   ├── Tooltip.tsx            ← 🆕 Info tooltip (click/ESC/click-outside)
+│   └── ConfirmDialog.tsx      ← 🆕 Confirmation dialog (danger variant, ESC close)
 ├── App.tsx                    ← Root component
-├── main.tsx                   ← Entry: LanguageProvider > Provider > StrictMode
-├── App.css / index.css        ← Styles
+├── main.tsx                   ← Entry: ThemeProvider > LanguageProvider > Provider > StrictMode
+├── App.css / index.css        ← 🆕 Design system tokens (light + dark mode)
 └── assets/                    ← Static images
 ```
 

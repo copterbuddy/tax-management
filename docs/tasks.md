@@ -336,12 +336,58 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 
 ---
 
+### TASK-017: UX/UI Improvement — Design System + Round 1 & 2
+
+**Priority:** 🟡 P1
+**Effort:** L (10+ files)
+**Status:** ✅ ทำเสร็จแล้ว
+**Completed:** 2026-07-26
+**Depends on:** None
+
+**User Story:**
+> As a Thai investor, I want a clean, modern UI with light/dark mode, informative KPI cards with tooltips, and responsive design, so I can use the app comfortably on any device.
+
+**What was done (Round 1 + 2):**
+
+| Feature | Status |
+|---|---|
+| Design System Foundation (`docs/ux/design-system.md`) | ✅ |
+| Light/Dark Mode CSS Tokens + ThemeContext | ✅ |
+| Theme toggle + Language switcher in header | ✅ |
+| KPI cards: F-pattern reorder + tooltip ⓘ + subValue2 context | ✅ |
+| Tooltip component (click/ESC/click-outside) | ✅ |
+| ConfirmDialog component | ✅ |
+| Data freshness indicator | ✅ |
+| Tab navigation with active indicator | ✅ |
+| Responsive table → card view on mobile | ✅ |
+| Empty state CTA button (TradeTable) | ✅ |
+| Empty state CTA button (RemittanceLog) | ✅ |
+
+**Files:**
+- `src/components/TradeTable.tsx` — Add CTA button in empty state
+- `src/components/RemittanceLog.tsx` — Add CTA button in empty state
+- `src/components/Tooltip.tsx` — ✅ New
+- `src/components/ConfirmDialog.tsx` — ✅ New
+- `src/components/KpiCard.tsx` — ✅ Modified
+- `src/components/Dashboard.tsx` — ✅ Modified
+- `src/context/ThemeContext.tsx` — ✅ New
+- `src/main.tsx` — ✅ Modified
+- `src/index.css` — ✅ Modified
+- `src/App.css` — ✅ Modified
+- `docs/ux/design-system.md` — ✅ Complete
+- `docs/ux/screens/dashboard.md` — ✅ Round 1 spec
+- `docs/ux/screens/dashboard-r2.md` — ✅ Round 2 spec
+
+📝 Post-Task: skills updated — added ThemeContext, Tooltip, ConfirmDialog to architecture; added Theme + UI Components to features
+
+---
+
 ## 📊 Summary
 
 | Priority | Count | Done | Pending | Tasks |
 |---|---|---|---|---|
 | 🔴 P0 | 4 | 2 | 2 | TASK-000 ✅, TASK-011 ✅, TASK-001 ⬜, TASK-002 ⬜ |
-| 🟡 P1 | 3 | 1 | 2 | TASK-012 ✅, TASK-003 ⬜, TASK-004 ⬜ |
+| 🟡 P1 | 4 | 2 | 2 | TASK-012 ✅, TASK-017 ✅, TASK-003 ⬜, TASK-004 ⬜ |
 | 🟢 P2 | 3 | 0 | 3 | TASK-005 ⬜, TASK-006 ⬜, TASK-007 ⬜ |
 | ⚪ P3 | 3 | 0 | 3 | TASK-008 ⬜, TASK-009 ⬜, TASK-010 ⬜ |
-| **Total** | **13** | **3** | **10** | |
+| **Total** | **14** | **4** | **10** | |

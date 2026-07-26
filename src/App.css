@@ -1,1 +1,13 @@
-/* App-specific overrides can go here if needed */
+/* App-level styles — most styles now live in index.css (design system).
+   Add page-specific overrides here if needed. */
+
+/* Sticky header on mobile */
+@media (max-width: 639px) {
+  .dashboard-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--color-bg);
+    padding: var(--space-3) 0;
+  }
+}

@@ -68,7 +68,10 @@ export function RemittanceLog({ gains, onRecordRemit }: RemittanceLogProps) {
         <div className="empty-state">
           <div className="empty-icon">🏦</div>
           <p>No remittances recorded for {remitYear}</p>
-          <p className="empty-hint">Click "Record Remittance" to record funds brought into Thailand.</p>
+          <p className="empty-hint">When you remit funds from a stock sale into Thailand, record it here.</p>
+          <button className="btn btn-primary" onClick={onRecordRemit}>
+            🏦 Record Remittance
+          </button>
         </div>
       ) : (
         <div className="table-wrapper">

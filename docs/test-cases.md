@@ -10,7 +10,8 @@
 | Task | Total | ✅ PASS | ❌ FAIL | ⬜ Pending | 🟡 Testing |
 |---|---|---|---|---|---|
 | TASK-000 (Provider) | 23 | 23 | 0 | 0 | 0 |
-| **Total** | **23** | **23** | **0** | **0** | **0** |
+| TASK-017 (UX/UI) | 8 | 8 | 0 | 0 | 0 |
+| **Total** | **31** | **31** | **0** | **0** | **0** |
 
 ---
 
@@ -1078,6 +1079,141 @@
 | AC11 — Migration | TC-015-019 |
 | AC12 — tsc clean | TC-015-020 |
 | EC1-7 | TC-015-010, 011, 012 |
+
+---
+
+## 🔜 Next: TASK-001 Test Cases (Thai Tax Brackets)
+
+Will be added when Dev completes TASK-001 implementation.
+
+---
+
+## 🟡 TASK-017: UX/UI Improvement — Design System + Round 1 & 2
+
+**Reference Spec:** BA Spec — TASK-017 (dashboard.md, dashboard-r2.md, design-system.md)
+**Task Status:** ✅ ทำเสร็จแล้ว (Dev)
+**Test Status:** ✅ ทดสอบผ่านทั้งหมด (8/8)
+
+---
+
+### 📦 Group 1: Empty State CTA Buttons
+
+---
+
+#### TC-017-001: TradeTable empty state has CTA button
+
+**Covers:** Round 2 spec — TradeTable empty state CTA
+**Status:** ✅ PASS
+**Type:** Static analysis
+
+**Scenario:** เมื่อไม่มี trades ในปีที่เลือก TradeTable empty state ต้องมีปุ่ม "Add First Trade"
+**Expected Result:** `<button className="btn btn-primary" onClick={onAddNew}>` ใน empty state block
+**Actual Result:** ✅ Found at `TradeTable.tsx:69` — `<button className="btn btn-primary" onClick={onAddNew}>` with EN/TH labels
+
+---
+
+#### TC-017-002: RemittanceLog empty state has CTA button
+
+**Covers:** Round 2 spec — RemittanceLog empty state CTA
+**Status:** ✅ PASS
+**Type:** Static analysis
+
+**Scenario:** เมื่อไม่มี remittances ในปีที่เลือก RemittanceLog empty state ต้องมีปุ่ม "Record Remittance"
+**Expected Result:** `<button className="btn btn-primary" onClick={onRecordRemit}>` ใน empty state block
+**Actual Result:** ✅ Found at `RemittanceLog.tsx:69` — `<button className="btn btn-primary" onClick={onRecordRemit}>`
+
+---
+
+### 📦 Group 2: Design System Foundation
+
+---
+
+#### TC-017-003: CSS custom properties — Light mode tokens
+
+**Covers:** Round 1 spec — Design System tokens
+**Status:** ✅ PASS
+**Type:** Static analysis
+
+**Scenario:** `:root` ต้องมี CSS custom properties ครบตาม design-system.md
+**Expected Result:** Tokens: --color-primary, --color-success, --color-danger, --color-bg, --color-surface, --color-text-primary, --color-text-secondary, --color-text-tertiary, --color-border, --shadow-sm/md/lg
+**Actual Result:** ✅ All tokens present in `index.css:8-51`
+
+---
+
+#### TC-017-004: CSS custom properties — Dark mode tokens
+
+**Covers:** Round 1 spec — Dark mode
+**Status:** ✅ PASS
+**Type:** Static analysis
+
+**Scenario:** `[data-theme="dark"]` ต้อง override CSS properties
+**Expected Result:** Dark mode block with inverse colors
+**Actual Result:** ✅ Found at `index.css:54` — complete dark mode token overrides
+
+---
+
+#### TC-017-005: ThemeContext provides light/dark toggle
+
+**Covers:** Round 1 spec — Theme switching
+**Status:** ✅ PASS
+**Type:** Static analysis
+
+**Scenario:** ThemeContext ต้องมี provider + useTheme hook + localStorage persistence
+**Expected Result:** `ThemeProvider` wraps app in `main.tsx`, `useTheme()` returns `{theme, toggleTheme}`, localStorage key = `tax_tracker_theme`
+**Actual Result:** ✅ `ThemeContext.tsx` — STORAGE_KEY, getInitialTheme(), toggleTheme(), data-theme attribute on `<html>`
+
+---
+
+### 📦 Group 3: UI Components
+
+---
+
+#### TC-017-006: Tooltip component exists with correct API
+
+**Covers:** Round 2 spec — Tooltip component
+**Status:** ✅ PASS
+**Type:** Static analysis
+
+**Scenario:** Tooltip component ต้องรับ `content`, `children?`, `position?` props
+**Expected Result:** Interface matches spec, เปิดด้วย click, ปิดด้วย ESC/click-outside
+**Actual Result:** ✅ `Tooltip.tsx` — `interface TooltipProps { content: string; children?: ReactNode; position?: 'top' | 'bottom' | 'left' | 'right' }`, click toggle + ESC + click-outside handlers
+
+---
+
+#### TC-017-007: KpiCard supports tooltip + subValue2 + highlight variant
+
+**Covers:** Round 2 spec — Enhanced KPI cards
+**Status:** ✅ PASS
+**Type:** Static analysis
+
+**Scenario:** KpiCard ต้องมี props: `tooltip?`, `subValue2?`, variant `highlight`
+**Expected Result:** Props interface matches, renders Tooltip when tooltip prop provided, renders subValue2 line
+**Actual Result:** ✅ `KpiCard.tsx` — all props present, renders `<Tooltip>` when tooltip prop exists, renders `kpi-sub-detail` for subValue2
+
+---
+
+#### TC-017-008: ConfirmDialog component exists
+
+**Covers:** Round 2 spec
+**Status:** ✅ PASS
+**Type:** Static analysis
+
+**Scenario:** ConfirmDialog ต้องรองรับ danger variant + ESC close
+**Expected Result:** `ConfirmDialogProps { message, confirmLabel?, cancelLabel?, onConfirm, onCancel, danger? }`, ESC closes
+**Actual Result:** ✅ `ConfirmDialog.tsx` — full interface match, ESC key handler, danger button variant
+
+---
+
+### 📊 Traceability Matrix — TASK-017
+
+| Spec Reference | Test Cases |
+|---|---|
+| Round 1 — Design System | TC-017-003, TC-017-004 |
+| Round 1 — Theme toggle | TC-017-005 |
+| Round 2 — Empty state CTA | TC-017-001, TC-017-002 |
+| Round 2 — Tooltip | TC-017-006 |
+| Round 2 — KPI card enhanced | TC-017-007 |
+| Round 2 — ConfirmDialog | TC-017-008 |
 
 ---
 

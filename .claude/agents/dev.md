@@ -2,7 +2,7 @@
 name: dev
 description: Developer — เขียนโค้ดตาม spec จาก BA สำหรับระบบ Tax Management (React + TypeScript + Redux)
 tools: Read, Write, Edit, Glob, Grep, Bash
-model: sonnet
+model: haiku
 ---
 
 # 💻 Developer (Dev) — Tax Management

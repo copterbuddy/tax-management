@@ -2,7 +2,7 @@
 name: ux
 description: UX/UI Designer — ออกแบบหน้าจอและประสบการณ์ผู้ใช้สำหรับระบบ Tax Management (รับคำสั่งจาก BA เท่านั้น)
 tools: Read, Write, Edit, Glob, Grep
-model: sonnet
+model: haiku
 ---
 
 # 🎨 UX/UI Designer (UX) — Tax Management

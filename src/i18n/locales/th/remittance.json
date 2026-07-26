@@ -28,5 +28,11 @@
   "remitFormRemaining": "คงเหลือ",
   "remitFormPreview": "ประมาณการภาษี",
   "remitFormPreviewNote": "เฉพาะส่วนกำไรที่ต้องเสียภาษี ส่วนเงินต้นไม่ต้องเสียภาษี",
-  "remitExceeds": "จำนวนนำเข้าเกินยอดคงเหลือ จำนวนที่นำเข้าได้"
+  "remitExceeds": "จำนวนนำเข้าเกินยอดคงเหลือ จำนวนที่นำเข้าได้",
+  "remitEditTitle": "แก้ไขรายการนำเงินเข้า",
+  "remitEditSubmit": "บันทึกการแก้ไข",
+  "editRemit": "แก้ไข",
+  "deleteRemit": "ลบ",
+  "colActions": "จัดการ",
+  "confirmDeleteRemit": "คุณแน่ใจหรือไม่ว่าต้องการลบรายการนำเงินเข้านี้?"
 }

@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import type { RealizedGainResult } from '../types/trade';
+import type { RealizedGainResult, RemittanceRecord } from '../types/trade';
 import { useTranslation } from 'react-i18next';
 
 interface RemittanceLogProps {
   gains: RealizedGainResult[];
   onRecordRemit: () => void;
+  onEditRemittance: (remittance: RemittanceRecord) => void;
+  onDeleteRemittance: (remittance: RemittanceRecord) => void;
 }
 
-export function RemittanceLog({ gains, onRecordRemit }: RemittanceLogProps) {
+export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDeleteRemittance }: RemittanceLogProps) {
   const { t } = useTranslation();
   const [remitYear, setRemitYear] = useState<number>(new Date().getFullYear());
 
@@ -88,6 +90,7 @@ export function RemittanceLog({ gains, onRecordRemit }: RemittanceLogProps) {
                 <th>{t('remittance:colGainPercent')}</th>
                 <th>{t('remittance:colTaxable')}</th>
                 <th>{t('remittance:colNotes')}</th>
+                <th>{t('remittance:colActions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -105,6 +108,38 @@ export function RemittanceLog({ gains, onRecordRemit }: RemittanceLogProps) {
                     </span>
                   </td>
                   <td>{r.notes || '-'}</td>
+                  <td className="actions-cell">
+                    <button
+                      className="btn-icon btn-edit"
+                      onClick={() => onEditRemittance({
+                        id: r.id,
+                        sellTradeId: r.sellTradeId,
+                        amountUSD: r.amountUSD,
+                        remitDate: r.remitDate,
+                        fxRateTHB: r.fxRateTHB,
+                        notes: r.notes,
+                      })}
+                      title={t('remittance:editRemit')}
+                      aria-label={t('remittance:editRemit')}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className="btn-icon btn-delete"
+                      onClick={() => onDeleteRemittance({
+                        id: r.id,
+                        sellTradeId: r.sellTradeId,
+                        amountUSD: r.amountUSD,
+                        remitDate: r.remitDate,
+                        fxRateTHB: r.fxRateTHB,
+                        notes: r.notes,
+                      })}
+                      title={t('remittance:deleteRemit')}
+                      aria-label={t('remittance:deleteRemit')}
+                    >
+                      🗑️
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -119,6 +154,7 @@ export function RemittanceLog({ gains, onRecordRemit }: RemittanceLogProps) {
                     <strong>฿{totalTaxable.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
                   </span>
                 </td>
+                <td></td>
                 <td></td>
               </tr>
             </tfoot>

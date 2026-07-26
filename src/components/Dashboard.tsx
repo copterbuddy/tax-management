@@ -6,6 +6,8 @@ import {
   updateTrade,
   deleteTrade,
   addRemittance,
+  updateRemittance,
+  deleteRemittance,
   setSelectedTaxYear,
 } from '../store/tradeSlice';
 import { formatGainIndicator, validateSellLots } from '../engine/fifoEngine';
@@ -36,8 +38,10 @@ export function Dashboard() {
   const [showForm, setShowForm] = useState(false);
   const [showRemitForm, setShowRemitForm] = useState(false);
   const [editingTrade, setEditingTrade] = useState<TradeTransaction | null>(null);
+  const [editingRemittance, setEditingRemittance] = useState<RemittanceRecord | null>(null);
   const [activeTab, setActiveTab] = useState<'trades' | 'remittances'>('trades');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleteRemitConfirm, setDeleteRemitConfirm] = useState<RemittanceRecord | null>(null);
 
   const summary = taxSummaries[selectedTaxYear];
 
@@ -89,6 +93,26 @@ export function Dashboard() {
     dispatch(addRemittance(remit));
     setShowRemitForm(false);
   }, [dispatch]);
+
+  const handleEditRemittance = useCallback((remit: RemittanceRecord) => {
+    setEditingRemittance(remit);
+  }, []);
+
+  const handleUpdateRemittance = useCallback((remit: RemittanceRecord) => {
+    dispatch(updateRemittance(remit));
+    setEditingRemittance(null);
+  }, [dispatch]);
+
+  const handleDeleteRemittance = useCallback((remit: RemittanceRecord) => {
+    setDeleteRemitConfirm(remit);
+  }, []);
+
+  const confirmDeleteRemittance = useCallback(() => {
+    if (deleteRemitConfirm) {
+      dispatch(deleteRemittance({ id: deleteRemitConfirm.id, sellTradeId: deleteRemitConfirm.sellTradeId }));
+      setDeleteRemitConfirm(null);
+    }
+  }, [dispatch, deleteRemitConfirm]);
 
   const handleLangSwitch = useCallback((next: SupportedLang) => {
     i18next.changeLanguage(next);
@@ -264,6 +288,8 @@ export function Dashboard() {
         <RemittanceLog
           gains={gains}
           onRecordRemit={() => setShowRemitForm(true)}
+          onEditRemittance={handleEditRemittance}
+          onDeleteRemittance={handleDeleteRemittance}
         />
       )}
 
@@ -281,15 +307,19 @@ export function Dashboard() {
         />
       )}
 
-      {showRemitForm && (
+      {(showRemitForm || editingRemittance) && (
         <RemitForm
           gains={gains}
-          onSubmit={handleAddRemittance}
-          onCancel={() => setShowRemitForm(false)}
+          remittance={editingRemittance}
+          onSubmit={editingRemittance ? handleUpdateRemittance : handleAddRemittance}
+          onCancel={() => {
+            setShowRemitForm(false);
+            setEditingRemittance(null);
+          }}
         />
       )}
 
-      {/* Confirm Delete Dialog */}
+      {/* Confirm Delete Trade Dialog */}
       {deleteConfirmId && (
         <ConfirmDialog
           message={t('common:confirmDelete')}
@@ -297,6 +327,18 @@ export function Dashboard() {
           cancelLabel={t('common:cancel')}
           onConfirm={confirmDelete}
           onCancel={() => setDeleteConfirmId(null)}
+          danger
+        />
+      )}
+
+      {/* Confirm Delete Remittance Dialog */}
+      {deleteRemitConfirm && (
+        <ConfirmDialog
+          message={t('remittance:confirmDeleteRemit')}
+          confirmLabel={t('common:delete')}
+          cancelLabel={t('common:cancel')}
+          onConfirm={confirmDeleteRemittance}
+          onCancel={() => setDeleteRemitConfirm(null)}
           danger
         />
       )}

@@ -110,6 +110,33 @@ function recomputeGains(trades: TradeTransaction[], existingGains: RealizedGainR
   });
 }
 
+function recomputeGainsWithModifiedRemittances(
+  trades: TradeTransaction[],
+  existingGains: RealizedGainResult[],
+  sellTradeId: string,
+  newRemittances: RemittanceRecord[]
+): RealizedGainResult[] {
+  const { gains: freshGains } = computeAllRealizedGains(trades);
+  return freshGains.map(fg => {
+    let result = { ...fg };
+    if (fg.sellTradeId === sellTradeId) {
+      for (const r of newRemittances) {
+        try { result = applyRemittance(result, r); }
+        catch { /* skip invalid remittances */ }
+      }
+    } else {
+      const otherGain = existingGains.find(g => g.sellTradeId === fg.sellTradeId);
+      if (otherGain) {
+        for (const r of otherGain.remittances) {
+          try { result = applyRemittance(result, r); }
+          catch { /* skip invalid remittances */ }
+        }
+      }
+    }
+    return result;
+  });
+}
+
 function recomputeSummaries(
   trades: TradeTransaction[],
   gains: RealizedGainResult[],
@@ -192,6 +219,36 @@ export const tradeSlice = createSlice({
       }
     },
 
+    updateRemittance: (state, action: PayloadAction<RemittanceRecord>) => {
+      const gain = state.gains.find(g =>
+        g.remittances.some(r => r.id === action.payload.id)
+      );
+      if (!gain) return;
+
+      const updatedRemittances = gain.remittances.map(r =>
+        r.id === action.payload.id ? action.payload : r
+      );
+
+      state.gains = recomputeGainsWithModifiedRemittances(
+        state.trades, state.gains, gain.sellTradeId, updatedRemittances
+      );
+      state.taxSummaries = recomputeSummaries(state.trades, state.gains);
+      saveGains(state.gains);
+    },
+
+    deleteRemittance: (state, action: PayloadAction<{ id: string; sellTradeId: string }>) => {
+      const gain = state.gains.find(g => g.sellTradeId === action.payload.sellTradeId);
+      if (!gain) return;
+
+      const filteredRemittances = gain.remittances.filter(r => r.id !== action.payload.id);
+
+      state.gains = recomputeGainsWithModifiedRemittances(
+        state.trades, state.gains, gain.sellTradeId, filteredRemittances
+      );
+      state.taxSummaries = recomputeSummaries(state.trades, state.gains);
+      saveGains(state.gains);
+    },
+
     importTrades: (state, action: PayloadAction<TradeTransaction[]>) => {
       state.trades = action.payload;
       saveTrades(state.trades);
@@ -225,6 +282,8 @@ export const {
   updateTrade,
   deleteTrade,
   addRemittance,
+  updateRemittance,
+  deleteRemittance,
   importTrades,
   clearAllTrades,
   setSelectedTaxYear,

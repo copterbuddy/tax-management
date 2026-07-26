@@ -28,5 +28,11 @@
   "remitFormRemaining": "Remaining",
   "remitFormPreview": "Estimated Taxable Gain",
   "remitFormPreviewNote": "Only the gain portion is taxable. Cost basis is not taxed.",
-  "remitExceeds": "Remittance exceeds remaining proceeds. Available"
+  "remitExceeds": "Remittance exceeds remaining proceeds. Available",
+  "remitEditTitle": "Edit Remittance",
+  "remitEditSubmit": "Save Changes",
+  "editRemit": "Edit",
+  "deleteRemit": "Delete",
+  "colActions": "Actions",
+  "confirmDeleteRemit": "Are you sure you want to delete this remittance record?"
 }

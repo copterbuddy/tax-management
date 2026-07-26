@@ -20,6 +20,7 @@ type RemitFormData = z.infer<typeof remitFormSchema>;
 
 interface RemitFormProps {
   gains: RealizedGainResult[];
+  remittance?: RemittanceRecord | null;
   onSubmit: (remittance: RemittanceRecord) => void;
   onCancel: () => void;
 }
@@ -30,8 +31,9 @@ function generateId(): string {
 
 // ─── Component ─────────────────────────────────────────────────────────────
 
-export function RemitForm({ gains, onSubmit, onCancel }: RemitFormProps) {
+export function RemitForm({ gains, remittance, onSubmit, onCancel }: RemitFormProps) {
   const { t } = useTranslation();
+  const isEdit = !!remittance;
 
   const {
     register,
@@ -42,11 +44,11 @@ export function RemitForm({ gains, onSubmit, onCancel }: RemitFormProps) {
   } = useForm<RemitFormData>({
     resolver: zodResolver(remitFormSchema),
     defaultValues: {
-      sellTradeId: '',
-      amountUSD: 0,
-      remitDate: new Date().toISOString().substring(0, 10),
-      fxRateTHB: 0,
-      notes: '',
+      sellTradeId: remittance?.sellTradeId || '',
+      amountUSD: remittance?.amountUSD ?? 0,
+      remitDate: remittance?.remitDate || new Date().toISOString().substring(0, 10),
+      fxRateTHB: remittance?.fxRateTHB ?? 0,
+      notes: remittance?.notes || '',
     },
   });
 
@@ -54,21 +56,32 @@ export function RemitForm({ gains, onSubmit, onCancel }: RemitFormProps) {
   const amountUSD = watch('amountUSD');
   const fxRateTHB = watch('fxRateTHB');
 
-  const sellTrades = gains.filter(g => g.remainingProceedsUSD > 0);
+  const sellTrades = gains.filter(g => {
+    if (g.remainingProceedsUSD > 0) return true;
+    // When editing, always include the trade the remittance currently belongs to
+    if (isEdit && remittance && g.sellTradeId === remittance.sellTradeId) return true;
+    return false;
+  });
   const selectedGain = gains.find(g => g.sellTradeId === sellTradeId);
 
   const onFormSubmit = (data: RemitFormData) => {
     const amount = Number(data.amountUSD);
 
-    if (selectedGain && amount > selectedGain.remainingProceedsUSD) {
+    // When editing, the old remittance still counts toward totalRemitted,
+    // so the effective available = remaining + oldAmount
+    const effectiveRemaining = selectedGain
+      ? selectedGain.remainingProceedsUSD + (isEdit && remittance ? remittance.amountUSD : 0)
+      : 0;
+
+    if (selectedGain && amount > effectiveRemaining) {
       setError('amountUSD', {
-        message: `${t('remittance:remitExceeds')}: $${selectedGain.remainingProceedsUSD.toFixed(2)}`,
+        message: `${t('remittance:remitExceeds')}: $${effectiveRemaining.toFixed(2)}`,
       });
       return;
     }
 
-    const remittance: RemittanceRecord = {
-      id: generateId(),
+    const remittanceRecord: RemittanceRecord = {
+      id: remittance?.id || generateId(),
       sellTradeId: data.sellTradeId,
       amountUSD: amount,
       remitDate: data.remitDate,
@@ -76,7 +89,7 @@ export function RemitForm({ gains, onSubmit, onCancel }: RemitFormProps) {
       notes: data.notes?.trim() || undefined,
     };
 
-    onSubmit(remittance);
+    onSubmit(remittanceRecord);
   };
 
   const estimatedTaxable = selectedGain && amountUSD && fxRateTHB
@@ -87,7 +100,7 @@ export function RemitForm({ gains, onSubmit, onCancel }: RemitFormProps) {
     <div className="trade-form-overlay">
       <div className="trade-form-modal">
         <div className="trade-form-header">
-          <h2>{t('remittance:remitFormTitle')}</h2>
+          <h2>{isEdit ? t('remittance:remitEditTitle') : t('remittance:remitFormTitle')}</h2>
           <button className="btn-close" onClick={onCancel} aria-label={t('common:close')}>&times;</button>
         </div>
         <form onSubmit={handleSubmit(onFormSubmit)} className="trade-form">
@@ -189,7 +202,7 @@ export function RemitForm({ gains, onSubmit, onCancel }: RemitFormProps) {
               {t('remittance:remitFormCancel')}
             </button>
             <button type="submit" className="btn btn-primary">
-              {t('remittance:remitFormSubmit')}
+              {isEdit ? t('remittance:remitEditSubmit') : t('remittance:remitFormSubmit')}
             </button>
           </div>
         </form>

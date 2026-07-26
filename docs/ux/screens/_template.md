@@ -1,7 +1,7 @@
 # 📐 Screen: <ชื่อหน้าจอ>
 
 > **Created:** <YYYY-MM-DD> | **Updated:** <YYYY-MM-DD>
-> **UX Agent:** <ชื่อ agent session>
+> **Created by:** UX phase (Claude Code)
 > **Related Tasks:** TASK-XXX
 
 ---
@@ -83,4 +83,4 @@
 
 ---
 
-> **Template Usage:** UX Agent — copy ไฟล์นี้, เปลี่ยนชื่อเป็น `<screen-name>.md`, เติมข้อมูลให้ครบทุก section
+> **Template Usage:** UX phase — copy ไฟล์นี้, เปลี่ยนชื่อเป็น `<screen-name>.md`, เติมข้อมูลให้ครบทุก section

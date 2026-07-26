@@ -3,7 +3,12 @@
     "allow": [
       "WebSearch",
       "Bash(npx tsc *)",
-      "Bash(node qa-test-run.mjs)"
+      "Bash(node qa-test-run.mjs)",
+      "Bash(cd \"d:/myProject/cluade/tax-management\" && rm -f \".claude/agents/ba.md\" \".claude/agents/ux.md\" \".claude/agents/dev.md\" \".claude/agents/qa.md\" && ls -la \".claude/agents/\" 2>&1)",
+      "Bash(cd \"d:/myProject/cluade/tax-management\" && rmdir \".claude/agents\" && ls -la \".claude/\")"
+    ],
+    "additionalDirectories": [
+      "d:\\myProject\\cluade\\tax-management\\.claude\\agents"
     ]
   }
 }

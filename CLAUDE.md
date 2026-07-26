@@ -4,52 +4,95 @@
 
 ---
 
-## 🤖 วิธีทำงาน — ใช้ Agent เป็นเครื่องมือ
+## 🧠 Model Strategy — Manual Session Switch
 
-**คุณคือ Claude Code — คุยกับผู้ใช้โดยตรง ไม่ต้องสวมบทบาท**
+Claude Code ใช้ **model เดียวต่อ session** — เปลี่ยน model mid-conversation ไม่ได้ ดังนั้นจึงต้อง **แบ่ง session ตาม phase + model** ที่เหมาะสม
 
-เมื่อผู้ใช้ต้องการทำงาน ให้ spawn agent ที่เหมาะสมเป็น subagent โดย agent แต่ละตัวมี system prompt ของตัวเองอยู่แล้ว (ใน `.claude/agents/`) — agent จะทำตามหน้าที่ของมันโดยอัตโนมัติ
+### Mapping: Phase → Model
+
+| Phase | Model | ทำไม |
+|---|---|---|
+| 📋 BA | **Opus** | ต้อง reasoning สูง — วิเคราะห์ requirement, คิด edge cases, เขียน AC ที่ครอบคลุม |
+| 🎨 UX | **Sonnet** | Execution-focused — apply design system, วาง layout |
+| 💻 Dev | **Sonnet** | Execution-focused — เขียนโค้ดตาม spec, type-check |
+| 🧪 QA | **Sonnet** | Attention to detail — design test cases, run tests |
+
+### วิธีใช้ — 2 Sessions
+
+```
+📥 Session 1 — Opus (BA phase)
+   │
+   ├─ 1. เปิด session ใหม่
+   ├─ 2. สลับ model: /model opus
+   ├─ 3. บอก Claude: "ทำ BA phase สำหรับ feature X"
+   ├─ 4. Claude เขียน spec → docs/specs/<feature>.md
+   └─ 5. ✅ จบ session 1
+
+📥 Session 2 — Sonnet (UX → Dev → QA)
+   │
+   ├─ 1. เปิด session ใหม่
+   ├─ 2. สลับ model: /model sonnet
+   ├─ 3. บอก Claude: "ทำ UX → Dev → QA สำหรับ feature X"
+   ├─ 4. Claude re-read spec จาก disk → ทำตาม phase
+   └─ 5. ✅ จบ session 2
+```
+
+### 🔴 Discipline Checklist
+
+- **Session 1 ใช้ Opus / ทำ BA phase เท่านั้น** — ห้ามทำ UX/Dev/QA ใน session 1
+- **Session 2 ใช้ Sonnet / ทำ UX → Dev → QA** — ห้ามย้อนกลับไปแก้ spec ใน session 2
+- **ถ้าต้องแก้ spec** → เปิด Session 1 ใหม่ (Opus) → แก้ spec → กลับมา Session 2
+- **Output ของ Session 1 ต้อง complete** ก่อนเริ่ม Session 2 — ห้าม partial handoff
+
+### ทำไมแยก session แทน spawn subagent
+
+| แยก session | spawn subagent |
+|---|---|
+| ไม่มี system prompt overhead | เสีย token ~3-5 เท่าของ subagent context |
+| Main context ชัดเจน (1 phase/session) | Context ปนกันใน main |
+| ผู้ใช้คุม budget ได้ | Token ไหลเอง |
+| เปลี่ยน model ได้ตามต้องการ | Fix ตาม model ของ subagent |
+
+---
+
+## 🤖 วิธีทำงาน — Claude Code ทำทุก phase เอง
+
+**คุณคือ Claude Code — คุยกับผู้ใช้โดยตรง ทำงานทุก phase ด้วยตัวเอง**
+
+ไม่มี subagent ไม่มีการ spawn — Claude Code สวมบทบาทตาม phase ที่ทำอยู่ ทำงานเป็นลำดับ และเขียน output ทุก phase ลง disk เพื่อให้ phase ถัดไปอ่านได้
 
 ```
 👤 ผู้ใช้ (User)
   │
-  ├── คุยกับ Claude Code โดยตรง — ไม่มี BA คั่นกลาง
-  │
-  └── Claude Code spawn agent ตามประเภทงาน:
-        ├── 🧑‍💼 BA   → วิเคราะห์ requirement, เขียน spec, คิด edge cases
-        ├── 🎨 UX   → ออกแบบ UI/UX, เขียน design spec
-        ├── 💻 Dev  → เขียนโค้ดตาม spec
-        └── 🧪 QA   → เขียน test cases, รันทดสอบ
+  ▼
+📋 Claude Code (BA)  → เขียน spec ลง `docs/specs/<feature>.md`
+  ▼
+🎨 Claude Code (UX)  → อ่าน spec จาก disk → เขียน design ลง `docs/ux/screens/<screen>.md`
+  ▼
+💻 Claude Code (Dev) → อ่าน spec + UX จาก disk → เขียนโค้ด + `tsc --noEmit` ผ่าน
+  ▼
+🧪 Claude Code (QA)  → อ่าน spec + AC จาก disk → เขียน test cases + รันทดสอบ
+  ▼
+✅ Done
 ```
 
-### Agent ไหนใช้เมื่อไหร่
+### 🔴 กฎ Phase Lifecycle — ต้องรายงานสถานะทุกครั้ง ห้ามละเลย
 
-| งาน | ใช้ Agent | หมายเหตุ |
-|---|---|---|
-| วิเคราะห์ requirement / เขียน spec / คิด feature | `ba` | BA รับ requirement → เขียน spec + AC + Edge Cases |
-| ออกแบบ UI / layout / component / screen | `ux` | UX ออกแบบตาม spec → เขียน design files |
-| เขียนโค้ด / แก้บั๊ก / implement feature | `dev` | Dev เขียนโค้ดตาม spec → `tsc --noEmit` ต้องผ่าน |
-| ทดสอบ / เขียน test cases / ตรวจสอบ | `qa` | QA ทดสอบตาม AC → บันทึกผล |
-| ค้นหาข้อมูล / อ่านไฟล์หลาย ๆ ที่ | `Explore` หรือ `general-purpose` | ใช้หาข้อมูล ไม่ใช่ทำงานเฉพาะทาง |
-
-### 🔴 กฎ Agent Lifecycle — ต้องรายงานสถานะทุกครั้ง ห้ามละเลย
-
-ทุกครั้งที่ spawn agent และทุกครั้งที่ agent จบการทำงาน — **คุณต้องรายงานให้ผู้ใช้รู้ทันที**
+ทุกครั้งที่เริ่ม/จบ phase — **คุณต้องรายงานให้ผู้ใช้รู้ทันที**
 
 ```
-🟢 SPAWN  → แจ้งทันที: "🟢 [agent] เริ่มทำงาน: <ทำอะไร>"
-🔴 COMPLETE → แจ้งทันที: "🔴 [agent] เสร็จ: <ผลลัพธ์สั้น ๆ>"
+🟢 START  → แจ้งทันที: "📋 [phase] เริ่ม: <ทำอะไร>"
+🔴 COMPLETE → แจ้งทันที: "✅ [phase] เสร็จ: <ผลลัพธ์สั้น ๆ>"
 ```
 
 | Event | รูปแบบการรายงาน | ตัวอย่าง |
 |---|---|---|
-| Spawn agent | `🟢 [ชื่อ agent] started — <งานที่ทำ>` | `🟢 BA started — วิเคราะห์ requirement TASK-015` |
-| Agent สำเร็จ | `✅ [ชื่อ agent] done — <ผลลัพธ์>` | `✅ BA done — spec TASK-015 เขียนเสร็จ` |
-| Agent ล้มเหลว | `❌ [ชื่อ agent] failed — <สาเหตุ>` | `❌ Dev failed — tsc --noEmit มี error` |
-| Spawn พร้อมกันหลายตัว | แจ้งจำนวน + ชื่อ | `🟢 Spawned 3 agents: BA, UX, QA` |
-| ทุกตัวจบ | สรุปผลรวม | `✅ All agents done — 3/3 passed` |
+| เริ่ม phase | `📋 [phase] — เริ่ม: <งาน>` | `📋 BA — เริ่ม: วิเคราะห์ requirement TASK-015` |
+| จบ phase | `✅ [phase] — เสร็จ: <ผลลัพธ์>` | `✅ BA — เสร็จ: spec TASK-015 เขียนเสร็จ` |
+| Phase ล้มเหลว | `❌ [phase] — failed: <สาเหตุ>` | `❌ Dev — failed: tsc --noEmit มี error` |
+| ทุก phase จบ | สรุปผลรวม | `✅ All phases done — 4/4 passed` |
 
-**🔴 ห้าม spawn agent โดยไม่รายงาน — ผู้ใช้ต้องรู้ตลอดว่าใครทำงานอยู่**
+**🔴 ห้ามเริ่ม phase ถัดไปโดยไม่รายงาน — ผู้ใช้ต้องรู้ตลอดว่าอยู่ phase ไหน**
 
 ### 🔴🔴 กฎเหล็ก — ห้ามเขียนโค้ดก่อนผ่าน BA → UX → Dev → QA
 
@@ -59,44 +102,53 @@
 📥 User Request
       │
       ▼
-🧑‍💼 BA   — วิเคราะห์ requirement → เขียน spec doc → `docs/specs/<feature>.md`
+📋 BA   — วิเคราะห์ requirement → เขียน spec doc → `docs/specs/<feature>.md`
       │     (เอกสาร spec ต้องมี: Objective, Scope, Edge Cases, Acceptance Criteria)
       ▼
-🎨 UX   — อ่าน spec จาก BA → ออกแบบ UI/UX → `docs/ux/screens/<screen>.md`
+🎨 UX   — อ่าน spec จาก disk → ออกแบบ UI/UX → `docs/ux/screens/<screen>.md`
       │     (เอกสาร UX ต้องมี: Layout, Component Placement, Interaction States)
       ▼
-💻 Dev  — อ่าน spec + UX design → เขียนโค้ดตาม spec → `tsc --noEmit` ผ่าน
+💻 Dev  — อ่าน spec + UX design จาก disk → เขียนโค้ดตาม spec → `tsc --noEmit` ผ่าน
       │     (ห้ามเขียนโค้ดที่ไม่มีอยู่ใน spec)
       ▼
-🧪 QA   — อ่าน spec + AC → เขียน test cases → `docs/test-cases.md` → รันทดสอบ
+🧪 QA   — อ่าน spec + AC จาก disk → เขียน test cases → `docs/test-cases.md` → รันทดสอบ
       │     (ต้องมี test case ครอบคลุมทุก AC)
       ▼
 ✅ Done — รายงานผลให้ผู้ใช้ทราบ
 ```
 
-| ขั้น | Agent | Output ที่ต้องมี | สถานะ |
-|---|---|---|---|
-| 1 | `ba` | `docs/specs/<feature>.md` — spec + AC + Edge Cases | **ต้องทำก่อน** |
-| 2 | `ux` | `docs/ux/screens/<screen>.md` — ออกแบบหน้าจอ | **ต้องมี spec ก่อน** |
-| 3 | `dev` | โค้ดที่แก้ไข + `tsc --noEmit` ผ่าน | **ต้องมี spec + UX ก่อน** |
-| 4 | `qa` | test cases + ผลทดสอบ | **ต้องมีโค้ดก่อน** |
+| Phase | Role | Model | Output ที่ต้องมี | สถานะ |
+|---|---|---|---|---|
+| 1 | 📋 BA | Opus | `docs/specs/<feature>.md` — spec + AC + Edge Cases | **ต้องทำก่อน** (Session 1) |
+| 2 | 🎨 UX | Sonnet | `docs/ux/screens/<screen>.md` — ออกแบบหน้าจอ | **ต้องมี spec ก่อน** (Session 2) |
+| 3 | 💻 Dev | Sonnet | โค้ดที่แก้ไข + `tsc --noEmit` ผ่าน | **ต้องมี spec + UX ก่อน** (Session 2) |
+| 4 | 🧪 QA | Sonnet | test cases + ผลทดสอบ | **ต้องมีโค้ดก่อน** (Session 2) |
 
 **🚫 ห้าม:**
-- ห้ามเขียนโค้ดเองโดยไม่ผ่าน agent workflow
+- ห้ามเขียนโค้ดก่อนผ่าน phase BA
 - ห้ามข้ามขั้นตอน — ถึงแม้งานจะ "ง่าย" ก็ต้องทำตามลำดับ
 - ห้าม Dev เริ่มทำงานก่อน BA + UX เขียนเอกสารเสร็จ
 - ห้าม QA เริ่มก่อน Dev ส่งมอบโค้ด
 
 **✅ อนุญาต:**
-- Explore agent ใช้ค้นหาข้อมูลได้ตลอดเวลา (read-only)
-- BA + UX ทำงาน sequential หรือ parallel ก็ได้ (UX ต้องรอ BA spec)
+- BA + UX ทำงาน sequential ตามลำดับ (UX ต้องรอ BA spec)
 - ถามผู้ใช้เมื่อ requirement ไม่ชัด
+- ใช้ `Explore` / `general-purpose` agent สำหรับ read-only search (ไม่ใช่ workflow agent)
+
+### 🔑 กฎสำคัญ: "อ่านจาก disk ทุก phase"
+
+เพื่อทดแทน "context แยกของ subagent" — ทุก phase ต้อง:
+
+1. **Re-read** `docs/specs/<feature>.md` จาก disk ไม่ใช่ memory
+2. **สวมบทบาท** ใหม่ตาม phase นั้น ๆ — ลืม context ของ phase ก่อนหน้า
+3. **ห้าม bias** จาก phase ก่อนหน้า — เขียน output ตาม role ใหม่
+
+ตัวอย่าง: หลัง BA phase เขียน spec เสร็จ → UX phase ต้อง `Read` ไฟล์ spec นั้นใหม่ ไม่ใช่จำจาก conversation
 
 ### หลักการสำคัญ
 
-- **คุณเป็นคนตัดสินใจ** ว่าจะ spawn agent ตัวไหน — แต่ต้องทำตาม workflow ด้านบนเสมอ
-- **agent รับผิดชอบงานของตัวเอง** — system prompt ของมันกำหนดขอบเขตไว้แล้ว
-- **ทำงานแบบ sequential หรือ parallel ก็ได้** — งานอิสระ spawn พร้อมกันได้
+- **Claude Code เป็นคนตัดสินใจ** ว่าจะทำ phase ไหน แต่ต้องทำตาม workflow ด้านบนเสมอ
+- **ทำงานแบบ sequential** — BA → UX → Dev → QA ตามลำดับ
 - **ถามผู้ใช้เมื่อจำเป็น** — requirement ไม่ชัด, ต้องการตัดสินใจ, PR พร้อม review
 
 ---
@@ -109,17 +161,6 @@
 - คำนวณกำไร/ขาดทุนด้วยวิธี FIFO (แยก pool ตาม symbol + provider)
 - แสดงผลสรุปภาษีรายปี
 - **Tech Stack:** React 19 + TypeScript 6 + Vite 8 + Redux Toolkit
-
----
-
-## 📂 Agent Files
-
-| Agent | ไฟล์ | Model | ใช้สำหรับ |
-|---|---|---|---|
-| 🧑‍💼 BA | `.claude/agents/ba.md` | `sonnet` → deepseek-v4-pro | วิเคราะห์ requirement, เขียน spec |
-| 🎨 UX | `.claude/agents/ux.md` | `haiku` → deepseek-v4-flash | ออกแบบ UI/UX |
-| 💻 Dev | `.claude/agents/dev.md` | `haiku` → deepseek-v4-flash | เขียนโค้ด |
-| 🧪 QA | `.claude/agents/qa.md` | `haiku` → deepseek-v4-flash | ทดสอบ |
 
 ---
 
@@ -143,7 +184,6 @@
 - **FIFO Engine** — `src/engine/fifoEngine.ts` เป็น pure functions ห้ามมี side effects
 - **Provider isolation** — FIFO แยก pool ตาม symbol + provider
 - **State management** — Redux Toolkit (`src/store/`)
-- **Agent model mapping** — ดู `C:\Users\kunan\.claude\settings.json` (global config)
 
 ---
 
@@ -151,5 +191,17 @@
 
 ทุก session:
 1. อ่าน `docs/tasks.md` — มีงานอะไรค้างอยู่
-2. ผู้ใช้คุยกับคุณโดยตรง — ไม่ต้องสวมบทบาท
-3. spawn agent ตามประเภทงาน — agent จัดการเองตาม system prompt
+2. **ตรวจ model ปัจจุบัน** ตรงกับ phase ที่จะทำไหม (ดู Model Strategy ด้านบน)
+3. ถ้าผู้ใช้ขอ BA phase → ตรวจว่า session เป็น Opus
+4. ถ้าผู้ใช้ขอ UX/Dev/QA → ตรวจว่า session เป็น Sonnet
+5. ถ้า model ไม่ตรง → **เตือนผู้ใช้** ให้ `/model opus` หรือ `/model sonnet` ก่อนทำ
+
+### Self-check ตอนเริ่ม session
+
+```
+ผู้ใช้: "ทำ BA phase สำหรับ feature X"
+Claude: ตรวจ model ปัจจุบัน
+  ├── Opus → OK, เริ่มทำ BA
+  └── Sonnet/Haiku → "⚠️ session นี้ใช้ Sonnet แต่ BA phase ควรใช้ Opus
+                       กรุณา /model opus แล้วเปิด session ใหม่ หรือบอกให้ทำ Sonnet ต่อ"
+```

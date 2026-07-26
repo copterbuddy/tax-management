@@ -1,7 +1,19 @@
 # 🤖 Team Workflow — BA → UX → Dev → QA
 
-> **Purpose:** Document how the 4-agent team collaborates on Thai Tax Tracker.  
-> **Agents:** BA (Business Analyst), UX (UX/UI Designer), Dev (Developer), QA (Quality Assurance)
+> **Purpose:** Document how the 4-phase workflow operates on Thai Tax Tracker.  
+> **Execution model:** Claude Code handles all 4 phases sequentially with no subagent spawning.  
+> **Model strategy:** Manual session switch — BA = Opus, UX/Dev/QA = Sonnet. See `CLAUDE.md`.
+
+---
+
+## 🧠 Model per Phase (Quick Reference)
+
+| Phase | Model | Session |
+|---|---|---|
+| 📋 BA | Opus | Session 1 |
+| 🎨 UX → 💻 Dev → 🧪 QA | Sonnet | Session 2 |
+
+ดูรายละเอียดใน `CLAUDE.md` หัวข้อ "Model Strategy — Manual Session Switch"
 
 ---
 
@@ -13,13 +25,14 @@ User / Stakeholder
        │  "I want feature X"
        ▼
 ┌─────────────────────────────────────────────┐
-│ 🧑‍💼 BA (Business Analyst)                    │
+│ 📋 BA (Business Analyst)                    │
+│  — Claude Code plays this role              │
 │                                             │
 │ 1. Read existing code (understand impact)   │
 │ 2. Ask clarifying questions                 │
 │ 3. Evaluate: Does this need UI design?      │
-│    ├── Yes → Send UX Design Request         │
-│    └── No  → Write spec directly            │
+│    ├── Yes → Continue to UX phase           │
+│    └── No  → Skip UX phase                  │
 │ 4. Write Specification:                     │
 │    • User Story                             │
 │    • Acceptance Criteria                    │
@@ -27,48 +40,49 @@ User / Stakeholder
 │    • Edge Cases                             │
 │ 5. Validate: "Is this enough for Dev+QA?"  │
 │                                             │
-│ Output: SPEC + UX Design (ถ้ามี)            │
+│ Output: SPEC → docs/specs/<feature>.md      │
 └──────────────┬──────────────────────────────┘
                │
-     ┌─────────┴─────────┐
-     ▼                   │
-┌────────────┐           │  ← BA สั่งเมื่อต้องการออกแบบ UI
-│ 🎨 UX      │           │
-│            │           │
-│ 1. Read    │           │
-│    design  │           │
-│    request │           │
-│ 2. Read    │           │
-│    design  │           │
-│    system  │           │
-│ 3. Design  │           │
-│    UX/UI   │           │
-│ 4. Write   │           │
-│    persist │           │
-│    files   │           │
-│ 5. Return  │           │
-│    to BA   │           │
-└──────┬─────┘           │
-       │                 │
-       └─────┬───────────┘
-             │
-     ┌───────┴───────┐
-     ▼               ▼
-┌────────────┐  ┌──────────────┐
-│ 💻 Dev     │  │ 🧪 QA        │
-│            │  │              │
-│ 1. Read    │  │ 1. Read spec │
-│    spec    │  │ 2. Design    │
-│ 2. Read    │  │    test      │
-│    files   │  │    cases     │
-│ 3. Write   │  │ 3. Run tests │
-│    code    │  │ 4. Report    │
-│ 4. Type-   │  │    results   │
-│    check   │  │              │
-│ 5. Ship    │  │              │
-└──────┬─────┘  └──────┬───────┘
-       │               │
-       └───────┬───────┘
+               ▼
+┌─────────────────────────────────────────────┐
+│ 🎨 UX (UX/UI Designer)                      │
+│  — Claude Code plays this role              │
+│                                             │
+│ 1. RE-READ spec from disk (fresh perspective)│
+│ 2. Read design system                       │
+│ 3. Design UX/UI                             │
+│ 4. Write persistent files                   │
+│ 5. Validate: "Is this enough for Dev+QA?"  │
+│                                             │
+│ Output: Design Spec → docs/ux/screens/      │
+└──────────────┬──────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────┐
+│ 💻 Dev (Developer)                          │
+│  — Claude Code plays this role              │
+│                                             │
+│ 1. RE-READ spec + UX from disk              │
+│ 2. Read existing files (study patterns)    │
+│ 3. Write code                               │
+│ 4. Type-check (tsc --noEmit)                │
+│ 5. Hand off to QA                           │
+│                                             │
+│ Output: Code changes in src/                │
+└──────────────┬──────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────┐
+│ 🧪 QA (Quality Assurance)                   │
+│  — Claude Code plays this role              │
+│                                             │
+│ 1. RE-READ spec + AC from disk              │
+│ 2. Design test cases (every AC)             │
+│ 3. Run tests                                │
+│ 4. Report results                           │
+│                                             │
+│ Output: Test report → docs/test-cases.md    │
+└──────────────┬──────────────────────────────┘
                │
                ▼
        ┌──────────────┐
@@ -76,6 +90,30 @@ User / Stakeholder
        │ Fix if QA     │
        │ found bugs    │
        └──────────────┘
+```
+
+---
+
+## 🔑 Key Difference: Self-Execution Model
+
+**ห้าม spawn subagent** — Claude Code ทำทุก phase เองใน main context
+
+### How we keep each phase "fresh"
+
+| Subagent model (เดิม) | Self-execution model (ใหม่) |
+|---|---|
+| แต่ละ phase มี context แยก = independent reasoning | Claude Code ต้อง **re-read spec จาก disk** ทุก phase |
+| System prompt กำหนด role อัตโนมัติ | Claude Code ต้อง **สวมบทบาท** ใหม่ตาม phase |
+| ไม่ bias จาก phase ก่อน | **ลืม context ของ phase ก่อนหน้า** โดย re-read |
+
+### Discipline checklist (ทำทุก phase)
+
+```
+□ 1. Re-read input files from disk (ไม่ใช่ memory)
+□ 2. Switch mental model to current phase role
+□ 3. Produce output file matching phase template
+□ 4. Report ผล (✅ complete / ❌ failed) ก่อนข้าม phase
+□ 5. ห้ามข้าม phase โดยไม่มี output
 ```
 
 ---
@@ -202,7 +240,7 @@ User / Stakeholder
 
 ## 📐 Quality Gates
 
-| Gate | Check | Who |
+| Gate | Check | Role |
 |---|---|---|
 | **Spec Complete** | All ACs defined, edge cases covered | BA |
 | **UX Design Complete** | Persistent files updated, all states designed, responsive covered | UX |
@@ -217,9 +255,11 @@ User / Stakeholder
 
 | Scenario | Protocol |
 |---|---|
-| **Spec is unclear** | Dev/QA/UX asks BA — do NOT guess |
-| **UX design conflicts with design system** | UX informs BA — BA decides |
-| **Type error unresolved** | Dev escalates to BA |
-| **Test fails** | QA reports to Dev with repro steps |
-| **New edge case found** | BA updates spec → Dev adjusts → QA adds test |
+| **Spec is unclear** | Re-enter BA phase — do NOT guess |
+| **UX design conflicts with design system** | Re-enter UX phase — fix design |
+| **Type error unresolved** | Dev escalates → re-enter Dev phase |
+| **Test fails** | QA reports → re-enter Dev phase with repro steps |
+| **New edge case found** | Re-enter BA phase → update spec → re-do Dev + QA |
 | **Disagreement** | BA: final on requirements; UX: final on design; Dev: final on implementation; QA: veto on quality |
+
+> **Note:** "re-enter phase" หมายถึง Claude Code กลับไปทำ phase นั้นใหม่ ไม่ได้ spawn agent ใหม่

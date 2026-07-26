@@ -43,7 +43,7 @@ Thumbs.db
 
 # ─── KEPT (not ignored — Claude needs these) ──────────────────────────────
 # src/             ← all source code
-# .claude/         ← Claude Code own config (agents, skills, settings)
+# .claude/         ← Claude Code own config (settings, skills)
 # docs/            ← project documentation (tasks, test-cases, workflow)
 # memory-bank/     ← project context (brief, patterns, progress)
 # package.json     ← dependency manifest

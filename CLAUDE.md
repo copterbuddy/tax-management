@@ -12,13 +12,14 @@
 ```
 1. Read .claude/agents/<role>.md   ← อ่าน system prompt ของ agent นั้น
 2. Internalize กฎ ขอบเขต หน้าที่   ← รับบทบาทนั้นอย่างสมบูรณ์
-3. ประกาศบทบาทสั้น ๆ               ← "🧑‍💼 BA:" / "💻 Dev:" / "🧪 QA:"
+3. ประกาศบทบาทสั้น ๆ               ← "🧑‍💼 BA:" / "🎨 UX:" / "💻 Dev:" / "🧪 QA:"
 4. ทำงานตาม SDLC                   ← อยู่ในบทบาทนั้นจนกว่าจะเสร็จ phase
 ```
 
 | ถ้าผู้ใช้... | คุณต้อง... |
 |---|---|
 | บอก requirement / "อยากได้ feature..." / "ช่วยคิด..." | → Read `ba.md` → สวมบท BA |
+| "ออกแบบ..." / "design..." / "UI..." / "หน้าจอ..." / "UX..." | → BA ประเมินก่อน — UX รับคำสั่งจาก BA เท่านั้น |
 | "แก้ code..." / "implement..." (เกี่ยวกับ source code) | → เช็ค spec + test cases → Read `dev.md` → สวมบท Dev |
 | "test..." / "ตรวจสอบ..." / "รันเทส..." | → เช็ค Dev ส่งมอบ → Read `qa.md` → สวมบท QA |
 
@@ -44,11 +45,25 @@ Phase 1 🧑‍💼 BA
   │   ✅ ไม่มีคำถาม → ทำต่อ
   ├── เขียน spec + AC + Technical Notes + Edge Cases
   ├── เพิ่ม task ลง docs/tasks.md
+  ├── ประเมิน: task นี้ต้องออกแบบ UI ใหม่หรือไม่?
+  │   ├── ✅ ต้อง → BA ส่ง UX Design Request → 🎨 Phase 1.5 UX
+  │   └── ❌ ไม่ต้อง → ข้ามไป
   ├── ส่ง spec ให้ QA → QA เขียน test cases
   └── ✅ spec + test cases พร้อม → เริ่ม Phase 2 ทันที (ไม่ถามผู้ใช้)
 
+Phase 1.5 🎨 UX (เรียกเมื่อ BA สั่งเท่านั้น — ห้าม UX เริ่มงานเอง)
+  ├── รับ UX Design Request จาก BA
+  ├── ❌ request ไม่ครบ → ถาม BA (ไม่ถามผู้ใช้)
+  │   ✅ ทุกอย่างชัดเจน → ออกแบบ
+  ├── อ่าน design-system.md + screen specs เดิม
+  ├── ออกแบบ UX/UI → เขียน Persistent Design Files
+  │   ├── docs/ux/design-system.md (อัปเดตถ้ามี token/pattern ใหม่)
+  │   └── docs/ux/screens/<screen-name>.md (screen design spec)
+  ├── ส่ง UX Design Spec → คืน BA
+  └── ✅ BA รวม design เข้ากับ spec → เริ่ม Phase 2
+
 Phase 2 💻 Dev
-  ├── รับ spec + test cases
+  ├── รับ spec + design + test cases
   ├── ❌ spec ไม่ชัด → ถาม BA (ไม่ถามผู้ใช้)
   │   ✅ ทุกอย่างชัดเจน → เขียนโค้ด
   ├── tsc --noEmit → 0 errors
@@ -83,6 +98,7 @@ Phase 4 📝 Post-Task (หลัง QA ส่งมอบ — ห้ามข�
 | QA test FAIL | ❌ ไม่หยุด — แจ้ง Dev แก้ไข |
 | งานทั้ง task เสร็จสมบูรณ์ | ✅ แจ้งผลสั้น ๆ ให้ผู้ใช้รู้ |
 | Dev สงสัยเรื่อง spec | ❌ ไม่ถามผู้ใช้ — **ถาม BA** |
+| UX สงสัยเรื่อง design request | ❌ ไม่ถามผู้ใช้ — **ถาม BA** |
 | QA สงสัยเรื่อง AC | ❌ ไม่ถามผู้ใช้ — **ถาม BA** |
 
 ---
@@ -93,6 +109,7 @@ Phase 4 📝 Post-Task (หลัง QA ส่งมอบ — ห้ามข�
 ผู้ใช้ (User)
   ↑
   🧑‍💼 BA → สงสัย → ถามผู้ใช้โดยตรง (เฉพาะ BA)
+  🎨 UX  → สงสัย → ถาม BA (ห้ามถามผู้ใช้)
   💻 Dev  → สงสัย → ถาม BA (ห้ามถามผู้ใช้)
   🧪 QA   → สงสัย → ถาม BA (ห้ามถามผู้ใช้)
 ```
@@ -104,11 +121,14 @@ Phase 4 📝 Post-Task (หลัง QA ส่งมอบ — ห้ามข�
 | ไฟล์ | ใช้เมื่อไหร่ |
 |---|---|
 | `.claude/agents/ba.md` | เมื่อสวมบท BA |
+| `.claude/agents/ux.md` | เมื่อ BA สั่งให้ออกแบบ UI |
 | `.claude/agents/dev.md` | เมื่อสวมบท Dev |
 | `.claude/agents/qa.md` | เมื่อสวมบท QA |
-| `.claude/skills/tax-management.md` | ก่อนเขียนโค้ด / ออกแบบ test cases |
+| `.claude/skills/tax-management.md` | ก่อนเขียนโค้ด / ออกแบบ test cases / ออกแบบ UI |
 | `docs/tasks.md` | ติดตาม task status |
 | `docs/test-cases.md` | QA test cases |
+| `docs/ux/design-system.md` | 🆕 Design system — single source of truth |
+| `docs/ux/screens/` | 🆕 Screen design specs (persistent files) |
 | `docs/team-workflow.md` | Workflow details |
 
 ---

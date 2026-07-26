@@ -44,5 +44,10 @@
   "remittedLabel": "Remitted",
   "taxableLabel": "Taxable (THB)",
   "loss": "Loss",
-  "sellTradesCount": "sell trades"
+  "sellTradesCount": "sell trades",
+  "sellSymbolEmpty": "-- No shares available to sell. Add a BUY trade first. --",
+  "sharesAvailable": "shares available",
+  "sharesSoldOut": "sold out",
+  "sellSelectFirst": "Select a Symbol above first",
+  "sellAutoFilled": "Auto-filled from Symbol selection"
 }

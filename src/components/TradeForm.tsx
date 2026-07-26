@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -59,6 +59,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
     control,
     reset,
     watch,
+    setValue,
     setError,
     formState: { errors },
   } = useForm<TradeFormData>({
@@ -88,6 +89,71 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       notes: trade?.notes ?? '',
     });
   }, [trade, reset]);
+
+  // ─── Sellable Options (SELL mode Symbol dropdown) ─────────────────────────
+
+  interface SellableOption {
+    symbol: string;
+    provider: ProviderType;
+    totalRemaining: number;
+  }
+
+  const sellableOptions = useMemo<SellableOption[]>(() => {
+    const map = new Map<string, SellableOption>();
+    for (const lot of remainingLots) {
+      const key = `${lot.symbol}|${lot.provider}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.totalRemaining += lot.remainingQuantity;
+      } else {
+        map.set(key, {
+          symbol: lot.symbol,
+          provider: lot.provider,
+          totalRemaining: lot.remainingQuantity,
+        });
+      }
+    }
+    return Array.from(map.values())
+      .filter(o => o.totalRemaining > 0)
+      .sort((a, b) => a.symbol.localeCompare(b.symbol) || a.provider.localeCompare(b.provider));
+  }, [remainingLots]);
+
+  const allSellableOptions = useMemo(() => {
+    const options = [...sellableOptions];
+    if (trade && trade.type === 'SELL') {
+      const exists = options.some(
+        o => o.symbol === trade.symbol && o.provider === trade.provider
+      );
+      if (!exists) {
+        options.unshift({
+          symbol: trade.symbol,
+          provider: trade.provider as ProviderType,
+          totalRemaining: 0,
+        });
+      }
+    }
+    return options;
+  }, [sellableOptions, trade]);
+
+  // ─── Watch form values ───────────────────────────────────────────────────
+
+  const watchedType = watch('type');
+  const watchedSymbol = watch('symbol');
+  const watchedProvider = watch('provider');
+
+  // ─── Type toggle reset ───────────────────────────────────────────────────
+
+  const previousTypeRef = useRef(watchedType);
+
+  useEffect(() => {
+    if (watchedType !== previousTypeRef.current) {
+      setValue('symbol', '');
+      setValue('provider', 'Dime');
+      previousTypeRef.current = watchedType;
+    }
+  }, [watchedType, setValue]);
+
+  // ─── On Submit ───────────────────────────────────────────────────────────
 
   const onFormSubmit = (data: TradeFormData) => {
     const tradeData: TradeTransaction = {
@@ -127,10 +193,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
 
   // ─── Real-time Provider Availability ────────────────────────────────────
 
-  const watchedType = watch('type');
-  const watchedSymbol = watch('symbol');
-  const watchedProvider = watch('provider');
-
   const getAvailableQty = (sym: string, prov: string): number | null => {
     if (!sym) return null;
     const lots = remainingLots.filter(
@@ -168,14 +230,77 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
             </div>
             <div className="form-group">
               <label htmlFor="trade-symbol">{t('trade:formSymbol')}</label>
-              <input
-                id="trade-symbol"
-                type="text"
-                placeholder="e.g. AAPL"
-                {...register('symbol')}
-                className={errors.symbol ? 'input-error' : ''}
-              />
-              {errors.symbol && <span className="error-msg">{errors.symbol.message}</span>}
+              {watchedType === 'SELL' ? (
+                <Controller
+                  name="symbol"
+                  control={control}
+                  render={({ field }) => {
+                    const selectValue = field.value
+                      ? `sell|${field.value}|${watchedProvider}`
+                      : '';
+
+                    if (allSellableOptions.length === 0) {
+                      return (
+                        <>
+                          <select
+                            id="trade-symbol"
+                            disabled
+                            className={`select-empty${errors.symbol ? ' input-error' : ''}`}
+                          >
+                            <option>{t('trade:sellSymbolEmpty')}</option>
+                          </select>
+                          {errors.symbol && <span className="error-msg">{errors.symbol.message}</span>}
+                        </>
+                      );
+                    }
+
+                    return (
+                      <>
+                        <select
+                          id="trade-symbol"
+                          value={selectValue}
+                          onChange={(e) => {
+                            const parts = e.target.value.split('|');
+                            const symbol = parts[1];
+                            const provider = parts[2];
+                            field.onChange(symbol);
+                            setValue('provider', provider);
+                          }}
+                          className={errors.symbol ? 'input-error' : ''}
+                        >
+                          {allSellableOptions.map(opt => {
+                            const optValue = `sell|${opt.symbol}|${opt.provider}`;
+                            if (opt.totalRemaining === 0) {
+                              return (
+                                <option key={optValue} value={optValue}>
+                                  {opt.symbol} @ {opt.provider} — 0 {t('trade:sharesAvailable')} ({t('trade:sharesSoldOut')})
+                                </option>
+                              );
+                            }
+                            return (
+                              <option key={optValue} value={optValue}>
+                                {opt.symbol} @ {opt.provider} — {opt.totalRemaining} {t('trade:sharesAvailable')}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        {errors.symbol && <span className="error-msg">{errors.symbol.message}</span>}
+                      </>
+                    );
+                  }}
+                />
+              ) : (
+                <>
+                  <input
+                    id="trade-symbol"
+                    type="text"
+                    placeholder="e.g. AAPL"
+                    {...register('symbol')}
+                    className={errors.symbol ? 'input-error' : ''}
+                  />
+                  {errors.symbol && <span className="error-msg">{errors.symbol.message}</span>}
+                </>
+              )}
             </div>
           </div>
 
@@ -202,7 +327,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
                 name="provider"
                 control={control}
                 render={({ field }) => (
-                  <select id="trade-provider" {...field}>
+                  <select id="trade-provider" {...field} disabled={watchedType === 'SELL'}>
                     {PROVIDER_OPTIONS.map(p => {
                       const label = p === 'Dime' ? t('trade:providerDime') :
                                     p === 'Liberator' ? t('trade:providerLiberator') :
@@ -223,6 +348,13 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
               {watchedType === 'SELL' && watchedSymbol && currentAvailableQty !== null && currentAvailableQty === 0 && (
                 <span className="error-msg">
                   {t('common:noLotsAvailable') ?? `No ${watchedSymbol} lots available from ${watchedProvider}`}
+                </span>
+              )}
+              {watchedType === 'SELL' && (
+                <span className="hint-text">
+                  {watchedSymbol
+                    ? `ⓘ ${t('trade:sellAutoFilled')}`
+                    : `ⓘ ${t('trade:sellSelectFirst')}`}
                 </span>
               )}
             </div>

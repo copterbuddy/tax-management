@@ -1116,6 +1116,24 @@ a:hover {
   color: var(--color-danger);
 }
 
+.form-group select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background-color: var(--color-border-light);
+  border-color: var(--color-border-light);
+}
+
+.select-empty {
+  color: var(--color-text-tertiary);
+  font-style: italic;
+}
+
+.hint-text {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin-top: var(--space-1);
+}
+
 .form-actions {
   display: flex;
   justify-content: flex-end;

@@ -44,5 +44,10 @@
   "remittedLabel": "นำเข้าแล้ว",
   "taxableLabel": "ภาษี (THB)",
   "loss": "ขาดทุน",
-  "sellTradesCount": "รายการขาย"
+  "sellTradesCount": "รายการขาย",
+  "sellSymbolEmpty": "-- ไม่มีหุ้นให้ขาย กรุณาเพิ่มรายการซื้อก่อน --",
+  "sharesAvailable": "หุ้นที่เหลือ",
+  "sharesSoldOut": "ขายหมดแล้ว",
+  "sellSelectFirst": "เลือก Symbol ก่อน",
+  "sellAutoFilled": "ค่า auto-fill จาก Symbol ที่เลือก"
 }

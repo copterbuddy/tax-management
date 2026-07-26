@@ -247,6 +247,45 @@
 
 ---
 
+### TASK-019: Sell Trade Symbol Dropdown (เปลี่ยน Symbol เป็น dropdown เมื่อขาย)
+
+**Priority:** 🟡 P1
+**Effort:** S (1 component file + 2 i18n files)
+**Status:** ✅ ทำเสร็จแล้ว
+**Assigned to:** Dev
+**Depends on:** None
+**Spec:** `docs/specs/sell-symbol-dropdown.md`
+
+**User Story:**
+> As a Thai investor recording a SELL transaction, I want the Symbol field to be a dropdown showing only the stocks I currently hold (with their provider and available quantity), so that I cannot accidentally enter a symbol I do not own or sell more shares than I have.
+
+**Acceptance Criteria:**
+| # | Condition |
+|---|---|
+| AC1 | เมื่อ type=SELL → Symbol field เปลี่ยนเป็น dropdown ทันที |
+| AC2 | Dropdown แสดงเฉพาะหุ้นจาก remainingLots ที่มี remainingQuantity > 0 |
+| AC3 | แต่ละ option แสดง "SYMBOL@Provider — X shares" |
+| AC4 | เลือก option → auto-fill symbol และ provider |
+| AC5 | Provider dropdown ถูก disabled เมื่อ type=SELL (เพราะค่า auto-fill แล้ว) |
+| AC6 | เมื่อ type=BUY → Symbol กลับเป็น text input, Provider กลับมาเป็น dropdown ปกติ |
+| AC7 | แก้ไขรายการขายเดิม → ฟอร์มแสดงค่าเดิมได้ แม้หุ้นจะขายหมดแล้ว |
+| AC8 | ไม่มี remainingLots → dropdown แสดง empty state ที่สื่อความหมาย |
+| AC9 | `tsc --noEmit` ผ่าน ไม่มี type error |
+| AC10 | Existing BUY flow ไม่ได้รับผลกระทบ |
+
+**Technical Notes:**
+- `TradeForm.tsx` เท่านั้นที่ต้องแก้ — ใช้ `Controller` จาก react-hook-form
+- `remainingLots` ถูกส่งเข้ามาแล้วใน props ไม่ต้องเปลี่ยน interface
+- เพิ่ม i18n keys: `sellSymbolEmpty`, `sharesAvailable`, `sharesSoldOut` (EN+TH)
+- ต้อง destructure `setValue` จาก `useForm` เพิ่มเพื่อ auto-fill provider
+
+**Files to Change:**
+- `src/components/TradeForm.tsx` — เปลี่ยน Symbol field เป็น conditional dropdown
+- `src/i18n/locales/en/trade.json` — เพิ่ม 3 keys
+- `src/i18n/locales/th/trade.json` — เพิ่ม 3 keys
+
+---
+
 ## 🟢 P2 — Medium Priority
 
 ### TASK-005: Install Test Framework (Vitest)
@@ -413,7 +452,7 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 | Priority | Count | Done | Pending | Tasks |
 |---|---|---|---|---|
 | 🔴 P0 | 5 | 5 | 0 | TASK-000 ✅, TASK-011 ✅, TASK-001 ✅, TASK-018 ✅, TASK-002 ✅ |
-| 🟡 P1 | 4 | 4 | 0 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅ |
+| 🟡 P1 | 5 | 4 | 1 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-019 ⬜ |
 | 🟢 P2 | 3 | 0 | 3 | TASK-005 ⬜, TASK-006 ⬜, TASK-007 ⬜ |
 | ⚪ P3 | 3 | 0 | 3 | TASK-008 ⬜, TASK-009 ⬜, TASK-010 ⬜ |
-| **Total** | **15** | **9** | **6** | |
+| **Total** | **16** | **9** | **7** | |

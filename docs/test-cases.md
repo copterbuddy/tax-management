@@ -10,9 +10,10 @@
 | Task | Total | ✅ PASS | ❌ FAIL | ⬜ Pending | 🟡 Testing |
 |---|---|---|---|---|---|
 | TASK-000 (Provider) | 23 | 23 | 0 | 0 | 0 |
+| TASK-019 (Sell Dropdown) | 20 | 20 | 0 | 0 | 0 |
 | TASK-017 (UX/UI) | 8 | 8 | 0 | 0 | 0 |
 | TASK-018 (Prod-Ready) | 38 | 38 | 0 | 0 | 0 |
-| **Total** | **69** | **69** | **0** | **0** | **0** |
+| **Total** | **89** | **89** | **0** | **0** | **0** |
 
 ---
 
@@ -308,6 +309,249 @@
 
 ---
 
+## 🟡 TASK-019: Sell Trade Symbol Dropdown
+
+**Reference Spec:** `docs/specs/sell-symbol-dropdown.md`  
+**Reference UX:** `docs/ux/screens/trade-form-sell-dropdown.md`  
+**Task Status:** ✅ ทำเสร็จแล้ว  
+**Test Status:** ✅ ทดสอบผ่านทั้งหมด (18/18)
+
+---
+
+### 📦 Group 1: Symbol Dropdown (SELL mode)
+
+---
+
+#### TC-019-001: Symbol field becomes dropdown when type=SELL
+
+**Covers:** AC1  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L233 — `{watchedType === 'SELL' ? (...Controller+select...) : (...text input...)}` — conditional rendering based on type. Dropdown renders `<select>` when SELL.
+
+---
+
+#### TC-019-002: Symbol dropdown only shows lots with remainingQuantity > 0
+
+**Covers:** AC2  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L117 — `.filter(o => o.totalRemaining > 0)` — lots with zero remaining are excluded from `sellableOptions`.
+
+---
+
+#### TC-019-003: Option format "SYMBOL @ Provider — X shares available"
+
+**Covers:** AC3  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L282 — `{opt.symbol} @ {opt.provider} — {opt.totalRemaining} {t('trade:sharesAvailable')}`. Options use composite value `sell|SYMBOL|Provider` for disambiguation (L272).
+
+---
+
+#### TC-019-004: Options sorted alphabetically
+
+**Covers:** AC4  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L118 — `.sort((a, b) => a.symbol.localeCompare(b.symbol) || a.provider.localeCompare(b.provider))` — sorted by symbol, then provider.
+
+---
+
+#### TC-019-005: Selecting option auto-fills symbol and provider
+
+**Covers:** AC5  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L262-268 — `onChange` handler parses composite value `"sell|SYMBOL|Provider"` → calls `field.onChange(symbol)` + `setValue('provider', provider)`. Both fields set in one action.
+
+---
+
+#### TC-019-006: Provider disabled when type=SELL
+
+**Covers:** AC6  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L330 — `disabled={watchedType === 'SELL'}` on Provider `<select>`. CSS L1119-1123 provides grayed-out styling (`opacity: 0.6`, `cursor: not-allowed`).
+
+---
+
+#### TC-019-007: Auto-fill hint text shown below Provider
+
+**Covers:** AC6  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L353-359 — When SELL mode: if `watchedSymbol` is set → `"ⓘ Auto-filled from Symbol selection"`, if empty → `"ⓘ Select a Symbol above first"`. Uses `.hint-text` CSS class.
+
+---
+
+### 📦 Group 2: BUY Mode (No Regression)
+
+---
+
+#### TC-019-008: Symbol returns to text input when type=BUY
+
+**Covers:** AC7  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L292-303 — ELSE branch renders original `<input type="text">` with `{...register('symbol')}`. BUY flow unchanged.
+
+---
+
+#### TC-019-009: Provider returns to enabled dropdown when type=BUY
+
+**Covers:** AC7  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L330 — `disabled={watchedType === 'SELL'}` only disables for SELL. BUY mode → Provider is enabled, shows available quantity per provider (original behavior).
+
+---
+
+#### TC-019-010: Type toggle resets Symbol and Provider
+
+**Covers:** AC8  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L148-154 — `useEffect` with `previousTypeRef` (L146). When `watchedType !== previousTypeRef.current` → `setValue('symbol', '')` + `setValue('provider', 'Dime')`. Initial render doesn't trigger (ref starts with same value as watchedType).
+
+---
+
+#### TC-019-011: Edit mode preserves original values (no spurious reset)
+
+**Covers:** AC8, AC10  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L146 — `previousTypeRef` initialized with `watchedType` (which is the trade's type in edit mode). Effect only fires on change, not on initial render. L80-91 — `reset()` called with trade values when `trade` prop changes.
+
+---
+
+### 📦 Group 3: Empty State
+
+---
+
+#### TC-019-012: Empty state when no sellable lots
+
+**Covers:** AC9  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L242-253 — When `allSellableOptions.length === 0` → disabled `<select>` with `t('trade:sellSymbolEmpty')`. i18n keys: EN `"-- No shares available to sell..."`, TH `"-- ไม่มีหุ้นให้ขาย..."`.
+
+---
+
+#### TC-019-013: Empty state for both EN and TH
+
+**Covers:** AC9  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** `en/trade.json` L48: `"sellSymbolEmpty": "-- No shares available to sell. Add a BUY trade first. --"`. `th/trade.json` L48: `"sellSymbolEmpty": "-- ไม่มีหุ้นให้ขาย กรุณาเพิ่มรายการซื้อก่อน --"`. Both keys present.
+
+---
+
+### 📦 Group 4: Edit Mode (Sold Out)
+
+---
+
+#### TC-019-014: Edit SELL with sold-out position shows in dropdown
+
+**Covers:** AC10, EC1  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L121-136 — `allSellableOptions` checks if `trade.type === 'SELL'` and adds trade's pair with `totalRemaining: 0` via `unshift()` if not already in list. L273-278 — sold-out option renders `"0 shares available (sold out)"`.
+
+---
+
+#### TC-019-015: Sold-out option text in both EN and TH
+
+**Covers:** AC10  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** `en/trade.json` L49-50: `"sharesAvailable": "shares available"`, `"sharesSoldOut": "sold out"`. `th/trade.json` L49-50: `"sharesAvailable": "หุ้นที่เหลือ"`, `"sharesSoldOut": "ขายหมดแล้ว"`.
+
+---
+
+### 📦 Group 5: Edge Cases
+
+---
+
+#### TC-019-016: Same symbol, multiple providers — separate options
+
+**Covers:** EC3  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L101-119 — `sellableOptions` groups by `symbol|provider` composite key. L272 — Each option uses `sell|SYMBOL|Provider` composite value. Two providers with same symbol → two distinct options with different values.
+
+---
+
+#### TC-019-017: Partial sell → zero-quantity lot removed from dropdown
+
+**Covers:** EC5  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L117 — `.filter(o => o.totalRemaining > 0)`. When all shares of a (symbol, provider) pair are sold, `totalRemaining` becomes 0 and the pair is filtered out from `sellableOptions`.
+
+---
+
+#### TC-019-018: Zod validation still applies
+
+**Covers:** EC6  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** TradeForm.tsx L13 — `symbol: z.string().min(1).max(VALIDATION.SYMBOL_MAX_LENGTH)` unchanged. Symbol dropdown uses `field.onChange(symbol)` which goes through same zod validation path. L269 — `className={errors.symbol ? 'input-error' : ''}` shows error state.
+
+---
+
+### 📦 Group 6: i18n & CSS
+
+---
+
+#### TC-019-019: All 5 i18n keys present in EN and TH
+
+**Covers:** AC3, AC9, AC10  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** Keys verified in both locale files:
+| Key | EN | TH |
+|---|---|---|
+| `sellSymbolEmpty` | `-- No shares... --` | `-- ไม่มีหุ้น... --` |
+| `sharesAvailable` | `shares available` | `หุ้นที่เหลือ` |
+| `sharesSoldOut` | `sold out` | `ขายหมดแล้ว` |
+| `sellSelectFirst` | `Select a Symbol above first` | `เลือก Symbol ก่อน` |
+| `sellAutoFilled` | `Auto-filled from Symbol selection` | `ค่า auto-fill จาก Symbol ที่เลือก` |
+
+---
+
+#### TC-019-020: CSS classes for new states
+
+**Covers:** AC6, AC9  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Verification:** `index.css` contains:
+- L1119-1123: `select:disabled` — opacity 0.6, cursor not-allowed, background/border changed
+- L1126-1129: `.select-empty` — italic, muted color for empty state
+- L1131-1134: `.hint-text` — small muted text for auto-fill hint
+
+---
+
 ## 📋 Test Execution Log
 
 | Date | Tester | TC Range | Result | Notes |
@@ -318,6 +562,7 @@
 | 2026-07-25 | QA | TC-021 ~ TC-022 | 2/2 PASS | Code verification — migration |
 | 2026-07-25 | QA | TC-023 ~ TC-025 | 3/3 PASS | Static check — removed features |
 | **2026-07-25** | **QA** | **TC-001 ~ TC-025** | **25/25 ✅ PASS** | **TASK-000: All tests passed** |
+| **2026-07-26** | **QA** | **TC-019-001 ~ TC-019-020** | **20/20 ✅ PASS** | **TASK-019: All tests passed — static analysis + type check + i18n + CSS** |
 
 ---
 
@@ -331,6 +576,23 @@
 | AC4 — SELL validation | TC-007, TC-008, TC-009, TC-010, TC-016, TC-017, TC-018 | ✅ 7/7 |
 | AC5 — Migration | TC-021, TC-022 | ✅ 2/2 |
 | AC6 — Remove Export/Import | TC-023, TC-024, TC-025 | ✅ 3/3 |
+| **TASK-019** | | |
+| AC1 — SELL Symbol dropdown | TC-019-001 | ✅ |
+| AC2 — Filter remaining > 0 | TC-019-002 | ✅ |
+| AC3 — Option format | TC-019-003, TC-019-019 | ✅ |
+| AC4 — Sorted alphabetically | TC-019-004 | ✅ |
+| AC5 — Auto-fill provider | TC-019-005 | ✅ |
+| AC6 — Provider disabled | TC-019-006, TC-019-007, TC-019-020 | ✅ |
+| AC7 — BUY unchanged | TC-019-008, TC-019-009 | ✅ |
+| AC8 — Type toggle reset | TC-019-010, TC-019-011 | ✅ |
+| AC9 — Empty state | TC-019-012, TC-019-013 | ✅ |
+| AC10 — Edit sold out | TC-019-014, TC-019-015 | ✅ |
+| AC11 — tsc --noEmit | Type check passed | ✅ |
+| AC12 — BUY regression | TC-019-008, TC-019-009 | ✅ |
+| EC1 — Sold out edit | TC-019-014 | ✅ |
+| EC3 — Multiple providers | TC-019-016 | ✅ |
+| EC5 — Partial sell | TC-019-017 | ✅ |
+| EC6 — Zod validation | TC-019-018 | ✅ |
 
 ---
 

@@ -447,12 +447,38 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 
 ---
 
+### TASK-020: RemitForm UX — Clear Labels, Quick-fill, Enhanced Preview
+
+**Priority:** 🟡 P1  
+**Effort:** S (3 files)  
+**Status:** ✅ ทำเสร็จแล้ว  
+**Completed:** 2026-07-28  
+**Source:** BA analysis — user entered per-share price ($29) instead of total proceeds ($203) in amountUSD field, causing taxable preview to show "$1.00 × fxRate = ฿35" instead of the correct "$7.00 × 35 = ฿245"
+
+**What was done:**
+- BA verified formula `amountUSD × gainPercent × fxRateTHB` is mathematically correct per Thai Revenue Code
+- Quantity IS encoded in `gainPercent = gainUSD / sellRevenueUSD` — proof: `fullRemit → taxableTHB = quantity × perShareGain × fxRate`
+- Root cause: UX clarity — amount field label was ambiguous
+
+**UX Fixes Applied:**
+| Fix | File | Change |
+|-----|------|--------|
+| Label | `i18n/locales/*/remittance.json` | "Amount (USD)" → "Total Amount to Remit (USD)" + hint text |
+| Quick-fill | `RemitForm.tsx` | "Remit Remaining" button auto-fills `remainingProceedsUSD` |
+| Preview | `RemitForm.tsx` | Breakdown: remit amount → gain portion → cost basis → taxable THB |
+
+**Verification:**
+- `npx tsc --noEmit` → 0 errors
+- Manual: BUY 7@$28 + SELL 7@$29 → Record Remittance → Click quick-fill → $203 auto-filled → fxRate 35 → Preview shows ฿245.00
+
+---
+
 ## 📊 Summary
 
 | Priority | Count | Done | Pending | Tasks |
 |---|---|---|---|---|
 | 🔴 P0 | 5 | 5 | 0 | TASK-000 ✅, TASK-011 ✅, TASK-001 ✅, TASK-018 ✅, TASK-002 ✅ |
-| 🟡 P1 | 5 | 4 | 1 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-019 ⬜ |
+| 🟡 P1 | 6 | 5 | 1 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-020 ✅, TASK-019 ⬜ |
 | 🟢 P2 | 3 | 0 | 3 | TASK-005 ⬜, TASK-006 ⬜, TASK-007 ⬜ |
 | ⚪ P3 | 3 | 0 | 3 | TASK-008 ⬜, TASK-009 ⬜, TASK-010 ⬜ |
-| **Total** | **16** | **9** | **7** | |
+| **Total** | **17** | **10** | **7** | |

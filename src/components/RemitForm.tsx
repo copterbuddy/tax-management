@@ -39,6 +39,7 @@ export function RemitForm({ gains, remittance, onSubmit, onCancel }: RemitFormPr
     register,
     handleSubmit,
     watch,
+    setValue,
     setError,
     formState: { errors },
   } = useForm<RemitFormData>({
@@ -153,6 +154,19 @@ export function RemitForm({ gains, remittance, onSubmit, onCancel }: RemitFormPr
                 {...register('amountUSD', { valueAsNumber: true })}
                 className={errors.amountUSD ? 'input-error' : ''}
               />
+              <span className="hint-text">
+                {t('remittance:remitFormAmountHint')}
+              </span>
+              {selectedGain && selectedGain.remainingProceedsUSD > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-link"
+                  style={{ fontSize: '0.85rem', padding: '4px 0' }}
+                  onClick={() => setValue('amountUSD', selectedGain.remainingProceedsUSD)}
+                >
+                  {t('remittance:remitFormRemitRemaining', { amount: selectedGain.remainingProceedsUSD.toFixed(2) })}
+                </button>
+              )}
               {errors.amountUSD && <span className="error-msg">{errors.amountUSD.message}</span>}
             </div>
           </div>
@@ -187,13 +201,28 @@ export function RemitForm({ gains, remittance, onSubmit, onCancel }: RemitFormPr
 
           {selectedGain && amountUSD && !isNaN(Number(amountUSD)) && Number(amountUSD) > 0 && fxRateTHB && !isNaN(Number(fxRateTHB)) && (
             <div className="remit-preview">
-              <p>
-                <strong>{t('remittance:remitFormPreview')}:</strong>{' '}
-                ${(Number(amountUSD) * selectedGain.gainPercent).toFixed(2)} USD × {Number(fxRateTHB).toFixed(2)} THB/USD
-                {' = '}
-                ฿{estimatedTaxable.toFixed(2)}
-              </p>
-              <p className="remit-note">{t('remittance:remitFormPreviewNote')} ({(selectedGain.gainPercent * 100).toFixed(1)}%)</p>
+              <p><strong>{t('remittance:remitFormPreview')}:</strong></p>
+              <div className="remit-breakdown">
+                <p className="remit-breakdown-row">
+                  {t('remittance:remitFormPreviewRemit')}: <strong>${Number(amountUSD).toFixed(2)}</strong>
+                </p>
+                <p className="remit-breakdown-row">
+                  {t('remittance:remitFormPreviewGain', { pct: (selectedGain.gainPercent * 100).toFixed(1) })}:
+                  {' '}<strong>${(Number(amountUSD) * selectedGain.gainPercent).toFixed(2)}</strong>
+                </p>
+                <p className="remit-breakdown-row">
+                  {t('remittance:remitFormPreviewCost')}:{' '}
+                  <strong>${(Number(amountUSD) - Number(amountUSD) * selectedGain.gainPercent).toFixed(2)}</strong>
+                </p>
+                <p className="remit-breakdown-result">
+                  {t('remittance:remitFormPreviewTaxable', {
+                    usd: (Number(amountUSD) * selectedGain.gainPercent).toFixed(2),
+                    fx: Number(fxRateTHB).toFixed(2),
+                    thb: estimatedTaxable.toFixed(2)
+                  })}
+                </p>
+              </div>
+              <p className="remit-note">{t('remittance:remitFormPreviewNote')}</p>
             </div>
           )}
 

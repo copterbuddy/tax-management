@@ -29,6 +29,7 @@ export const tradeTransactionSchema = z.object({
   exchangeFeeUSD: z.number().min(0).default(0),
   tafFeeUSD: z.number().min(0).default(0),
   commissionRebateUSD: z.number().min(0).default(0),
+  vatUSD: z.number().min(0).default(0),
   notes: z.string().optional(),
 });
 

@@ -25,6 +25,7 @@ describe('tradeTransactionSchema', () => {
     exchangeFeeUSD: 0.25,
     tafFeeUSD: 0,
     commissionRebateUSD: 0,
+    vatUSD: 0,
   };
 
   it('parses a valid trade', () => {
@@ -133,6 +134,25 @@ describe('tradeTransactionSchema', () => {
       expect(result.data.commissionRebateUSD).toBe(0);
     }
   });
+
+  it('rejects negative vatUSD', () => {
+    const result = tradeTransactionSchema.safeParse({ ...validTrade, vatUSD: -0.5 });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts valid vatUSD', () => {
+    const result = tradeTransactionSchema.safeParse({ ...validTrade, vatUSD: 0.07 });
+    expect(result.success).toBe(true);
+  });
+
+  it('defaults missing vatUSD to 0', () => {
+    const { vatUSD, ...tradeWithoutVat } = validTrade;
+    const result = tradeTransactionSchema.safeParse(tradeWithoutVat);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.vatUSD).toBe(0);
+    }
+  });
 });
 
 describe('remittanceRecordSchema', () => {
@@ -198,7 +218,7 @@ describe('safeParse', () => {
     const result = safeParse(tradeTransactionSchema, {
       id: 't1', date: '2026-01-01', symbol: 'AAPL', type: 'BUY',
       provider: 'Dime', quantity: 10, priceUSD: 150, commissionUSD: 1,
-      exchangeFeeUSD: 0, tafFeeUSD: 0, commissionRebateUSD: 0,
+      exchangeFeeUSD: 0, tafFeeUSD: 0, commissionRebateUSD: 0, vatUSD: 0,
     }, null as any);
     expect(result.id).toBe('t1');
   });

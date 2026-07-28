@@ -19,6 +19,7 @@ const tradeFormSchema = z.object({
   exchangeFeeUSD: z.number().min(0),
   tafFeeUSD: z.number().min(0),
   commissionRebateUSD: z.number().min(0),
+  vatUSD: z.number().min(0),
   notes: z.string().optional(),
 });
 
@@ -78,6 +79,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       exchangeFeeUSD: trade?.exchangeFeeUSD ?? 0,
       tafFeeUSD: trade?.tafFeeUSD ?? 0,
       commissionRebateUSD: trade?.commissionRebateUSD ?? 0,
+      vatUSD: trade?.vatUSD ?? 0,
       notes: trade?.notes ?? '',
     },
   });
@@ -95,6 +97,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       exchangeFeeUSD: trade?.exchangeFeeUSD ?? 0,
       tafFeeUSD: trade?.tafFeeUSD ?? 0,
       commissionRebateUSD: trade?.commissionRebateUSD ?? 0,
+      vatUSD: trade?.vatUSD ?? 0,
       notes: trade?.notes ?? '',
     });
   }, [trade, reset]);
@@ -177,11 +180,12 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       exchangeFeeUSD: Number(data.exchangeFeeUSD),
       tafFeeUSD: Number(data.tafFeeUSD),
       commissionRebateUSD: Number(data.commissionRebateUSD),
+      vatUSD: Number(data.vatUSD),
       notes: data.notes?.trim() || undefined,
     };
 
-    // Validate rebate does not exceed total fees
-    const totalFees = tradeData.commissionUSD + tradeData.exchangeFeeUSD + tradeData.tafFeeUSD;
+    // Validate rebate does not exceed total fees (including VAT)
+    const totalFees = tradeData.commissionUSD + tradeData.exchangeFeeUSD + tradeData.tafFeeUSD + tradeData.vatUSD;
     if (tradeData.commissionRebateUSD > totalFees) {
       setError('commissionRebateUSD', {
         message: `Rebate cannot exceed total fees ($${totalFees.toFixed(2)})`,
@@ -429,6 +433,19 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
                 className={errors.commissionUSD ? 'input-error' : ''}
               />
               {errors.commissionUSD && <span className="error-msg">{errors.commissionUSD.message}</span>}
+            </div>
+            <div className="form-group">
+              <label htmlFor="trade-vat">{t('trade:formVat')}</label>
+              <input
+                id="trade-vat"
+                type="number"
+                step="any"
+                min="0"
+                placeholder="e.g. 0.11"
+                {...register('vatUSD', { valueAsNumber: true })}
+                className={errors.vatUSD ? 'input-error' : ''}
+              />
+              {errors.vatUSD && <span className="error-msg">{errors.vatUSD.message}</span>}
             </div>
             <div className="form-group">
               <label htmlFor="trade-exchange-fee">{t('trade:formExchangeFee')}</label>

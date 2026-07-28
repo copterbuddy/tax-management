@@ -549,12 +549,40 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 
 ---
 
+### TASK-023: Add VAT (ภาษีมูลค่าเพิ่ม) Field
+
+**Priority:** 🟡 P1
+**Effort:** S (10 files)
+**Status:** ✅ ทำเสร็จแล้ว
+**Completed:** 2026-07-28
+
+**What was done:**
+
+| Change | File | Detail |
+|---|---|---|
+| Interface | `src/types/trade.ts` | Add `vatUSD: number` |
+| Validation | `src/validation/schemas.ts` | `z.number().min(0).default(0)` |
+| Migration | `src/store/tradeSlice.ts` | Default 0 for old trades |
+| Engine | `src/engine/fifoEngine.ts` | BUY: `cost + vat`, SELL: `revenue - vat` |
+| Form | `src/components/TradeForm.tsx` | VAT input right after Commission, flex-wrap responsive |
+| Table | `src/components/TradeTable.tsx` | Total Fees includes VAT |
+| CSS | `src/index.css` | `.form-row-fees` → flexbox wrap |
+| i18n EN/TH | `formVat` | "VAT (USD)" / "ภาษีมูลค่าเพิ่ม (USD)" |
+
+**Layout:** `[Commission] [VAT] [Exchange] [TAF]` → flex-wrap อัตโนมัติ
+
+**Verification:**
+- `npx tsc --noEmit` → 0 errors
+- `npm test` → 116 tests pass
+
+---
+
 ## 📊 Summary
 
 | Priority | Count | Done | Pending | Tasks |
 |---|---|---|---|---|
 | 🔴 P0 | 5 | 5 | 0 | TASK-000 ✅, TASK-011 ✅, TASK-001 ✅, TASK-018 ✅, TASK-002 ✅ |
-| 🟡 P1 | 8 | 8 | 0 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-020 ✅, TASK-019 ✅, TASK-021 ✅, TASK-022 ✅ |
+| 🟡 P1 | 9 | 9 | 0 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-020 ✅, TASK-019 ✅, TASK-021 ✅, TASK-022 ✅, TASK-023 ✅ |
 | 🟢 P2 | 3 | 0 | 3 | TASK-005 ⬜, TASK-006 ⬜, TASK-007 ⬜ |
 | ⚪ P3 | 3 | 0 | 3 | TASK-008 ⬜, TASK-009 ⬜, TASK-010 ⬜ |
-| **Total** | **19** | **13** | **6** | |
+| **Total** | **20** | **14** | **6** | |

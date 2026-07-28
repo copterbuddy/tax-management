@@ -157,6 +157,7 @@ interface TradeTransaction {
   exchangeFeeUSD: number // Exchange/market fee in USD
   tafFeeUSD: number      // TAF (Trading Activity Fee) in USD — SELL only
   commissionRebateUSD: number // Commission rebate/promotional discount in USD
+  vatUSD: number         // VAT (Value Added Tax) in USD
   notes?: string
   // Note: NO fxRateTHB — FX only at remittance
 }

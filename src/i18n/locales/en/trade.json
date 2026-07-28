@@ -37,6 +37,7 @@
   "formExchangeFee": "Exchange Fee (USD)",
   "formTafFee": "TAF Fee (USD)",
   "formRebate": "Commission Rebate (USD)",
+  "formVat": "VAT (USD)",
   "formNotes": "Notes (optional)",
   "formNotesPlaceholder": "e.g. Broker reference",
   "formCancel": "Cancel",

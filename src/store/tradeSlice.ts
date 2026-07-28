@@ -29,6 +29,9 @@ function migrateTrade(trade: TradeTransaction): TradeTransaction {
   if (migrated.commissionRebateUSD === undefined) {
     migrated.commissionRebateUSD = 0;
   }
+  if (migrated.vatUSD === undefined) {
+    migrated.vatUSD = 0;
+  }
   return migrated as TradeTransaction;
 }
 

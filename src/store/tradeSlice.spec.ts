@@ -53,6 +53,7 @@ function makeTrade(overrides: TradeOverride = {}): TradeTransaction {
     exchangeFeeUSD: overrides.exchangeFeeUSD ?? 0,
     tafFeeUSD: overrides.tafFeeUSD ?? 0,
     commissionRebateUSD: overrides.commissionRebateUSD ?? 0,
+    vatUSD: overrides.vatUSD ?? 0,
     ...overrides,
   } as TradeTransaction;
 }
@@ -279,6 +280,22 @@ describe('tradeSlice', () => {
       if (migrated.commissionRebateUSD === undefined) migrated.commissionRebateUSD = 0;
 
       expect(migrated.commissionRebateUSD).toBe(2);
+    });
+
+    it('migrates trade without vatUSD to 0', () => {
+      const rawTrade = { id: 'old1', date: '2026-01-01', symbol: 'AAPL', type: 'BUY', provider: 'Dime', quantity: 10, priceUSD: 150, commissionUSD: 0 } as any;
+      const migrated = { ...rawTrade };
+      if (migrated.vatUSD === undefined) migrated.vatUSD = 0;
+
+      expect(migrated.vatUSD).toBe(0);
+    });
+
+    it('does NOT overwrite existing vatUSD value', () => {
+      const rawTrade = { id: 'old1', date: '2026-01-01', symbol: 'AAPL', type: 'BUY', provider: 'Dime', quantity: 10, priceUSD: 150, commissionUSD: 0, vatUSD: 0.15 } as any;
+      const migrated = { ...rawTrade };
+      if (migrated.vatUSD === undefined) migrated.vatUSD = 0;
+
+      expect(migrated.vatUSD).toBe(0.15);
     });
   });
 

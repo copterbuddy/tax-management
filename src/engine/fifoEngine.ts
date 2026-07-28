@@ -9,12 +9,12 @@ function lotKey(symbol: string, provider: ProviderType): string {
 
 export function calculateBuyCostUSD(trade: TradeTransaction): number {
   if (trade.type !== 'BUY') return 0;
-  return trade.quantity * trade.priceUSD + trade.commissionUSD + (trade.exchangeFeeUSD ?? 0) - (trade.commissionRebateUSD ?? 0);
+  return trade.quantity * trade.priceUSD + trade.commissionUSD + (trade.exchangeFeeUSD ?? 0) + (trade.vatUSD ?? 0) - (trade.commissionRebateUSD ?? 0);
 }
 
 export function calculateSellRevenueUSD(trade: TradeTransaction): number {
   if (trade.type !== 'SELL') return 0;
-  return trade.quantity * trade.priceUSD - trade.commissionUSD - (trade.exchangeFeeUSD ?? 0) - (trade.tafFeeUSD ?? 0) + (trade.commissionRebateUSD ?? 0);
+  return trade.quantity * trade.priceUSD - trade.commissionUSD - (trade.exchangeFeeUSD ?? 0) - (trade.tafFeeUSD ?? 0) - (trade.vatUSD ?? 0) + (trade.commissionRebateUSD ?? 0);
 }
 
 export function calculateUnitCostUSD(trade: TradeTransaction): number {

@@ -1067,7 +1067,14 @@ a:hover {
 }
 
 .form-row-fees {
-  grid-template-columns: 1fr 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.form-row-fees .form-group {
+  flex: 1 1 130px;
+  min-width: 0;
 }
 
 .form-group {
@@ -1262,7 +1269,7 @@ a:hover {
   }
 
   .form-row-fees {
-    grid-template-columns: 1fr;
+    flex-direction: column;
   }
 
   .trade-form-modal {

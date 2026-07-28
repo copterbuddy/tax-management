@@ -16,6 +16,8 @@ const tradeFormSchema = z.object({
   quantity: z.number().positive('Must be positive').max(VALIDATION.QUANTITY_MAX),
   priceUSD: z.number().min(VALIDATION.PRICE_MIN).max(VALIDATION.PRICE_MAX),
   commissionUSD: z.number().min(0),
+  exchangeFeeUSD: z.number().min(0),
+  tafFeeUSD: z.number().min(0),
   notes: z.string().optional(),
 });
 
@@ -72,6 +74,8 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       quantity: trade?.quantity ?? 0,
       priceUSD: trade?.priceUSD ?? 0,
       commissionUSD: trade?.commissionUSD ?? 0,
+      exchangeFeeUSD: trade?.exchangeFeeUSD ?? 0,
+      tafFeeUSD: trade?.tafFeeUSD ?? 0,
       notes: trade?.notes ?? '',
     },
   });
@@ -86,6 +90,8 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       quantity: trade?.quantity ?? 0,
       priceUSD: trade?.priceUSD ?? 0,
       commissionUSD: trade?.commissionUSD ?? 0,
+      exchangeFeeUSD: trade?.exchangeFeeUSD ?? 0,
+      tafFeeUSD: trade?.tafFeeUSD ?? 0,
       notes: trade?.notes ?? '',
     });
   }, [trade, reset]);
@@ -165,6 +171,8 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       quantity: Number(data.quantity),
       priceUSD: Number(data.priceUSD),
       commissionUSD: Number(data.commissionUSD),
+      exchangeFeeUSD: Number(data.exchangeFeeUSD),
+      tafFeeUSD: Number(data.tafFeeUSD),
       notes: data.notes?.trim() || undefined,
     };
 
@@ -395,7 +403,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
             </div>
           </div>
 
-          <div className="form-row">
+          <div className="form-row form-row-fees">
             <div className="form-group">
               <label htmlFor="trade-commission">{t('trade:formFee')}</label>
               <input
@@ -409,6 +417,34 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
               />
               {errors.commissionUSD && <span className="error-msg">{errors.commissionUSD.message}</span>}
             </div>
+            <div className="form-group">
+              <label htmlFor="trade-exchange-fee">{t('trade:formExchangeFee')}</label>
+              <input
+                id="trade-exchange-fee"
+                type="number"
+                step="any"
+                min="0"
+                placeholder="e.g. 0.25"
+                {...register('exchangeFeeUSD', { valueAsNumber: true })}
+                className={errors.exchangeFeeUSD ? 'input-error' : ''}
+              />
+              {errors.exchangeFeeUSD && <span className="error-msg">{errors.exchangeFeeUSD.message}</span>}
+            </div>
+            {watchedType === 'SELL' && (
+              <div className="form-group">
+                <label htmlFor="trade-taf-fee">{t('trade:formTafFee')}</label>
+                <input
+                  id="trade-taf-fee"
+                  type="number"
+                  step="any"
+                  min="0"
+                  placeholder="e.g. 0.10"
+                  {...register('tafFeeUSD', { valueAsNumber: true })}
+                  className={errors.tafFeeUSD ? 'input-error' : ''}
+                />
+                {errors.tafFeeUSD && <span className="error-msg">{errors.tafFeeUSD.message}</span>}
+              </div>
+            )}
           </div>
 
           <div className="form-group">

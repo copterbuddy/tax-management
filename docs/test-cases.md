@@ -1961,3 +1961,64 @@ Thai brackets present: 0-150k (0%), 150k-300k (5%), 300k-500k (10%), 500k-750k (
 | EC6 — Missing translation key | TC-018-009 |
 | EC7 — Thai numeral formatting | TC-018-010 |
 | EC8 — 5-year date limit | TC-018-013 (zod refining) |
+
+---
+
+## TASK-021: Exchange Fee + TAF Fee Fields (ค่าธรรมเนียมตลาดหลักทรัพย์ + ค่าธรรมเนียม TAF)
+
+### AC Coverage
+
+| # | Condition | Priority |
+|---|---|---|
+| AC1 | `TradeTransaction` interface has `exchangeFeeUSD` and `tafFeeUSD` as `number` fields | Must |
+| AC2 | `tradeTransactionSchema` validates both new fields: `z.number().min(0)` | Must |
+| AC3 | `calculateBuyCostUSD` includes commission + exchangeFee | Must |
+| AC4 | `calculateSellRevenueUSD` subtracts commission + exchangeFee + tafFee | Must |
+| AC5 | TradeForm shows exchangeFee input for both BUY and SELL | Must |
+| AC6 | TradeForm shows tafFee input **only when type=SELL** (hidden on BUY) | Must |
+| AC7 | TradeForm schema includes both new fields with `z.number().min(0)` | Must |
+| AC8 | TradeForm defaults: `trade?.exchangeFeeUSD ?? 0`, `trade?.tafFeeUSD ?? 0` | Must |
+| AC9 | TradeTable shows 1 aggregate "Total Fees" column = sum of all fees | Must |
+| AC10 | TradeTable total column uses aggregate fees in BUY/SELL formula | Must |
+| AC11 | TradeTable mobile card shows "Total Fees" aggregate row | Must |
+| AC12 | `migrateTrade()` sets `exchangeFeeUSD: 0`, `tafFeeUSD: 0` for old trades | Must |
+| AC13 | Migration does NOT overwrite existing values | Must |
+| AC14 | 6 i18n keys added to both EN and TH (3 col + 3 form) | Must |
+| AC15 | TAF Fee input appears/disappears when toggling BUY↔SELL | Must |
+| AC16 | `tsc --noEmit` passes | Must |
+| AC17 | All existing tests pass | Must |
+| AC18 | New test cases cover migration + engine formulas + validation | Must |
+
+### Test Cases
+
+| TC | AC | Type | Scenario | Expected Result |
+|---|---|---|---|---|
+| TC-021-001 | AC1 | Unit | TradeTransaction has exchangeFeeUSD field | Interface compiles, field is number type |
+| TC-021-002 | AC1 | Unit | TradeTransaction has tafFeeUSD field | Interface compiles, field is number type |
+| TC-021-003 | AC2 | Unit | Valid trade with exchangeFeeUSD=0.5 passes schema | `safeParse` success |
+| TC-021-004 | AC2 | Unit | Valid trade with tafFeeUSD=0.15 passes schema | `safeParse` success |
+| TC-021-005 | AC2 | Unit | Negative exchangeFeeUSD rejected | `safeParse` failure |
+| TC-021-006 | AC2 | Unit | Negative tafFeeUSD rejected | `safeParse` failure |
+| TC-021-007 | AC3 | Unit | calculateBuyCostUSD includes exchangeFee | BUY: `qty×price + commission + exchangeFee` |
+| TC-021-008 | AC4 | Unit | calculateSellRevenueUSD subtracts exchangeFee + tafFee | SELL: `qty×price - commission - exchangeFee - tafFee` |
+| TC-021-009 | AC5 | Unit | TradeForm renders exchangeFee input for BUY | Input with id `trade-exchange-fee` visible |
+| TC-021-010 | AC5 | Unit | TradeForm renders exchangeFee input for SELL | Input with id `trade-exchange-fee` visible |
+| TC-021-011 | AC6 | Unit | TradeForm renders tafFee input only for SELL | Input with id `trade-taf-fee` visible on SELL, hidden on BUY |
+| TC-021-012 | AC8 | Unit | TradeForm defaults to 0 for new fields when editing old trade | `exchangeFeeUSD: 0`, `tafFeeUSD: 0` |
+| TC-021-013 | AC9 | E2E | TradeTable shows aggregated Total Fees column | Column shows `commission + exchangeFee + tafFee` |
+| TC-021-014 | AC10 | Unit | BUY total = qty×price + fees (all 3) | Total calc matches formula |
+| TC-021-015 | AC10 | Unit | SELL total = qty×price - fees (all 3) | Total calc matches formula |
+| TC-021-016 | AC11 | E2E | Mobile card shows "Total Fees" row | Card shows sum of all 3 fees |
+| TC-021-017 | AC12 | Unit | Old trade without exchangeFeeUSD → migration sets 0 | `migrateTrade` adds `exchangeFeeUSD: 0` |
+| TC-021-018 | AC12 | Unit | Old trade without tafFeeUSD → migration sets 0 | `migrateTrade` adds `tafFeeUSD: 0` |
+| TC-021-019 | AC13 | Unit | Existing exchangeFeeUSD not overwritten by migration | Value preserved |
+| TC-021-020 | AC14 | Unit | EN locale has all 6 new i18n keys | `colTotalFees`, `formExchangeFee`, `formTafFee` present |
+| TC-021-021 | AC14 | Unit | TH locale has all 6 new i18n keys | `colTotalFees`, `formExchangeFee`, `formTafFee` present |
+| TC-021-022 | AC15 | E2E | Switching BUY→SELL shows/hides TAF Fee input | TAF Fee input visibility toggles with trade type |
+| TC-021-023 | AC16 | Build | `tsc --noEmit` passes | Zero TypeScript errors |
+| TC-021-024 | AC17 | Build | All existing tests pass | 101 tests pass (all suites) |
+| TC-021-025 | EC1 | Unit | Old trade (no new fee fields) migration → both set to 0 | exchangeFeeUSD=0, tafFeeUSD=0 |
+| TC-021-026 | EC4 | Unit | All fees = 0 → cost = qty×price, revenue = qty×price | Formulas work with zero fees |
+| TC-021-027 | EC5 | E2E | Edit SELL trade with stored tafFeeUSD → shows stored value | Input populated with stored `tafFeeUSD` |
+| TC-021-028 | EC6 | E2E | Edit old BUY trade → both new fields show 0 | `exchangeFeeUSD: 0`, `tafFeeUSD: 0` |
+

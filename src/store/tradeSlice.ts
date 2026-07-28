@@ -19,6 +19,13 @@ function migrateTrade(trade: TradeTransaction): TradeTransaction {
   if ('fxRateTHB' in migrated) {
     delete migrated.fxRateTHB;
   }
+  // Set defaults for new fee fields (old trades without these fields)
+  if (migrated.exchangeFeeUSD === undefined) {
+    migrated.exchangeFeeUSD = 0;
+  }
+  if (migrated.tafFeeUSD === undefined) {
+    migrated.tafFeeUSD = 0;
+  }
   return migrated as TradeTransaction;
 }
 

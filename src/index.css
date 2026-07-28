@@ -864,7 +864,7 @@ a:hover {
 .col-optional { display: table-cell; }
 
 @media (max-width: 767px) {
-  .col-fee { display: none; }
+  .col-total-fees { display: none; }
   .col-remitted { display: none; }
 }
 
@@ -1038,7 +1038,7 @@ a:hover {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  width: 560px;
+  width: 640px;
   max-width: 94vw;
   max-height: 90vh;
   overflow-y: auto;
@@ -1064,6 +1064,10 @@ a:hover {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-4);
+}
+
+.form-row-fees {
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .form-group {
@@ -1254,6 +1258,10 @@ a:hover {
   }
 
   .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .form-row-fees {
     grid-template-columns: 1fr;
   }
 

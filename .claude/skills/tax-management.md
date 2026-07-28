@@ -154,6 +154,8 @@ interface TradeTransaction {
   quantity: number
   priceUSD: number       // Unit price in USD
   commissionUSD: number  // Total commission in USD
+  exchangeFeeUSD: number // Exchange/market fee in USD
+  tafFeeUSD: number      // TAF (Trading Activity Fee) in USD — SELL only
   notes?: string
   // Note: NO fxRateTHB — FX only at remittance
 }

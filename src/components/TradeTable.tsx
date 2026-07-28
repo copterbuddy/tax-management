@@ -119,7 +119,7 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                 <th>{t('trade:colType')}</th>
                 <th className="num">{t('trade:colQty')}</th>
                 <th className="num col-optional col-price">{t('trade:colPrice')}</th>
-                <th className="num col-optional col-fee">{t('trade:colFee')}</th>
+                <th className="num col-optional col-total-fees">{t('trade:colTotalFees')}</th>
                 <th className="num">{t('trade:colTotal')}</th>
                 <th className="num">{t('trade:colGain')}</th>
                 <th className="num col-optional col-remitted">{t('trade:colRemitted')}</th>
@@ -129,9 +129,10 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
             </thead>
             <tbody>
               {sortedTrades.map(trade => {
+                const fees = (trade.commissionUSD ?? 0) + (trade.exchangeFeeUSD ?? 0) + (trade.tafFeeUSD ?? 0);
                 const totalUSD = trade.type === 'BUY'
-                  ? (trade.quantity * trade.priceUSD + trade.commissionUSD)
-                  : (trade.quantity * trade.priceUSD - trade.commissionUSD);
+                  ? (trade.quantity * trade.priceUSD + fees)
+                  : (trade.quantity * trade.priceUSD - fees);
 
                 const gain = trade.type === 'SELL' ? gainMap.get(trade.id) : null;
 
@@ -149,7 +150,7 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                     </td>
                     <td className="num">{trade.quantity}</td>
                     <td className="num col-optional col-price">${trade.priceUSD.toFixed(2)}</td>
-                    <td className="num col-optional col-fee">${trade.commissionUSD.toFixed(2)}</td>
+                    <td className="num col-optional col-total-fees">${fees.toFixed(2)}</td>
                     <td className="num">${totalUSD.toFixed(2)}</td>
                     <td className="num gain-cell">
                       {gain ? (
@@ -204,9 +205,10 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
           {/* Mobile Card View */}
           <div className="trade-cards">
             {sortedTrades.map(trade => {
+              const fees = (trade.commissionUSD ?? 0) + (trade.exchangeFeeUSD ?? 0) + (trade.tafFeeUSD ?? 0);
               const totalUSD = trade.type === 'BUY'
-                ? (trade.quantity * trade.priceUSD + trade.commissionUSD)
-                : (trade.quantity * trade.priceUSD - trade.commissionUSD);
+                ? (trade.quantity * trade.priceUSD + fees)
+                : (trade.quantity * trade.priceUSD - fees);
 
               const gain = trade.type === 'SELL' ? gainMap.get(trade.id) : null;
 
@@ -233,8 +235,8 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                       <span className="card-value">{trade.quantity} × ${trade.priceUSD.toFixed(2)}</span>
                     </div>
                     <div className="trade-card-row">
-                      <span className="card-label">{t('trade:colFee')}</span>
-                      <span className="card-value">${trade.commissionUSD.toFixed(2)}</span>
+                      <span className="card-label">{t('trade:colTotalFees')}</span>
+                      <span className="card-value">${fees.toFixed(2)}</span>
                     </div>
                     <div className="trade-card-row">
                       <span className="card-label">{t('trade:colTotal')}</span>

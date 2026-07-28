@@ -473,12 +473,52 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 
 ---
 
+### TASK-021: Add Exchange Fee + TAF Fee Fields (ค่าธรรมเนียมตลาดหลักทรัพย์ + ค่าธรรมเนียม TAF)
+
+**Priority:** 🟡 P1
+**Effort:** M (12 source files + 2 doc files)
+**Status:** ✅ ทำเสร็จแล้ว
+**Completed:** 2026-07-28
+**Spec:** `docs/specs/commission-fee-fields.md`
+
+**User Story:**
+> As a Thai investor recording a trade, I want to enter Exchange Fee (ค่าธรรมเนียมตลาดหลักทรัพย์) and TAF Fee (ค่าธรรมเนียมการขาย) separately from Commission Fee, so my cost basis and net proceeds match my broker statement exactly.
+
+**What was done:**
+
+| Change | File | Detail |
+|---|---|---|
+| Interface | `src/types/trade.ts` | Add `exchangeFeeUSD`, `tafFeeUSD` to `TradeTransaction` |
+| Validation | `src/validation/schemas.ts` | Add both fields with `z.number().min(0).default(0)` |
+| Migration | `src/store/tradeSlice.ts` | `migrateTrade()` sets defaults for old trades |
+| Engine | `src/engine/fifoEngine.ts` | `calculateBuyCostUSD` / `calculateSellRevenueUSD` updated |
+| Form | `src/components/TradeForm.tsx` | 2 inputs (BUY) / 3 inputs (SELL) with conditional TAF |
+| Table | `src/components/TradeTable.tsx` | `colTotalFees` aggregate column + mobile card |
+| CSS | `src/index.css` | `.form-row-fees` + responsive breakpoints |
+| i18n EN | `src/i18n/locales/en/trade.json` | 3 new keys |
+| i18n TH | `src/i18n/locales/th/trade.json` | 3 new keys |
+| Tests | 3 test files | 15 new test cases (engine 5 + validation 6 + migration 4) |
+
+**Decisions:**
+- Table: 1 aggregate "Total Fees" column (not 3 separate columns)
+- TAF Fee: SELL only (hidden on BUY form)
+- TH naming: ค่าธรรมเนียมตลาดหลักทรัพย์ / ค่าธรรมเนียม TAF
+
+**Verification:**
+- `npx tsc --noEmit` → 0 errors
+- `npm test` → 101 tests pass (all suites)
+- Manual: Form shows 2 fee inputs on BUY, 3 on SELL
+- Manual: Desktop table shows "Total Fees" column
+- Manual: Mobile card shows "Total Fees" aggregate row
+
+---
+
 ## 📊 Summary
 
 | Priority | Count | Done | Pending | Tasks |
 |---|---|---|---|---|
 | 🔴 P0 | 5 | 5 | 0 | TASK-000 ✅, TASK-011 ✅, TASK-001 ✅, TASK-018 ✅, TASK-002 ✅ |
-| 🟡 P1 | 6 | 5 | 1 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-020 ✅, TASK-019 ⬜ |
+| 🟡 P1 | 7 | 7 | 0 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-020 ✅, TASK-019 ✅, TASK-021 ✅ |
 | 🟢 P2 | 3 | 0 | 3 | TASK-005 ⬜, TASK-006 ⬜, TASK-007 ⬜ |
 | ⚪ P3 | 3 | 0 | 3 | TASK-008 ⬜, TASK-009 ⬜, TASK-010 ⬜ |
-| **Total** | **17** | **10** | **7** | |
+| **Total** | **18** | **12** | **6** | |

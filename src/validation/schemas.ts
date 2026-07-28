@@ -26,6 +26,8 @@ export const tradeTransactionSchema = z.object({
   quantity: z.number().positive().max(VALIDATION.QUANTITY_MAX),
   priceUSD: z.number().min(VALIDATION.PRICE_MIN).max(VALIDATION.PRICE_MAX),
   commissionUSD: z.number().min(0),
+  exchangeFeeUSD: z.number().min(0).default(0),
+  tafFeeUSD: z.number().min(0).default(0),
   notes: z.string().optional(),
 });
 

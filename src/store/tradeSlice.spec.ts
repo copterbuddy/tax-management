@@ -50,6 +50,8 @@ function makeTrade(overrides: TradeOverride = {}): TradeTransaction {
     quantity: overrides.quantity ?? 10,
     priceUSD: overrides.priceUSD ?? 150,
     commissionUSD: overrides.commissionUSD ?? 1,
+    exchangeFeeUSD: overrides.exchangeFeeUSD ?? 0,
+    tafFeeUSD: overrides.tafFeeUSD ?? 0,
     ...overrides,
   } as TradeTransaction;
 }
@@ -220,6 +222,45 @@ describe('tradeSlice', () => {
 
       expect((migrated as any).assetType).toBeUndefined();
       expect((migrated as any).fxRateTHB).toBeUndefined();
+      expect(migrated.provider).toBe('Dime');
+    });
+  });
+
+  describe('Migration — new fee fields for old trades', () => {
+    it('migrates trade without exchangeFeeUSD to 0', () => {
+      const rawTrade = { id: 'old1', date: '2026-01-01', symbol: 'AAPL', type: 'BUY', provider: 'Dime', quantity: 10, priceUSD: 150, commissionUSD: 0 } as any;
+      const migrated = { ...rawTrade };
+      if (migrated.exchangeFeeUSD === undefined) migrated.exchangeFeeUSD = 0;
+      if (migrated.tafFeeUSD === undefined) migrated.tafFeeUSD = 0;
+
+      expect(migrated.exchangeFeeUSD).toBe(0);
+      expect(migrated.tafFeeUSD).toBe(0);
+    });
+
+    it('does NOT overwrite existing exchangeFeeUSD value', () => {
+      const rawTrade = { id: 'old1', date: '2026-01-01', symbol: 'AAPL', type: 'BUY', provider: 'Dime', quantity: 10, priceUSD: 150, commissionUSD: 0, exchangeFeeUSD: 0.5 } as any;
+      const migrated = { ...rawTrade };
+      if (migrated.exchangeFeeUSD === undefined) migrated.exchangeFeeUSD = 0;
+
+      expect(migrated.exchangeFeeUSD).toBe(0.5);
+    });
+
+    it('migrates trade without tafFeeUSD to 0', () => {
+      const rawTrade = { id: 'old1', date: '2026-01-01', symbol: 'AAPL', type: 'BUY', provider: 'Dime', quantity: 10, priceUSD: 150, commissionUSD: 0 } as any;
+      const migrated = { ...rawTrade };
+      if (migrated.tafFeeUSD === undefined) migrated.tafFeeUSD = 0;
+
+      expect(migrated.tafFeeUSD).toBe(0);
+    });
+
+    it('handles old trade with neither new fee field', () => {
+      const rawTrade = { id: 'old1', date: '2026-01-01', symbol: 'AAPL', type: 'BUY', provider: 'Dime', quantity: 10, priceUSD: 150, commissionUSD: 0 } as any;
+      const migrated = { ...rawTrade };
+      if (migrated.exchangeFeeUSD === undefined) migrated.exchangeFeeUSD = 0;
+      if (migrated.tafFeeUSD === undefined) migrated.tafFeeUSD = 0;
+
+      expect(migrated.exchangeFeeUSD).toBe(0);
+      expect(migrated.tafFeeUSD).toBe(0);
       expect(migrated.provider).toBe('Dime');
     });
   });

@@ -49,5 +49,6 @@
   "sharesAvailable": "หุ้นที่เหลือ",
   "sharesSoldOut": "ขายหมดแล้ว",
   "sellSelectFirst": "เลือก Symbol ก่อน",
+  "sellSelectSymbol": "-- เลือกหุ้น --",
   "sellAutoFilled": "ค่า auto-fill จาก Symbol ที่เลือก"
 }

@@ -268,6 +268,9 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
                           }}
                           className={errors.symbol ? 'input-error' : ''}
                         >
+                          <option value="" disabled>
+                            {t('trade:sellSelectSymbol')}
+                          </option>
                           {allSellableOptions.map(opt => {
                             const optValue = `sell|${opt.symbol}|${opt.provider}`;
                             if (opt.totalRemaining === 0) {
@@ -345,6 +348,9 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
                   </select>
                 )}
               />
+              {errors.provider && (
+                <span className="error-msg">{errors.provider.message}</span>
+              )}
               {watchedType === 'SELL' && watchedSymbol && currentAvailableQty !== null && currentAvailableQty === 0 && (
                 <span className="error-msg">
                   {t('common:noLotsAvailable') ?? `No ${watchedSymbol} lots available from ${watchedProvider}`}

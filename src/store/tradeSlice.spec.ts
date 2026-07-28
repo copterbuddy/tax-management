@@ -52,6 +52,7 @@ function makeTrade(overrides: TradeOverride = {}): TradeTransaction {
     commissionUSD: overrides.commissionUSD ?? 1,
     exchangeFeeUSD: overrides.exchangeFeeUSD ?? 0,
     tafFeeUSD: overrides.tafFeeUSD ?? 0,
+    commissionRebateUSD: overrides.commissionRebateUSD ?? 0,
     ...overrides,
   } as TradeTransaction;
 }
@@ -262,6 +263,22 @@ describe('tradeSlice', () => {
       expect(migrated.exchangeFeeUSD).toBe(0);
       expect(migrated.tafFeeUSD).toBe(0);
       expect(migrated.provider).toBe('Dime');
+    });
+
+    it('migrates trade without commissionRebateUSD to 0', () => {
+      const rawTrade = { id: 'old1', date: '2026-01-01', symbol: 'AAPL', type: 'BUY', provider: 'Dime', quantity: 10, priceUSD: 150, commissionUSD: 0 } as any;
+      const migrated = { ...rawTrade };
+      if (migrated.commissionRebateUSD === undefined) migrated.commissionRebateUSD = 0;
+
+      expect(migrated.commissionRebateUSD).toBe(0);
+    });
+
+    it('does NOT overwrite existing commissionRebateUSD value', () => {
+      const rawTrade = { id: 'old1', date: '2026-01-01', symbol: 'AAPL', type: 'BUY', provider: 'Dime', quantity: 10, priceUSD: 150, commissionUSD: 0, commissionRebateUSD: 2 } as any;
+      const migrated = { ...rawTrade };
+      if (migrated.commissionRebateUSD === undefined) migrated.commissionRebateUSD = 0;
+
+      expect(migrated.commissionRebateUSD).toBe(2);
     });
   });
 

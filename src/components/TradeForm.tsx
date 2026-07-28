@@ -18,6 +18,7 @@ const tradeFormSchema = z.object({
   commissionUSD: z.number().min(0),
   exchangeFeeUSD: z.number().min(0),
   tafFeeUSD: z.number().min(0),
+  commissionRebateUSD: z.number().min(0),
   notes: z.string().optional(),
 });
 
@@ -76,6 +77,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       commissionUSD: trade?.commissionUSD ?? 0,
       exchangeFeeUSD: trade?.exchangeFeeUSD ?? 0,
       tafFeeUSD: trade?.tafFeeUSD ?? 0,
+      commissionRebateUSD: trade?.commissionRebateUSD ?? 0,
       notes: trade?.notes ?? '',
     },
   });
@@ -92,6 +94,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       commissionUSD: trade?.commissionUSD ?? 0,
       exchangeFeeUSD: trade?.exchangeFeeUSD ?? 0,
       tafFeeUSD: trade?.tafFeeUSD ?? 0,
+      commissionRebateUSD: trade?.commissionRebateUSD ?? 0,
       notes: trade?.notes ?? '',
     });
   }, [trade, reset]);
@@ -173,8 +176,18 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       commissionUSD: Number(data.commissionUSD),
       exchangeFeeUSD: Number(data.exchangeFeeUSD),
       tafFeeUSD: Number(data.tafFeeUSD),
+      commissionRebateUSD: Number(data.commissionRebateUSD),
       notes: data.notes?.trim() || undefined,
     };
+
+    // Validate rebate does not exceed total fees
+    const totalFees = tradeData.commissionUSD + tradeData.exchangeFeeUSD + tradeData.tafFeeUSD;
+    if (tradeData.commissionRebateUSD > totalFees) {
+      setError('commissionRebateUSD', {
+        message: `Rebate cannot exceed total fees ($${totalFees.toFixed(2)})`,
+      });
+      return;
+    }
 
     // Check real-time availability BEFORE calling onValidate
     if (tradeData.type === 'SELL') {
@@ -445,6 +458,22 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
                 {errors.tafFeeUSD && <span className="error-msg">{errors.tafFeeUSD.message}</span>}
               </div>
             )}
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="trade-rebate">{t('trade:formRebate')}</label>
+              <input
+                id="trade-rebate"
+                type="number"
+                step="any"
+                min="0"
+                placeholder="e.g. 0.50"
+                {...register('commissionRebateUSD', { valueAsNumber: true })}
+                className={errors.commissionRebateUSD ? 'input-error' : ''}
+              />
+              {errors.commissionRebateUSD && <span className="error-msg">{errors.commissionRebateUSD.message}</span>}
+            </div>
           </div>
 
           <div className="form-group">

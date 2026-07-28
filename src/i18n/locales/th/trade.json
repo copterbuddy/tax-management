@@ -36,6 +36,7 @@
   "formFee": "ค่าคอมมิชชัน (USD)",
   "formExchangeFee": "ค่าธรรมเนียมตลาดหลักทรัพย์ (USD)",
   "formTafFee": "ค่าธรรมเนียม TAF (USD)",
+  "formRebate": "เงินคืนค่าคอมมิชชั่น (USD)",
   "formNotes": "หมายเหตุ (ไม่บังคับ)",
   "formNotesPlaceholder": "เช่น อ้างอิงโบรกเกอร์",
   "formCancel": "ยกเลิก",

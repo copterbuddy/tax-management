@@ -129,7 +129,7 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
             </thead>
             <tbody>
               {sortedTrades.map(trade => {
-                const fees = (trade.commissionUSD ?? 0) + (trade.exchangeFeeUSD ?? 0) + (trade.tafFeeUSD ?? 0);
+                const fees = (trade.commissionUSD ?? 0) + (trade.exchangeFeeUSD ?? 0) + (trade.tafFeeUSD ?? 0) - (trade.commissionRebateUSD ?? 0);
                 const totalUSD = trade.type === 'BUY'
                   ? (trade.quantity * trade.priceUSD + fees)
                   : (trade.quantity * trade.priceUSD - fees);

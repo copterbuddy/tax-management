@@ -34,6 +34,7 @@ function makeTrade(overrides: TradeOverride = {}): TradeTransaction {
     commissionUSD: overrides.commissionUSD ?? 1,
     exchangeFeeUSD: overrides.exchangeFeeUSD ?? 0,
     tafFeeUSD: overrides.tafFeeUSD ?? 0,
+    commissionRebateUSD: overrides.commissionRebateUSD ?? 0,
     ...overrides,
   } as TradeTransaction;
 }
@@ -102,6 +103,21 @@ describe('calculateSellRevenueUSD', () => {
   it('subtracts all three fees from SELL revenue', () => {
     const trade = makeTrade({ type: 'SELL', quantity: 5, priceUSD: 100, commissionUSD: 1, exchangeFeeUSD: 0.3, tafFeeUSD: 0.08 });
     expect(calculateSellRevenueUSD(trade)).toBe(100 * 5 - 1 - 0.3 - 0.08); // 498.62
+  });
+
+  it('subtracts commissionRebateUSD from BUY cost (reduces cost)', () => {
+    const trade = makeTrade({ type: 'BUY', quantity: 10, priceUSD: 150, commissionUSD: 1, exchangeFeeUSD: 0.5, commissionRebateUSD: 0.5 });
+    expect(calculateBuyCostUSD(trade)).toBe(150 * 10 + 1 + 0.5 - 0.5); // 1501
+  });
+
+  it('adds commissionRebateUSD to SELL revenue (increases revenue)', () => {
+    const trade = makeTrade({ type: 'SELL', quantity: 10, priceUSD: 200, commissionUSD: 2, exchangeFeeUSD: 0.5, tafFeeUSD: 0.15, commissionRebateUSD: 1 });
+    expect(calculateSellRevenueUSD(trade)).toBe(200 * 10 - 2 - 0.5 - 0.15 + 1); // 1998.35
+  });
+
+  it('zero rebate — same as before', () => {
+    const trade = makeTrade({ type: 'BUY', quantity: 10, priceUSD: 150, commissionUSD: 1, exchangeFeeUSD: 0.5 });
+    expect(calculateBuyCostUSD(trade)).toBe(150 * 10 + 1 + 0.5); // 1501.5
   });
 });
 

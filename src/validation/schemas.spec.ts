@@ -24,6 +24,7 @@ describe('tradeTransactionSchema', () => {
     commissionUSD: 1.5,
     exchangeFeeUSD: 0.25,
     tafFeeUSD: 0,
+    commissionRebateUSD: 0,
   };
 
   it('parses a valid trade', () => {
@@ -113,6 +114,25 @@ describe('tradeTransactionSchema', () => {
       expect(result.data.tafFeeUSD).toBe(0);
     }
   });
+
+  it('rejects negative commissionRebateUSD', () => {
+    const result = tradeTransactionSchema.safeParse({ ...validTrade, commissionRebateUSD: -0.5 });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts valid commissionRebateUSD', () => {
+    const result = tradeTransactionSchema.safeParse({ ...validTrade, commissionRebateUSD: 1 });
+    expect(result.success).toBe(true);
+  });
+
+  it('defaults missing commissionRebateUSD to 0', () => {
+    const { commissionRebateUSD, ...tradeWithoutRebate } = validTrade;
+    const result = tradeTransactionSchema.safeParse(tradeWithoutRebate);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.commissionRebateUSD).toBe(0);
+    }
+  });
 });
 
 describe('remittanceRecordSchema', () => {
@@ -178,7 +198,7 @@ describe('safeParse', () => {
     const result = safeParse(tradeTransactionSchema, {
       id: 't1', date: '2026-01-01', symbol: 'AAPL', type: 'BUY',
       provider: 'Dime', quantity: 10, priceUSD: 150, commissionUSD: 1,
-      exchangeFeeUSD: 0, tafFeeUSD: 0,
+      exchangeFeeUSD: 0, tafFeeUSD: 0, commissionRebateUSD: 0,
     }, null as any);
     expect(result.id).toBe('t1');
   });

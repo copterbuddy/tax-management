@@ -513,12 +513,48 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 
 ---
 
+### TASK-022: Add Commission Rebate (เงินคืนค่าคอมมิชชั่น)
+
+**Priority:** 🟡 P1
+**Effort:** S (10 files)
+**Status:** ✅ ทำเสร็จแล้ว
+**Completed:** 2026-07-28
+**Spec:** Design decisions from chat
+
+**User Story:**
+> As a Thai investor, I want to enter promotional commission rebates separately, so my net fees reflect broker promotions/discounts accurately.
+
+**What was done:**
+
+| Change | File | Detail |
+|---|---|---|
+| Interface | `src/types/trade.ts` | Add `commissionRebateUSD: number` |
+| Validation | `src/validation/schemas.ts` | `z.number().min(0).default(0)` |
+| Migration | `src/store/tradeSlice.ts` | `migrateTrade()` sets default 0 |
+| Engine | `src/engine/fifoEngine.ts` | BUY: `cost - rebate`, SELL: `revenue + rebate` |
+| Form | `src/components/TradeForm.tsx` | Rebate input in separate row + validate ≤ total fees |
+| Table | `src/components/TradeTable.tsx` | Total Fees = `sum fees - rebate` (net) |
+| i18n | EN/TH locale | `formRebate` key |
+
+**Decisions:**
+- Net fees approach: rebate affects gain calculation (reduces cost / increases revenue)
+- Table: included in Total Fees (net), no separate rebate column
+- Range: 0 ≤ rebate ≤ total fees (validated in form)
+
+**Verification:**
+- `npx tsc --noEmit` → 0 errors
+- `npm test` → 109 tests pass (all suites)
+- Manual: Form shows rebate row below fees
+- Manual: Rebate > total fees → validation error
+
+---
+
 ## 📊 Summary
 
 | Priority | Count | Done | Pending | Tasks |
 |---|---|---|---|---|
 | 🔴 P0 | 5 | 5 | 0 | TASK-000 ✅, TASK-011 ✅, TASK-001 ✅, TASK-018 ✅, TASK-002 ✅ |
-| 🟡 P1 | 7 | 7 | 0 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-020 ✅, TASK-019 ✅, TASK-021 ✅ |
+| 🟡 P1 | 8 | 8 | 0 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-020 ✅, TASK-019 ✅, TASK-021 ✅, TASK-022 ✅ |
 | 🟢 P2 | 3 | 0 | 3 | TASK-005 ⬜, TASK-006 ⬜, TASK-007 ⬜ |
 | ⚪ P3 | 3 | 0 | 3 | TASK-008 ⬜, TASK-009 ⬜, TASK-010 ⬜ |
-| **Total** | **18** | **12** | **6** | |
+| **Total** | **19** | **13** | **6** | |

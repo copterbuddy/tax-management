@@ -12,6 +12,7 @@ export interface TradeTransaction {
   commissionUSD: number; // Total commission in USD
   exchangeFeeUSD: number; // Exchange/market fee in USD
   tafFeeUSD: number; // TAF (Trading Activity Fee) in USD — SELL only
+  commissionRebateUSD: number; // Commission rebate/promotional discount in USD
   notes?: string;
 }
 

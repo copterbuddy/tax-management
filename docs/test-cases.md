@@ -2021,4 +2021,54 @@ Thai brackets present: 0-150k (0%), 150k-300k (5%), 300k-500k (10%), 500k-750k (
 | TC-021-026 | EC4 | Unit | All fees = 0 → cost = qty×price, revenue = qty×price | Formulas work with zero fees |
 | TC-021-027 | EC5 | E2E | Edit SELL trade with stored tafFeeUSD → shows stored value | Input populated with stored `tafFeeUSD` |
 | TC-021-028 | EC6 | E2E | Edit old BUY trade → both new fields show 0 | `exchangeFeeUSD: 0`, `tafFeeUSD: 0` |
+| TC-021-029 | AC18 | Unit | `commissionRebateUSD` field exists in TradeTransaction | Interface compiles, field is number |
+| TC-021-030 | AC18 | Unit | calculateBuyCostUSD subtracts commissionRebateUSD | BUY: cost = qty×price + fees - rebate |
+| TC-021-031 | AC18 | Unit | calculateSellRevenueUSD adds commissionRebateUSD | SELL: revenue = qty×price - fees + rebate |
+| TC-021-032 | AC18 | Unit | Schema rejects negative commissionRebateUSD | safeParse failure |
+| TC-021-033 | AC18 | Unit | Schema defaults missing commissionRebateUSD to 0 | defaultValue = 0 |
+| TC-021-034 | AC18 | Unit | Migration sets commissionRebateUSD = 0 for old trades | Old trades get 0 |
+| TC-021-035 | AC18 | Unit | Migration does NOT overwrite existing rebate value | Value preserved |
+
+---
+
+## TASK-022: Commission Rebate (เงินคืนค่าคอมมิชชั่น)
+
+### AC Coverage
+
+| # | Condition | Priority |
+|---|---|---|
+| AC1 | `TradeTransaction` has `commissionRebateUSD: number` field | Must |
+| AC2 | Schema validates `commissionRebateUSD: z.number().min(0)` | Must |
+| AC3 | `calculateBuyCostUSD` subtracts rebate: `qty×price + commission + exchangeFee - rebate` | Must |
+| AC4 | `calculateSellRevenueUSD` adds rebate: `qty×price - commission - exchangeFee - tafFee + rebate` | Must |
+| AC5 | TradeForm shows rebate input for both BUY and SELL | Must |
+| AC6 | TradeForm validates rebate ≤ total fees (commission + exchangeFee + tafFee) | Must |
+| AC7 | TradeForm defaults: `trade?.commissionRebateUSD ?? 0` | Must |
+| AC8 | `migrateTrade()` sets `commissionRebateUSD: 0` for old trades | Must |
+| AC9 | Migration does NOT overwrite existing value | Must |
+| AC10 | i18n key `formRebate` added to both EN and TH | Must |
+| AC11 | TradeTable Total Fees = commission + exchangeFee + tafFee - rebate (net fees) | Must |
+| AC12 | `tsc --noEmit` passes | Must |
+| AC13 | All existing tests pass | Must |
+
+### Test Cases
+
+| TC | AC | Type | Scenario | Expected Result |
+|---|---|---|---|---|
+| TC-022-001 | AC1 | Unit | TradeTransaction has commissionRebateUSD field | Interface compiles, field is number |
+| TC-022-002 | AC2 | Unit | Schema rejects negative commissionRebateUSD | safeParse failure |
+| TC-022-003 | AC2 | Unit | Schema defaults missing rebate to 0 | defaultValue = 0 |
+| TC-022-004 | AC3 | Unit | calculateBuyCostUSD subtracts rebate on BUY | BUY cost = qty×price + fees - rebate |
+| TC-022-005 | AC4 | Unit | calculateSellRevenueUSD adds rebate on SELL | SELL revenue = qty×price - fees + rebate |
+| TC-022-006 | AC5 | Unit | TradeForm renders rebate input for BUY | Input with id `trade-rebate` visible |
+| TC-022-007 | AC5 | Unit | TradeForm renders rebate input for SELL | Input with id `trade-rebate` visible |
+| TC-022-008 | AC6 | Unit | Form rejects rebate > total fees | Error shown: "Rebate cannot exceed total fees" |
+| TC-022-009 | AC7 | Unit | Edit old trade → rebate defaults to 0 | `commissionRebateUSD: 0` |
+| TC-022-010 | AC8 | Unit | Old trade → migration sets rebate to 0 | migrateTrade adds commissionRebateUSD: 0 |
+| TC-022-011 | AC9 | Unit | Existing rebate not overwritten | Value preserved |
+| TC-022-012 | AC10 | Unit | EN locale has formRebate key | `formRebate` = "Commission Rebate (USD)" |
+| TC-022-013 | AC10 | Unit | TH locale has formRebate key | `formRebate` = "เงินคืนค่าคอมมิชชั่น (USD)" |
+| TC-022-014 | AC11 | Unit | Total Fees = sum of fees - rebate | Net fees displayed in table |
+| TC-022-015 | AC12 | Build | `tsc --noEmit` passes | Zero TypeScript errors |
+| TC-022-016 | AC13 | Build | All existing tests pass | 109 tests pass (all suites) |
 

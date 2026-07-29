@@ -129,6 +129,7 @@ Claude Code ใช้ **model เดียวต่อ session** — เปล�
 - ห้ามข้ามขั้นตอน — ถึงแม้งานจะ "ง่าย" ก็ต้องทำตามลำดับ
 - ห้าม Dev เริ่มทำงานก่อน BA + UX เขียนเอกสารเสร็จ
 - ห้าม QA เริ่มก่อน Dev ส่งมอบโค้ด
+- **📋 BA ห้ามไปไล่ code** — BA ต้องยึดตาม `docs/` folder เป็นหลักเท่านั้น ห้ามเปิดไฟล์โค้ดเพื่อหา requirement หรือตรวจสอบว่ามีอะไรอยู่แล้วใน code เพราะ code จะถูกไล่ตรวจสอบตอน Dev execution เท่านั้น ถ้า requirement ใดไม่มีใน `docs/` ให้ BA **เพิ่ม spec/document ลงใน `docs/` folder** ไม่ใช่ไปเปิด code ดู
 
 **✅ อนุญาต:**
 - BA + UX ทำงาน sequential ตามลำดับ (UX ต้องรอ BA spec)
@@ -150,6 +151,19 @@ Claude Code ใช้ **model เดียวต่อ session** — เปล�
 - **Claude Code เป็นคนตัดสินใจ** ว่าจะทำ phase ไหน แต่ต้องทำตาม workflow ด้านบนเสมอ
 - **ทำงานแบบ sequential** — BA → UX → Dev → QA ตามลำดับ
 - **ถามผู้ใช้เมื่อจำเป็น** — requirement ไม่ชัด, ต้องการตัดสินใจ, PR พร้อม review
+
+---
+
+## ✅ Task Management — Update `docs/tasks.md` ทุกครั้งที่จบ phase
+
+**ทุก phase ที่ Dev และ QA ทำงานเสร็จ — ต้องกลับไป update `docs/tasks.md` ก่อนรายงานว่า phase เสร็จ**
+
+| Phase | เมื่อ | Action |
+|---|---|---|
+| 💻 Dev | Dev execution เสร็จ + `tsc --noEmit` ผ่าน | ✅ เปิด `docs/tasks.md` → mark งานที่ทำเสร็จ → commit |
+| 🧪 QA | QA test cases รันผ่านทั้งหมด | ✅ เปิด `docs/tasks.md` → mark งานที่ผ่าน QA → commit |
+
+**🔴 ห้ามรายงานว่า phase จบโดยที่ยังไม่ได้ update `docs/tasks.md`** — task tracking ต้องตรงกับสถานะปัจจุบันเสมอ
 
 ---
 

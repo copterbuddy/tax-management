@@ -42,7 +42,7 @@
   "sells": "ขาย",
   "tabTrades": "บันทึกซื้อขาย",
   "tabRemittances": "บันทึกนำเงินเข้า",
-  "kpiEstTax": "ภาษีที่ต้องจ่าย (ประมาณการ)",
+  "kpiEstTax": "ภาษีที่ต้องยื่น (ประมาณการ)",
   "kpiRemitted": "นำเงินเข้าแล้ว (USD)",
   "kpiNetGain": "กำไร/ขาดทุน สุทธิ (USD)",
   "kpiNotRemitted": "ยังไม่นำเข้า (USD)",

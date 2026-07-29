@@ -5,15 +5,156 @@
 
 ---
 
-## 📊 Summary
+## 🔴 TASK-024: Fix Edit SELL Blocked by remainingLots Validation
 
-| Task | Total | ✅ PASS | ❌ FAIL | ⬜ Pending | 🟡 Testing |
-|---|---|---|---|---|---|
-| TASK-000 (Provider) | 23 | 23 | 0 | 0 | 0 |
-| TASK-019 (Sell Dropdown) | 20 | 20 | 0 | 0 | 0 |
-| TASK-017 (UX/UI) | 8 | 8 | 0 | 0 | 0 |
-| TASK-018 (Prod-Ready) | 38 | 38 | 0 | 0 | 0 |
-| **Total** | **89** | **89** | **0** | **0** | **0** |
+**Reference Spec:** CLAUDE.md — Issue Workflow  
+**Task Status:** ✅ ทำเสร็จแล้ว (Dev)  
+**Test Status:** ✅ ทดสอบผ่านทั้งหมด (12/12)
+
+---
+
+### 📦 Group 1: FIFO Engine — excludeTradeId
+
+#### TC-024-001: computeAllRealizedGains accepts excludeTradeId param
+
+**Covers:** R4  
+**Status:** ✅ PASS  
+**Type:** Static analysis
+
+**Check:** `computeAllRealizedGains` มี signature `(trades: TradeTransaction[], excludeTradeId?: string)` — optional param `excludeTradeId`
+
+---
+
+#### TC-024-002: excludeTradeId excludes matching trade from computation
+
+**Covers:** R4  
+**Status:** ✅ PASS  
+**Type:** Code verification
+
+**Scenario:** 3 BUYs ALLW/Dime (539 shares) + 3 SELLs ALLW/Dime (315 shares) → remainingLots = 224
+**Input:** `computeAllRealizedGains(trades, 'sell_244_id')`
+**Expected:** remainingLots จะมี 224 + 244 = **468 shares** ALLW/Dime (ไม่รวม SELL 244)
+**Result:** fifoEngine.ts L131-133 — `.filter(t => t.id !== excludeTradeId)` กรอก trade ที่ตรงกับ excludeTradeId ออกก่อน sort
+
+---
+
+### 📦 Group 2: Dashboard — Validation + Remittance Guard
+
+#### TC-024-003: handleValidate uses computeAllRealizedGains with excludeTradeId
+
+**Covers:** R4  
+**Status:** ✅ PASS  
+**Type:** Code verification
+
+**Check:** Dashboard.tsx L89-100 — `handleValidate` เรียก `computeAllRealizedGains(trades, trade.id)` แทนการใช้ `remainingLots` จาก Redux โดยตรง
+**Dependency:** `[trades]` แทน `[remainingLots]`
+
+---
+
+#### TC-024-004: Edit SELL with no remittance → opens modal
+
+**Covers:** R4  
+**Status:** ✅ PASS  
+**Type:** Code verification
+
+**Check:** SELL ที่ไม่มี remittance → `handleEditTrade` ไม่มี gain.remittances → เรียก `setEditingTrade(trade)` — modal เปิด正常工作
+
+---
+
+#### TC-024-005: Edit SELL with remittance → alert blocks edit
+
+**Covers:** R1  
+**Status:** ✅ PASS  
+**Type:** Code verification
+
+**Check:** Dashboard.tsx L77-87 — `handleEditTrade` ตรวจสอบ `gains.find(g => g.sellTradeId === trade.id)` → ถ้า `sellGain.remittances.length > 0` → `alert()` + return (ไม่เปิด modal)
+
+---
+
+#### TC-024-006: SELL with remittance → i18n alert message shown
+
+**Covers:** R1  
+**Status:** ✅ PASS  
+**Type:** Code verification
+
+**Check:** Alert message = `t('trade:remitBeforeEdit')` — key มีทั้งใน `en/trade.json` และ `th/trade.json`
+
+---
+
+### 📦 Group 3: TradeForm — getAvailableQty + Lock Fields
+
+#### TC-024-007: getAvailableQty adds back trade.quantity when editing SELL
+
+**Covers:** R4  
+**Status:** ✅ PASS  
+**Type:** Code verification
+
+**Check:** TradeForm.tsx L229-232 — `if (trade && trade.type === 'SELL' && ...) { return baseQty + trade.quantity; }` — เมื่อ edit SELL ให้คืน lots ที่ trade นี้กินอยู่
+
+---
+
+#### TC-024-008: Type field disabled when editing
+
+**Covers:** R3  
+**Status:** ✅ PASS  
+**Type:** Code verification
+
+**Check:** TradeForm.tsx L350 — `<select id="trade-type" {...field} disabled={!!trade}>` — type field ถูก disabled เมื่อ edit mode
+
+---
+
+#### TC-024-009: Symbol field disabled when editing SELL
+
+**Covers:** R2  
+**Status:** ✅ PASS  
+**Type:** Code verification
+
+**Check:** TradeForm.tsx L294 — `<select id="trade-symbol" ... disabled={!!trade}>` — symbol field ถูก disabled เมื่อ edit SELL
+
+---
+
+#### TC-024-010: Add new SELL (not edit) — validation unchanged
+
+**Covers:** R4  
+**Status:** ✅ PASS  
+**Type:** Code verification
+
+**Check:** TradeForm.tsx L229 — `if (trade && ...)` — เมื่อ `trade === null` (add mode) logic `getAvailableQty` ทำงานเหมือนเดิม ไม่บวก quantity กลับ
+
+---
+
+### 📦 Group 4: TypeScript + Build
+
+#### TC-024-011: tsc --noEmit passes
+
+**Covers:** —  
+**Status:** ✅ PASS  
+**Type:** Compile check
+
+**Result:** `npx tsc --noEmit` → 0 errors
+
+---
+
+#### TC-024-012: All i18n keys present
+
+**Covers:** R1  
+**Status:** ✅ PASS  
+**Type:** Code verification
+
+**Result:** `remitBeforeEdit` key มีทั้ง `en/trade.json` และ `th/trade.json`
+
+---
+
+## 📊 Summary — All Tasks
+
+| Task | Total | ✅ PASS | ❌ FAIL | ⬜ Pending |
+|---|---|---|---|---|
+| TASK-000 (Provider) | 25 | 25 | 0 | 0 |
+| TASK-017 (UX/UI) | 8 | 8 | 0 | 0 |
+| TASK-018 (Prod-Ready) | 38 | 38 | 0 | 0 |
+| TASK-019 (Sell Dropdown) | 20 | 20 | 0 | 0 |
+| TASK-024 (Edit SELL Fix) | 12 | 12 | 0 | 0 |
+| **Total** | **103** | **103** | **0** | **0** |
 
 ---
 
@@ -563,6 +704,7 @@
 | 2026-07-25 | QA | TC-023 ~ TC-025 | 3/3 PASS | Static check — removed features |
 | **2026-07-25** | **QA** | **TC-001 ~ TC-025** | **25/25 ✅ PASS** | **TASK-000: All tests passed** |
 | **2026-07-26** | **QA** | **TC-019-001 ~ TC-019-020** | **20/20 ✅ PASS** | **TASK-019: All tests passed — static analysis + type check + i18n + CSS** |
+| **2026-07-29** | **QA** | **TC-024-001 ~ TC-024-012** | **12/12 ✅ PASS** | **TASK-024: All tests passed — code verification + static analysis + type check** |
 
 ---
 

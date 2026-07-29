@@ -125,9 +125,12 @@ export function processSellTrade(
 // ─── Batch computation ───────────────────────────────────────────────────
 
 export function computeAllRealizedGains(
-  trades: TradeTransaction[]
+  trades: TradeTransaction[],
+  excludeTradeId?: string
 ): { gains: RealizedGainResult[]; remainingLots: FifoLot[] } {
-  const sortedTrades = [...trades].sort((a, b) => a.date.localeCompare(b.date));
+  const sortedTrades = [...trades]
+    .filter(t => t.id !== excludeTradeId)
+    .sort((a, b) => a.date.localeCompare(b.date));
   const gains: RealizedGainResult[] = [];
   const lotsByKey: Record<string, FifoLot[]> = {};
 

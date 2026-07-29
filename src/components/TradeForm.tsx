@@ -223,7 +223,14 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
     const lots = remainingLots.filter(
       l => l.symbol === sym.toUpperCase() && l.provider === prov
     );
-    return lots.length > 0 ? lots.reduce((sum, l) => sum + l.remainingQuantity, 0) : 0;
+    const baseQty = lots.length > 0
+      ? lots.reduce((sum, l) => sum + l.remainingQuantity, 0)
+      : 0;
+    // R4: เมื่อ edit SELL — คืน lots ที่ trade นี้กำลังกินอยู่
+    if (trade && trade.type === 'SELL' && trade.symbol === sym.toUpperCase() && trade.provider === prov) {
+      return baseQty + trade.quantity;
+    }
+    return baseQty;
   };
 
   const currentAvailableQty = watchedType === 'SELL'
@@ -284,6 +291,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
                         <select
                           id="trade-symbol"
                           value={selectValue}
+                          disabled={!!trade}
                           onChange={(e) => {
                             const parts = e.target.value.split('|');
                             const symbol = parts[1];
@@ -339,7 +347,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
                 name="type"
                 control={control}
                 render={({ field }) => (
-                  <select id="trade-type" {...field}>
+                  <select id="trade-type" {...field} disabled={!!trade}>
                     <option value="BUY">{t('trade:tradeTypeBuy')}</option>
                     <option value="SELL">{t('trade:tradeTypeSell')}</option>
                   </select>

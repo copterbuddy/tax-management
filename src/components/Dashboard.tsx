@@ -10,7 +10,7 @@ import {
   deleteRemittance,
   setSelectedTaxYear,
 } from '../store/tradeSlice';
-import { formatGainIndicator, validateSellLots } from '../engine/fifoEngine';
+import { formatGainIndicator, validateSellLots, computeAllRealizedGains } from '../engine/fifoEngine';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import type { SupportedLang } from '../i18n/index';
@@ -75,19 +75,29 @@ export function Dashboard() {
   }, [dispatch, deleteConfirmId]);
 
   const handleEditTrade = useCallback((trade: TradeTransaction) => {
+    // R1: Remittance guard — SELL ที่มี remittance ต้องลบก่อนถึงจะแก้ได้
+    if (trade.type === 'SELL') {
+      const sellGain = gains.find(g => g.sellTradeId === trade.id);
+      if (sellGain && sellGain.remittances.length > 0) {
+        alert(t('trade:remitBeforeEdit') ?? '⚠️ กรุณาลบรายการนำเงินเข้าก่อนแก้ไขรายการขายนี้');
+        return;
+      }
+    }
     setEditingTrade(trade);
-  }, []);
+  }, [gains, t]);
 
   const handleValidate = useCallback((trade: TradeTransaction): string | null => {
     if (trade.type !== 'SELL') return null;
 
-    const relevantLots = remainingLots.filter(
+    // R4: exclude tradeId ที่กำลัง edit — คืน lots ที่ SELL ตัวนี้กินอยู่
+    const tempResult = computeAllRealizedGains(trades, trade.id);
+    const relevantLots = tempResult.remainingLots.filter(
       lot => lot.symbol === trade.symbol && lot.provider === trade.provider
     );
 
     const validation = validateSellLots(trade, relevantLots);
     return validation.valid ? null : validation.message!;
-  }, [remainingLots]);
+  }, [trades]);
 
   const handleAddRemittance = useCallback((remit: RemittanceRecord) => {
     dispatch(addRemittance(remit));

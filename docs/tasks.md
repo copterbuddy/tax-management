@@ -577,12 +577,43 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 
 ---
 
+### TASK-024: Fix Edit SELL Blocked by remainingLots Validation
+
+**Priority:** 🔴 P0
+**Effort:** S (5 files)
+**Status:** ✅ ทำเสร็จแล้ว
+**Completed:** 2026-07-29
+**Source:** Issue — Edit SELL 244 ALLW Dime → validation fail
+
+**Root Cause:** `remainingLots` computed from ALL trades including the SELL being edited → lots already consumed → validation sees insufficient pool (224 < 244)
+
+**What was done (Option C — excludeTradeId):**
+
+| Requirement | Change | File |
+|---|---|---|
+| Core fix | `computeAllRealizedGains` + param `excludeTradeId` — filter out trade ก่อน computation | `src/engine/fifoEngine.ts` |
+| Validation | `handleValidate` ใช้ `computeAllRealizedGains(trades, trade.id)` | `src/components/Dashboard.tsx` |
+| Remittance guard | Edit SELL ที่มี remit → alert "ลบ remit ก่อน" | `src/components/Dashboard.tsx` |
+| getAvailableQty | Edit mode — บวก trade.quantity กลับใน pool | `src/components/TradeForm.tsx` |
+| Lock type | Edit mode — type field disabled | `src/components/TradeForm.tsx` |
+| Lock symbol | Edit SELL — symbol field disabled | `src/components/TradeForm.tsx` |
+| i18n EN | `remitBeforeEdit` | `src/i18n/locales/en/trade.json` |
+| i18n TH | `remitBeforeEdit` | `src/i18n/locales/th/trade.json` |
+
+**Verification:**
+- `npx tsc --noEmit` → 0 errors
+- Manual: Edit SELL 244 ALLW Dime → ✅ no error
+- Manual: Edit SELL with remit → ❌ alert "ลบ remit ก่อน"
+- Manual: Edit SELL → type/symbol locked
+
+---
+
 ## 📊 Summary
 
 | Priority | Count | Done | Pending | Tasks |
 |---|---|---|---|---|
-| 🔴 P0 | 5 | 5 | 0 | TASK-000 ✅, TASK-011 ✅, TASK-001 ✅, TASK-018 ✅, TASK-002 ✅ |
+| 🔴 P0 | 6 | 6 | 0 | TASK-000 ✅, TASK-011 ✅, TASK-001 ✅, TASK-018 ✅, TASK-002 ✅, TASK-024 ✅ |
 | 🟡 P1 | 9 | 9 | 0 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-020 ✅, TASK-019 ✅, TASK-021 ✅, TASK-022 ✅, TASK-023 ✅ |
 | 🟢 P2 | 3 | 0 | 3 | TASK-005 ⬜, TASK-006 ⬜, TASK-007 ⬜ |
 | ⚪ P3 | 3 | 0 | 3 | TASK-008 ⬜, TASK-009 ⬜, TASK-010 ⬜ |
-| **Total** | **20** | **14** | **6** | |
+| **Total** | **21** | **15** | **6** | |

@@ -55,5 +55,6 @@
   "sharesSoldOut": "ขายหมดแล้ว",
   "sellSelectFirst": "เลือก Symbol ก่อน",
   "sellSelectSymbol": "-- เลือกหุ้น --",
-  "sellAutoFilled": "ค่า auto-fill จาก Symbol ที่เลือก"
+  "sellAutoFilled": "ค่า auto-fill จาก Symbol ที่เลือก",
+  "remitBeforeEdit": "⚠️ กรุณาลบรายการนำเงินเข้าก่อนแก้ไขรายการขายนี้"
 }

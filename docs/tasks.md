@@ -608,12 +608,39 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 
 ---
 
+### TASK-025: Change Default Theme Light → Dark (First-time User)
+
+**Priority:** 🟡 P1
+**Effort:** XS (1 file)
+**Status:** ✅ ทำเสร็จแล้ว
+**Completed:** 2026-07-29
+**Source:** UX — First-time user default theme
+
+**What was done:**
+
+| Requirement | Change | File |
+|---|---|---|
+| R1: เปลี่ยน default light → dark | `getInitialTheme()` — default คืนค่า `'dark'` | `src/context/ThemeContext.tsx` |
+| R2: เช็ค system ก่อน | เพิ่ม `window.matchMedia('(prefers-color-scheme: dark)')` check | `src/context/ThemeContext.tsx` |
+
+**Logic flow:**
+1. localStorage มี saved pref → ใช้ค่านั้น (existing users ไม่โดน)
+2. ไม่มี saved → เช็ค `prefers-color-scheme: dark` → dark ถ้า system dark
+3. ไม่มี saved + system ไม่ได้ set → dark
+
+**Verification:**
+- `npx tsc --noEmit` → 0 errors
+- Clear localStorage → reload → dark theme
+- Set `tax_tracker_theme='light'` → reload → light theme (รักษาค่าเดิม)
+
+---
+
 ## 📊 Summary
 
 | Priority | Count | Done | Pending | Tasks |
 |---|---|---|---|---|
 | 🔴 P0 | 6 | 6 | 0 | TASK-000 ✅, TASK-011 ✅, TASK-001 ✅, TASK-018 ✅, TASK-002 ✅, TASK-024 ✅ |
-| 🟡 P1 | 9 | 9 | 0 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-020 ✅, TASK-019 ✅, TASK-021 ✅, TASK-022 ✅, TASK-023 ✅ |
+| 🟡 P1 | 10 | 10 | 0 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-020 ✅, TASK-019 ✅, TASK-021 ✅, TASK-022 ✅, TASK-023 ✅, TASK-025 ✅ |
 | 🟢 P2 | 3 | 0 | 3 | TASK-005 ⬜, TASK-006 ⬜, TASK-007 ⬜ |
 | ⚪ P3 | 3 | 0 | 3 | TASK-008 ⬜, TASK-009 ⬜, TASK-010 ⬜ |
-| **Total** | **21** | **15** | **6** | |
+| **Total** | **22** | **16** | **6** | |

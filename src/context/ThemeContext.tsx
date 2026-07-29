@@ -19,8 +19,13 @@ function getInitialTheme(): Theme {
     // localStorage unavailable
   }
 
-  // Default: light mode
-  return 'light';
+  // R2: เช็ค system preference ก่อน
+  if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    return 'dark';
+  }
+
+  // R2: Default = dark mode (first-time user)
+  return 'dark';
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {

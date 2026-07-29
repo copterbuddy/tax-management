@@ -167,6 +167,81 @@ Claude Code ใช้ **model เดียวต่อ session** — เปล�
 
 ---
 
+---
+
+## 🐛 Issue Workflow — BA สั่ง Dev ไล่ code → วางแผนร่วม → ขอ Approve
+
+> **ใช้เมื่อมี issue / bug report เข้ามา** — ไม่ใช่ feature request ปกติ (feature ใช้ BA → UX → Dev → QA ด้านบน)
+
+### 🔴 กฎเหล็ก: BA ห้ามเดาสาเหตุ — สั่ง Dev ไปไล่ code ก่อน
+
+```
+📥 Issue / Bug Report
+  │
+  ▼
+📋 BA — รับ issue → สั่ง 💻 Dev: "ไปไล่ code หาสาเหตุ"
+  │
+  ▼
+💻 Dev — ไล่ code เจอสาเหตุ → รายงานกลับ 📋 BA
+  │               ├─ root cause (file:line)
+  │               ├─ scope (กระทบกี่จุด)
+  │               └─ วิธี fix เบื้องต้น
+  ▼
+📋 BA + 💻 Dev — วางแผน fix ร่วมกัน
+  │               ├─ แนวทางการแก้ไข code
+  │               ├─ ไฟล์ที่ต้องแก้
+  │               └─ ผลกระทบ (risk / regression)
+  ▼
+📋 BA + 🧪 QA — วางแผน test case ร่วมกัน
+  │               ├─ test case ที่ cover issue
+  │               └─ edge cases เพิ่มเติม
+  ▼
+📋 BA — รวมแผน提出 → ขอ ✅ Approve จากผู้ใช้
+  │               ├─ [Spec] requirement change (ถ้ามี)
+  │               ├─ [Code] แนวทาง fix
+  │               ├─ [Test] test case ที่จะเพิ่ม
+  │               └─ [Task] task.md ที่จะ update
+  ▼
+👤 ผู้ใช้ ✅ Approve
+  │
+  ▼
+📋 BA — เขียน spec change → docs/specs/<issue>.md
+  │     (ใช้ template เดียวกับ feature spec)
+  ▼
+📋 BA — update docs/tasks.md — เพิ่ม task สำหรับ fix นี้
+  ▼
+💻 Dev — implement code ตาม spec + tsc --noEmit ผ่าน → update docs/tasks.md
+  ▼
+🧪 QA — เขียน/รัน test cases → ทั้งหมดผ่าน → update docs/tasks.md
+  ▼
+✅ Done — รายงานผล
+```
+
+### 📋 Step-by-step
+
+| Step | ใคร | ทำอะไร | Output |
+|---|---|---|---|
+| 1 | 📋 BA | รับ issue → สั่ง Dev ไล่ code | คำสั่ง: "ไปไล่ code หาสาเหตุ" |
+| 2 | 💻 Dev | ไล่ code → รายงานกลับ BA | root cause (file:line), scope, fix approach |
+| 3 | 📋 BA + 💻 Dev | วางแผน fix ร่วมกัน | แนวทางแก้, ไฟล์ที่ต้องแก้, risk |
+| 4 | 📋 BA + 🧪 QA | วางแผน test case | test cases, edge cases |
+| 5 | 📋 BA | รวมแผน → ขอ Approve | spec, fix plan, test cases, task update |
+| 6 | 👤 ผู้ใช้ | ✅ Approve | — |
+| 7 | 📋 BA | เขียน spec change | `docs/specs/<issue>.md` |
+| 8 | 📋 BA | update tasks | `docs/tasks.md` — เพิ่ม task |
+| 9 | 💻 Dev | implement + tsc | code + `tsc --noEmit` ผ่าน |
+| 10 | 🧪 QA | test + verify | test cases ผ่าน |
+| 11 | ✅ Done | รายงานผล | — |
+
+### 🔴 กฎสำคัญ
+
+- **BA ห้ามเดาสาเหตุ** — ถ้ามี issue ให้สั่ง Dev ไปไล่ code หา root cause ก่อนเสมอ
+- **Dev ต้องรายงานกลับ BA ทุกครั้ง** — ไม่ใช่ Dev เห็นแล้ว fix เลย โดยไม่ผ่าน BA
+- **ห้าม implement ก่อน Approve** — ขั้นตอน 1-6 (BA → Dev ไล่ code → วางแผน → Approve) ต้องเสร็จก่อน ถึงเริ่ม implement ได้
+- **หลัง Approve แล้วค่อยทำ** — spec change → tasks → code → test ตามลำดับ
+
+---
+
 ## 📊 Project Overview
 
 **ระบบคำนวณภาษีสำหรับนักลงทุนรายบุคคล (ไทย)**

@@ -2,7 +2,7 @@
 // Single source of truth for all magic strings and config values.
 // OCP: Add new storage keys, providers, or config here — zero code changes elsewhere.
 
-import type { ProviderType } from './types/trade';
+import type { ProviderType, CountryCode, CountryWhtInfo } from './types/trade';
 
 // ─── Storage Keys ──────────────────────────────────────────────────────────
 
@@ -41,6 +41,53 @@ export const VALIDATION = {
   FX_RATE_MAX: 50,
   EARLIEST_YEAR: 2000,
 } as const;
+
+// ─── Storage Keys (Dividend) ───────────────────────────────────────────────
+
+export const STORAGE_KEYS_DIVIDEND = {
+  DIVIDENDS: 'tax_tracker_dividends',
+} as const;
+
+// ─── Country WHT Info ───────────────────────────────────────────────────────
+
+export const COUNTRY_WHT_INFO: Record<CountryCode, CountryWhtInfo> = {
+  US: {
+    code: 'US',
+    nameTH: 'สหรัฐอเมริกา',
+    nameEN: 'United States',
+    defaultWhtRate: 15,
+    hasDTATreaty: true,
+    noteTH: 'US-Thai Tax Treaty Art.10: 15% สำหรับบุคคลธรรมดาที่มี W-8BEN (ไม่มี W-8BEN = 30%)',
+    noteEN: 'US-Thai Tax Treaty Art.10: 15% for individuals with W-8BEN (30% without)',
+  },
+  UK: {
+    code: 'UK',
+    nameTH: 'สหราชอาณาจักร',
+    nameEN: 'United Kingdom',
+    defaultWhtRate: 0,
+    hasDTATreaty: true,
+    noteTH: 'UK ไม่หัก WHT เงินปันผล — เสียภาษีตาม Thai PIT เท่านั้น',
+    noteEN: 'UK does not withhold tax on dividends — taxed under Thai PIT only',
+  },
+  SG: {
+    code: 'SG',
+    nameTH: 'สิงคโปร์',
+    nameEN: 'Singapore',
+    defaultWhtRate: 0,
+    hasDTATreaty: true,
+    noteTH: 'สิงคโปร์ไม่มี WHT เงินปันผล — เสียภาษีตาม Thai PIT เท่านั้น',
+    noteEN: 'Singapore has no dividend WHT — taxed under Thai PIT only',
+  },
+  OTHER: {
+    code: 'OTHER',
+    nameTH: 'อื่น ๆ',
+    nameEN: 'Other',
+    defaultWhtRate: 0,
+    hasDTATreaty: false,
+    noteTH: 'กรุณาตรวจสอบอัตรา WHT กับประเทศต้นทาง — อาจไม่มี DTA กับไทย',
+    noteEN: 'Please verify WHT rate — may not have DTA with Thailand',
+  },
+};
 
 // ─── Tax Constants (Thai) ──────────────────────────────────────────────────
 

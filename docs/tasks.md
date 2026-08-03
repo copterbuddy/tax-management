@@ -606,6 +606,72 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 - Manual: Edit SELL with remit → ❌ alert "ลบ remit ก่อน"
 - Manual: Edit SELL → type/symbol locked
 
+### TASK-026: Foreign Dividend Tracking — ระบบบันทึกเงินปันผลหุ้นต่างประเทศ
+
+**Priority:** 🟡 P1
+**Effort:** XL (15+ files: 7 new, 4 modified, 2 doc)
+**Status:** ✅ ทำเสร็จแล้ว
+**Depends on:** None
+**Spec:** `docs/specs/dividend-tracker.md`
+
+**User Story:**
+> As a Thai investor receiving dividends from foreign stocks, I want to record dividend payments with WHT tracking and remittance-based income calculation, so I have all the numbers ready to file ภ.ง.ด.90.
+
+**Scope:**
+1. New data types: `DividendRecord`, `DividendRemittance`, `DividendSummary`, `CountryCode`, `CountryWhtInfo`
+2. New engine: `dividendEngine.ts` — pure functions for THB calc, WHT credit, remittance, summary
+3. New store: `dividendSlice.ts` — CRUD + remittance + localStorage persistence
+4. New tab: "Dividend" between Trade Log and Remittance Log
+5. New components: `DividendTab`, `DividendForm`, `DividendRemitForm`
+6. Country WHT auto-fill: US=15%, UK=0%, SG=0% (config-driven, extensible)
+7. Remittance-based: reportable income + WHT credit use remittance date FX
+8. i18n: `dividend:` namespace (EN/TH)
+
+**Key Architecture Decisions:**
+| Decision | Choice |
+|---|---|
+| Tax year | Remittance year (consistent with capital gains) |
+| THB for tax | Remittance date FX (per Thai RD rules) |
+| THB snapshot | Dividend date FX (reference only) |
+| Remittance | Partial allowed, multiple times per dividend |
+| Symbol validation | Must exist in BUY trades |
+| WHT rate | Country default auto-fill, user can override |
+
+**Technical Notes:**
+- **Do NOT modify:** `fifoEngine.ts`, `tradeSlice.ts`, `TradeForm.tsx`, `TradeTable.tsx`, `RemittanceLog.tsx`, `taxSlice.ts`
+- **New storage key:** `tax_tracker_dividends` (separate from trades/gains)
+- **Follow existing patterns:** react-hook-form + zodResolver, pure engine functions, KpiCard reuse
+- **Extensible:** Add new countries by adding entry to `COUNTRY_WHT_INFO` — no logic changes
+
+**Files:**
+| Action | File |
+|---|---|
+| NEW | `src/engine/dividendEngine.ts` |
+| NEW | `src/engine/dividendEngine.spec.ts` |
+| NEW | `src/store/dividendSlice.ts` |
+| NEW | `src/store/dividendSlice.spec.ts` |
+| NEW | `src/components/DividendTab.tsx` |
+| NEW | `src/components/DividendForm.tsx` |
+| NEW | `src/components/DividendRemitForm.tsx` |
+| NEW | `src/i18n/locales/en/dividend.json` |
+| NEW | `src/i18n/locales/th/dividend.json` |
+| MODIFY | `src/types/trade.ts` — add 5 interfaces + 1 type |
+| MODIFY | `src/constants.ts` — add `COUNTRY_WHT_INFO` |
+| MODIFY | `src/validation/schemas.ts` — add dividend schemas |
+| MODIFY | `src/store/index.ts` — register dividend reducer |
+| MODIFY | `src/i18n/index.ts` — add `dividend` namespace |
+| MODIFY | `src/components/Dashboard.tsx` — add Dividend tab |
+| MODIFY | `src/App.css` / `src/index.css` — dividend styles |
+| MODIFY | `docs/tasks.md` — add TASK-026 |
+
+**Acceptance Criteria (selected highlights):**
+- AC32: `npx tsc --noEmit` → 0 errors
+- AC35: Existing Trade Log / Remittance Log / FIFO engine — zero regressions
+- AC36: `npm test` → all tests pass
+- AC20: Real-time THB preview in form
+- AC24: "นำเข้าไทย" button for dividends with remaining > 0
+- AC27: Prevent remittance > remaining
+
 ---
 
 ### TASK-025: Change Default Theme Light → Dark (First-time User)
@@ -640,7 +706,7 @@ Allow users to switch between portfolios (e.g., "Personal", "Spouse", "Company")
 | Priority | Count | Done | Pending | Tasks |
 |---|---|---|---|---|
 | 🔴 P0 | 6 | 6 | 0 | TASK-000 ✅, TASK-011 ✅, TASK-001 ✅, TASK-018 ✅, TASK-002 ✅, TASK-024 ✅ |
-| 🟡 P1 | 10 | 10 | 0 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-020 ✅, TASK-019 ✅, TASK-021 ✅, TASK-022 ✅, TASK-023 ✅, TASK-025 ✅ |
+| 🟡 P1 | 11 | 11 | 0 | TASK-012 ✅, TASK-017 ✅, TASK-003 ✅, TASK-004 ✅, TASK-020 ✅, TASK-019 ✅, TASK-021 ✅, TASK-022 ✅, TASK-023 ✅, TASK-025 ✅, TASK-026 ✅ |
 | 🟢 P2 | 3 | 0 | 3 | TASK-005 ⬜, TASK-006 ⬜, TASK-007 ⬜ |
 | ⚪ P3 | 3 | 0 | 3 | TASK-008 ⬜, TASK-009 ⬜, TASK-010 ⬜ |
-| **Total** | **22** | **16** | **6** | |
+| **Total** | **23** | **17** | **6** | |

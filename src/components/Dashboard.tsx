@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import type { TradeTransaction, RemittanceRecord } from '../types/trade';
+import type { TradeTransaction, RemittanceRecord, DividendRecord, DividendRemittance } from '../types/trade';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   addTrade,
@@ -10,7 +10,16 @@ import {
   deleteRemittance,
   setSelectedTaxYear,
 } from '../store/tradeSlice';
+import {
+  addDividend,
+  updateDividend,
+  deleteDividend,
+  addDividendRemittance,
+  removeDividendRemittance,
+  setDividendDisplayYear,
+} from '../store/dividendSlice';
 import { formatGainIndicator, validateSellLots, computeAllRealizedGains } from '../engine/fifoEngine';
+import { computeDividendSummary, getAvailableSymbols } from '../engine/dividendEngine';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import type { SupportedLang } from '../i18n/index';
@@ -22,6 +31,9 @@ import { TradeTable } from './TradeTable';
 import { RemitForm } from './RemitForm';
 import { ConfirmDialog } from './ConfirmDialog';
 import { RemittanceLog } from './RemittanceLog';
+import { DividendTab } from './DividendTab';
+import { DividendForm } from './DividendForm';
+import { DividendRemitForm } from './DividendRemitForm';
 
 export function Dashboard() {
   const dispatch = useAppDispatch();
@@ -39,9 +51,19 @@ export function Dashboard() {
   const [showRemitForm, setShowRemitForm] = useState(false);
   const [editingTrade, setEditingTrade] = useState<TradeTransaction | null>(null);
   const [editingRemittance, setEditingRemittance] = useState<RemittanceRecord | null>(null);
-  const [activeTab, setActiveTab] = useState<'trades' | 'remittances'>('trades');
+  const [activeTab, setActiveTab] = useState<'trades' | 'dividends' | 'remittances'>('trades');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteRemitConfirm, setDeleteRemitConfirm] = useState<RemittanceRecord | null>(null);
+
+  // Dividend state
+  const dividendRecords = useAppSelector(state => state.dividend.records);
+  const dividendDisplayYear = useAppSelector(state => state.dividend.displayYear);
+  const dividendAvailableYears = useAppSelector(state => state.dividend.availableYears);
+  const [showDividendForm, setShowDividendForm] = useState(false);
+  const [editingDividend, setEditingDividend] = useState<DividendRecord | null>(null);
+  const [showDividendRemitForm, setShowDividendRemitForm] = useState(false);
+  const [remittingDividend, setRemittingDividend] = useState<DividendRecord | null>(null);
+  const [dividendDeleteConfirm, setDividendDeleteConfirm] = useState<string | null>(null);
 
   const summary = taxSummaries[selectedTaxYear];
 
@@ -123,6 +145,78 @@ export function Dashboard() {
       setDeleteRemitConfirm(null);
     }
   }, [dispatch, deleteRemitConfirm]);
+
+  // ─── Dividend Handlers ────────────────────────────────────────────
+
+  const dividendSummary = useMemo(
+    () => {
+      if (dividendRecords.length === 0) return null;
+      return computeDividendSummary(dividendRecords, dividendDisplayYear);
+    },
+    [dividendRecords, dividendDisplayYear],
+  );
+
+  const availableSymbols = useMemo(
+    () => getAvailableSymbols(trades),
+    [trades],
+  );
+
+  const handleAddDividend = useCallback((record: DividendRecord) => {
+    dispatch(addDividend(record));
+    setShowDividendForm(false);
+  }, [dispatch]);
+
+  const handleUpdateDividend = useCallback((record: DividendRecord) => {
+    dispatch(updateDividend(record));
+    setEditingDividend(null);
+  }, [dispatch]);
+
+  const handleDeleteDividend = useCallback((id: string) => {
+    const record = dividendRecords.find(r => r.id === id);
+    if (record && record.remittances.length > 0) {
+      alert(t('dividend:hasRemittance'));
+      return;
+    }
+    setDividendDeleteConfirm(id);
+  }, [dividendRecords, t]);
+
+  const confirmDeleteDividend = useCallback(() => {
+    if (dividendDeleteConfirm) {
+      dispatch(deleteDividend(dividendDeleteConfirm));
+      setDividendDeleteConfirm(null);
+    }
+  }, [dispatch, dividendDeleteConfirm]);
+
+  const handleEditDividend = useCallback((id: string) => {
+    const record = dividendRecords.find(r => r.id === id);
+    if (!record) return;
+    if (record.remittances.length > 0) {
+      alert(t('dividend:hasRemittance'));
+      return;
+    }
+    setEditingDividend(record);
+  }, [dividendRecords, t]);
+
+  const handleRemitDividend = useCallback((id: string) => {
+    const record = dividendRecords.find(r => r.id === id);
+    if (!record) return;
+    setRemittingDividend(record);
+    setShowDividendRemitForm(true);
+  }, [dividendRecords]);
+
+  const handleAddDividendRemittance = useCallback((remittance: DividendRemittance) => {
+    dispatch(addDividendRemittance(remittance));
+    setShowDividendRemitForm(false);
+    setRemittingDividend(null);
+  }, [dispatch]);
+
+  const handleDeleteDividendRemittance = useCallback((dividendId: string, remittanceId: string) => {
+    dispatch(removeDividendRemittance({ dividendId, remittanceId }));
+  }, [dispatch]);
+
+  const handleDividendYearChange = useCallback((year: number) => {
+    dispatch(setDividendDisplayYear(year));
+  }, [dispatch]);
 
   const handleLangSwitch = useCallback((next: SupportedLang) => {
     i18next.changeLanguage(next);
@@ -278,6 +372,12 @@ export function Dashboard() {
           📊 {t('common:tabTrades')}
         </button>
         <button
+          className={`tab-btn ${activeTab === 'dividends' ? 'active' : ''}`}
+          onClick={() => setActiveTab('dividends')}
+        >
+          💵 {t('dividend:tabDividends')}
+        </button>
+        <button
           className={`tab-btn ${activeTab === 'remittances' ? 'active' : ''}`}
           onClick={() => setActiveTab('remittances')}
         >
@@ -293,6 +393,19 @@ export function Dashboard() {
           onEdit={handleEditTrade}
           onDelete={handleDeleteTrade}
           onAddNew={() => setShowForm(true)}
+        />
+      ) : activeTab === 'dividends' ? (
+        <DividendTab
+          dividends={dividendRecords}
+          displayYear={dividendDisplayYear}
+          summary={dividendSummary}
+          onAdd={() => setShowDividendForm(true)}
+          onEdit={handleEditDividend}
+          onDelete={handleDeleteDividend}
+          onRemit={handleRemitDividend}
+          onYearChange={handleDividendYearChange}
+          availableYears={dividendAvailableYears}
+          onDeleteRemittance={handleDeleteDividendRemittance}
         />
       ) : (
         <RemittanceLog
@@ -329,6 +442,33 @@ export function Dashboard() {
         />
       )}
 
+      {/* Dividend Form Modal */}
+      {(showDividendForm || editingDividend) && (
+        <DividendForm
+          open={true}
+          onClose={() => {
+            setShowDividendForm(false);
+            setEditingDividend(null);
+          }}
+          onSave={editingDividend ? handleUpdateDividend : handleAddDividend}
+          editRecord={editingDividend}
+          availableSymbols={availableSymbols}
+        />
+      )}
+
+      {/* Dividend Remit Form Modal */}
+      {showDividendRemitForm && remittingDividend && (
+        <DividendRemitForm
+          open={true}
+          onClose={() => {
+            setShowDividendRemitForm(false);
+            setRemittingDividend(null);
+          }}
+          onRemit={handleAddDividendRemittance}
+          dividend={remittingDividend}
+        />
+      )}
+
       {/* Confirm Delete Trade Dialog */}
       {deleteConfirmId && (
         <ConfirmDialog
@@ -349,6 +489,18 @@ export function Dashboard() {
           cancelLabel={t('common:cancel')}
           onConfirm={confirmDeleteRemittance}
           onCancel={() => setDeleteRemitConfirm(null)}
+          danger
+        />
+      )}
+
+      {/* Confirm Delete Dividend Dialog */}
+      {dividendDeleteConfirm && (
+        <ConfirmDialog
+          message={t('dividend:deleteConfirm')}
+          confirmLabel={t('common:delete')}
+          cancelLabel={t('common:cancel')}
+          onConfirm={confirmDeleteDividend}
+          onCancel={() => setDividendDeleteConfirm(null)}
           danger
         />
       )}

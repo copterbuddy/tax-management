@@ -7,7 +7,7 @@ description: Thai Tax Tracker — Remittance-based FIFO capital gains calculator
 
 > **Invoke:** `/tax-management`  
 > **Purpose:** Teach Claude the project architecture, conventions, and how to add features correctly.  
-> **Last updated:** 2026-07-26 (TASK-018: Production-Ready Backend — i18next, Zod, react-hook-form, ErrorBoundary, Thai Tax Brackets)
+> **Last updated:** 2026-07-30 (TASK-026: Foreign Dividend Tracking — Types, Engine, Store, UI)
 
 ---
 
@@ -37,6 +37,7 @@ description: Thai Tax Tracker — Remittance-based FIFO capital gains calculator
 |---|---|
 | Trade Tracking | BUY/SELL foreign stocks with provider (Dime/Liberator/FinansiaSyrus) |
 | FIFO Engine | USD-based — lots matched by `symbol\|provider`, no cross-provider matching |
+| Dividend Tracking | Record foreign dividend payments with WHT tracking, country config, remittance-based income |
 | Remittance Tax | Taxable only when funds brought into Thailand (remittance-based) |
 | Remittance Log | Dedicated tab with history, year filter, totals |
 | Gain% Method | Only gain portion taxable; cost basis return is tax-free |
@@ -45,7 +46,7 @@ description: Thai Tax Tracker — Remittance-based FIFO capital gains calculator
 | Multi-Language | EN/TH with i18next — namespaced JSON, no inline `lang === 'th'` conditions |
 | Theme | Light/Dark mode with CSS custom properties + localStorage persistence |
 | UI Components | Tooltip (ⓘ), ConfirmDialog, KPI Cards (5 variants), responsive table→cards, ErrorBoundary |
-| Data | localStorage persistence (trades + gains/remittances) — validated with Zod on load |
+| Data | localStorage persistence (trades + gains/remittances + dividends) — validated with Zod on load |
 | 5-Year Limit | New trades limited to last 5 calendar years |
 | Thai Tax | Progressive 0-35% brackets, ฿160k default deduction |
 
@@ -58,21 +59,23 @@ src/
 ├── types/
 │   └── trade.ts              ← ALL type definitions (single source of truth)
 ├── engine/
-│   └── fifoEngine.ts          ← Pure functions: USD FIFO, remittance tax, validation
+│   ├── fifoEngine.ts          ← Pure functions: USD FIFO, remittance tax, validation
+│   └── dividendEngine.ts      ← Pure functions: dividend THB calc, WHT credit, remittance, summary
 ├── i18n/
 │   ├── index.ts               ← i18next setup + language detection + persistence
 │   └── locales/
-│       ├── th/ {common,trade,remittance}.json
-│       └── en/ {common,trade,remittance}.json
+│       ├── th/ {common,trade,remittance,dividend}.json
+│       └── en/ {common,trade,remittance,dividend}.json
 ├── validation/
 │   └── schemas.ts             ← Zod schemas + safeParse for localStorage validation
 ├── context/
 │   └── ThemeContext.tsx        ← Theme provider + useTheme hook (light/dark)
-├── constants.ts               ← Centralized: STORAGE_KEYS, PROVIDER_OPTIONS, DATE_LIMITS, VALIDATION, THAI_TAX
+├── constants.ts               ← Centralized: STORAGE_KEYS, PROVIDER_OPTIONS, DATE_LIMITS, VALIDATION, THAI_TAX, COUNTRY_WHT_INFO, STORAGE_KEYS_DIVIDEND
 ├── store/
-│   ├── index.ts               ← configureStore (trade + tax reducers)
+│   ├── index.ts               ← configureStore (trade + tax + dividend reducers)
 │   ├── hooks.ts               ← useAppDispatch / useAppSelector
 │   ├── tradeSlice.ts          ← Trade CRUD + remittance actions + gains persistence (zod-validated)
+│   ├── dividendSlice.ts       ← Dividend CRUD + remittance + persistence (zod-validated)
 │   └── taxSlice.ts            ← Thai progressive tax calculator (0-35%)
 ├── components/
 │   ├── Dashboard.tsx          ← Main page: KPI + tabs + modals (i18next, no inline lang)
@@ -80,6 +83,9 @@ src/
 │   ├── TradeForm.tsx          ← Add/Edit trade (react-hook-form + zodResolver, i18next)
 │   ├── RemitForm.tsx          ← Record remittance (react-hook-form + zodResolver, i18next)
 │   ├── RemittanceLog.tsx      ← Remittance history table + year filter (i18next)
+│   ├── DividendTab.tsx        ← Dividend list: KPI cards + table + remittance history (i18next)
+│   ├── DividendForm.tsx       ← Add/Edit dividend (react-hook-form pattern, i18next)
+│   ├── DividendRemitForm.tsx  ← Record dividend remittance (i18next)
 │   ├── KpiCard.tsx            ← Reusable KPI display card
 │   ├── Tooltip.tsx            ← Info tooltip (click/ESC/click-outside)
 │   ├── ConfirmDialog.tsx      ← Confirmation dialog (danger variant, ESC close)
@@ -134,6 +140,10 @@ Dashboard re-renders
 12. **Error Boundary** — Catches render errors, shows fallback UI — app doesn't white-screen.
 13. **Constants centralized** — `src/constants.ts` is single source for storage keys, providers, validation limits, tax constants.
 14. **Thai Tax Brackets** — Progressive 0-35%, personal allowance ฿60k + expense deduction ฿100k = ฿160k default.
+15. **Dividend Engine** — Separate pure engine for dividend THB calc, WHT credit, remittance, summary — no impact on FIFO.
+16. **Dividend Store** — Separate slice + localStorage key `tax_tracker_dividends`.
+17. **Country WHT Config** — `COUNTRY_WHT_INFO` in constants.ts — extensible (add country by adding entry).
+18. **Dividend Tax Year = Remittance Year** — Consistent with capital gains; remittance-date FX for reportable income + WHT credit.
 
 ---
 

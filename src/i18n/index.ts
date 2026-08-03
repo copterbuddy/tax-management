@@ -11,9 +11,11 @@ import { STORAGE_KEYS } from '../constants';
 import thCommon from './locales/th/common.json';
 import thTrade from './locales/th/trade.json';
 import thRemittance from './locales/th/remittance.json';
+import thDividend from './locales/th/dividend.json';
 import enCommon from './locales/en/common.json';
 import enTrade from './locales/en/trade.json';
 import enRemittance from './locales/en/remittance.json';
+import enDividend from './locales/en/dividend.json';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -23,8 +25,8 @@ export const FALLBACK_LANG: SupportedLang = 'th';
 // ─── Resources ─────────────────────────────────────────────────────────────
 
 const resources = {
-  th: { common: thCommon, trade: thTrade, remittance: thRemittance },
-  en: { common: enCommon, trade: enTrade, remittance: enRemittance },
+  th: { common: thCommon, trade: thTrade, remittance: thRemittance, dividend: thDividend },
+  en: { common: enCommon, trade: enTrade, remittance: enRemittance, dividend: enDividend },
 } as const;
 
 // ─── Language Detection ────────────────────────────────────────────────────
@@ -45,7 +47,7 @@ i18next.use(initReactI18next).init({
   resources,
   lng: detectLanguage(),
   fallbackLng: FALLBACK_LANG,
-  ns: ['common', 'trade', 'remittance'],
+  ns: ['common', 'trade', 'remittance', 'dividend'],
   defaultNS: 'common',
   interpolation: {
     escapeValue: false, // React already escapes

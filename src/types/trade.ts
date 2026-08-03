@@ -1,5 +1,16 @@
 export type TradeType = 'BUY' | 'SELL';
 export type ProviderType = 'Dime' | 'Liberator' | 'FinansiaSyrus';
+export type CountryCode = 'US' | 'UK' | 'SG' | 'OTHER';
+
+export interface CountryWhtInfo {
+  code: CountryCode;
+  nameTH: string;
+  nameEN: string;
+  defaultWhtRate: number;
+  hasDTATreaty: boolean;
+  noteTH?: string;
+  noteEN?: string;
+}
 
 export interface TradeTransaction {
   id: string;
@@ -85,4 +96,57 @@ export interface TaxSummary {
   totalSellCount: number;
   totalRemittanceCount: number;
   providerBreakdown: ProviderBreakdown[]; // Per-provider KPI
+}
+
+// ─── Dividend Types ──────────────────────────────────────────────────────────
+
+export interface DividendRecord {
+  id: string;
+  date: string;                  // Dividend pay date (YYYY-MM-DD)
+  symbol: string;                // Must exist in BUY trades
+  country: CountryCode;
+
+  // USD amounts
+  grossAmountUSD: number;        // Total dividend before WHT
+  whtRate: number;               // Percentage (user can override country default)
+  whtAmountUSD: number;          // Auto: grossUSD × whtRate / 100
+  netAmountUSD: number;          // Auto: grossUSD - whtUSD
+
+  // THB snapshot — reference only, based on dividend receipt date FX
+  dividendFxRate: number;
+  grossAmountTHB: number;        // grossUSD × dividendFx
+  whtAmountTHB: number;          // whtUSD × dividendFx
+  netAmountTHB: number;          // netUSD × dividendFx
+
+  // Remittance tracking
+  totalRemittedUSD: number;      // Sum of all remittances
+  remainingToRemitUSD: number;   // netUSD - totalRemittedUSD
+  remittances: DividendRemittance[];
+
+  notes?: string;
+}
+
+export interface DividendRemittance {
+  id: string;
+  dividendId: string;
+  amountUSD: number;
+  remitDate: string;             // YYYY-MM-DD
+  remitFxRate: number;           // THB per 1 USD on remittance date
+  remitTHB: number;              // amountUSD × remitFxRate
+  reportableIncomeTHB: number;   // same as remitTHB — for PND 90
+  whtCreditTHB: number;          // (amountUSD/netUSD) × whtUSD × remitFxRate
+  notes?: string;
+}
+
+export interface DividendSummary {
+  taxYear: number;                // Remittance year
+  totalGrossUSD: number;
+  totalWhtUSD: number;
+  totalNetUSD: number;
+  totalRemittedUSD: number;
+  totalReportableIncomeTHB: number;
+  totalWhtCreditTHB: number;
+  totalUnremittedUSD: number;
+  recordCount: number;
+  remittedCount: number;
 }

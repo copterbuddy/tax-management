@@ -50,6 +50,47 @@ export const remittanceRecordSchema = z.object({
 /** Array of RemittanceRecord */
 export const remittanceArraySchema = z.array(remittanceRecordSchema);
 
+// ─── Country Code ──────────────────────────────────────────────────────────
+
+export const countryCodeSchema = z.enum(['US', 'UK', 'SG', 'OTHER']);
+
+// ─── Dividend Remittance ───────────────────────────────────────────────────
+
+export const dividendRemittanceSchema = z.object({
+  id: z.string().min(1),
+  dividendId: z.string().min(1),
+  amountUSD: z.number().positive(),
+  remitDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+  remitFxRate: z.number().positive(),
+  remitTHB: z.number().min(0),
+  reportableIncomeTHB: z.number().min(0),
+  whtCreditTHB: z.number().min(0),
+  notes: z.string().optional(),
+});
+
+// ─── Dividend Record ───────────────────────────────────────────────────────
+
+export const dividendRecordSchema = z.object({
+  id: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+  symbol: z.string().min(1).max(VALIDATION.SYMBOL_MAX_LENGTH),
+  country: countryCodeSchema,
+  grossAmountUSD: z.number().positive(),
+  whtRate: z.number().min(0).max(100),
+  whtAmountUSD: z.number().min(0),
+  netAmountUSD: z.number().positive(),
+  dividendFxRate: z.number().positive(),
+  grossAmountTHB: z.number().min(0),
+  whtAmountTHB: z.number().min(0),
+  netAmountTHB: z.number().min(0),
+  totalRemittedUSD: z.number().min(0),
+  remainingToRemitUSD: z.number().min(0),
+  remittances: z.array(dividendRemittanceSchema),
+  notes: z.string().optional(),
+});
+
+export const dividendArraySchema = z.array(dividendRecordSchema);
+
 // ─── Realized Gain (partial — for localStorage validation) ─────────────────
 
 export const fifoMatchDetailSchema = z.object({

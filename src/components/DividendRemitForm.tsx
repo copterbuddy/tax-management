@@ -45,7 +45,7 @@ export function DividendRemitForm({
   );
 
   const remitTHB = amountUSD * remitFxRate;
-  const reportableIncomeTHB = amountUSD * dividend.dividendFxRate;
+  const reportableIncomeTHB = remitTHB;  // must derive from remitFxRate, never dividendFxRate (BR2)
 
   // ─── Handlers ────────────────────────────────────────────────────────
 

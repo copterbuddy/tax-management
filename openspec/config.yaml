@@ -1,15 +1,130 @@
 schema: spec-driven
+
 githubCopilot:
   cloudAgent: true
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Project context — shown to AI when creating artifacts.
+context: |
+  # Project: tax-management
+
+  Thai personal tax tracker for foreign stock / crypto trading.
+  Single-user, client-side only React app. No backend, no server, no auth.
+  Data lives entirely in localStorage.
+
+  ## Tech Stack
+
+  | Layer | Choice | Notes |
+  |---|---|---|
+  | UI | React 19.2 | Function components + hooks |
+  | Language | TypeScript 6.0 | strict on |
+  | Build | Vite 8 | dev server + `tsc -b` in `npm run build` |
+  | State | Redux Toolkit 2.12 | one slice per domain |
+  | Forms | react-hook-form 7 + @hookform/resolvers + zod 4 | pattern shared by all forms |
+  | i18n | i18next 26 + react-i18next 17 | en / th, namespaces per domain |
+  | Tests | Jest 30 + ts-jest + jsdom | *.spec.ts(x), testMatch **/*.spec.ts |
+  | Lint | oxlint 1.71 | `npm run lint` |
+
+  ## Architecture
+
+  src/engine/    pure calculation functions — NO React / Redux / DOM imports
+    fifoEngine.ts        capital-gain FIFO matching
+    dividendEngine.ts    dividend THB, WHT credit, remittance, annual summary
+  src/store/     Redux Toolkit slices + localStorage persistence
+    tradeSlice.ts        trades + capital-gain remittances
+    dividendSlice.ts     dividend records + dividend remittances
+    taxSlice.ts          Thai progressive income-tax calculator
+  src/components/  presentational + form components
+  src/validation/   zod schemas, single source of truth for localStorage load
+  src/types/        all shared TypeScript interfaces
+  src/i18n/         locale JSON files, one namespace per domain
+  src/constants.ts  storage keys, FX bounds, COUNTRY_WHT_INFO
+
+  Layering rules:
+  - engine/ is pure. Anything needing state or IO belongs in store/ or components/.
+  - Slice reducers compute derived totals by calling engine/ functions, never by
+    re-deriving a formula inline.
+  - localStorage is read/written ONLY inside slice reducers/actions. Components
+    dispatch actions.
+  - Every localStorage read is validated by a zod schema from validation/schemas.ts
+    and falls back to [] on corruption.
+
+  ## Domain Model
+
+  | Concept | Storage key | Slice |
+  |---|---|---|
+  | Trades (BUY/SELL) | tax_tracker_trades | tradeSlice |
+  | Capital-gain remittances | tax_tracker_remittances | tradeSlice |
+  | Dividend records | tax_tracker_dividends | dividendSlice |
+  | Tax calculations | tax_tracker_calculations | taxSlice |
+
+  Core types (src/types/trade.ts): TradeTransaction, RemittanceRecord, FifoLot,
+  FifoMatchDetail, RealizedGainResult, TaxSummary, DividendRecord,
+  DividendRemittance, DividendSummary, plus TradeType, ProviderType, CountryCode.
+
+  ## Tax Rules the Code Must Honour
+
+  These are the reason the code looks the way it does — not implementation details.
+
+  1. FIFO lots are keyed by symbol + provider. Never match across providers.
+  2. Capital losses are NOT deductible against capital gains (Revenue Code 40(4)(g)).
+  3. Gains are taxable only on remittance. Tax year = remittance year, not trade year.
+  4. THB value of a gain uses the remittance-date FX rate.
+  5. Dividend THB snapshot uses the dividend-date FX rate and is reference-only.
+  6. Dividend reportable income and WHT credit use the remittance-date FX rate.
+  7. WHT credit is proportional to the fraction of net dividend remitted.
+  8. A dividend is income only once remitted; unremitted → reportable 0.
+  9. US default WHT 15% assumes a valid W-8BEN (30% without). User can override.
+  10. FX bounds: 20–50 THB/USD (VALIDATION.FX_RATE_MIN/MAX).
+
+  Rule 6 detail: reportableIncomeTHB and remitTHB are the same figure — both are
+  amountUSD x remitFxRate. Using dividend-date FX there is a bug, not a variant.
+
+  ## Conventions
+
+  - i18n: every user-facing string via t('<namespace>:<key>'). No inline
+    `lang === 'th' ? ... : ...`, no hardcoded English in components.
+  - Forms: react-hook-form + zodResolver, one zod schema per form, validation
+    messages via the translation namespace.
+  - Tables: one table plus a paired mobile-card block. BOTH live inside the same
+    @media query block — mobile-only styling declared outside a media query leaks
+    onto desktop (this has bitten the repo before; see CLAUDE.md bug log).
+  - Pure components: data and handlers arrive as props. Redux is read in
+    Dashboard.tsx and passed down.
+  - Tests: *.spec.ts sits next to the module it covers. Pure engine functions are
+    tested directly; slices are tested through configureStore.
+
+  ## Quality Gates
+
+    npm test      # jest — all suites must pass
+    npm run lint  # oxlint
+    npm run build # tsc -b && vite build
+
+  Known caveat: `tsc --noEmit` at the repo root is vacuous (root tsconfig.json has
+  files: []). `npm run build` type-checks src/*.spec.ts via tsconfig.app.json, which
+  lacks jest types — so `npm run build` is currently red for that reason alone.
+  Verify with `npm test` + `npm run lint` until that is fixed.
+
+  ## Workflow
+
+  CLAUDE.md governs the process: BA → UX → Dev → QA, each phase writing its output to
+  disk before the next phase starts. Tasks tracked in docs/tasks.md. BA specs live in
+  docs/specs/, UX specs in docs/ux/screens/.
+
+  OpenSpec changes live in openspec/changes/<name>/ and are planned with the
+  openspec-* skills. The two systems coexist: docs/ is the original workflow,
+  openspec/ is the newer one.
+
+  ## Scope Boundaries
+
+  Out of scope unless explicitly requested:
+  - Backend, accounts, multi-user, sync
+  - Multi-currency (USD only for now)
+  - Automatic FX fetching from an API
+  - Foreign tax credit LIMIT calculation (credit cap = min(foreign tax, Thai tax))
+  - Pre-2024 dividend exemption — dividend income received before 1 Jan 2024 (BE 2567)
+    is permanently exempt in Thailand, but the app does not model this. Known gap.
+  - Generating filing documents (PND 90). This is a tracking tool; the user fills the
+    return by hand.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.

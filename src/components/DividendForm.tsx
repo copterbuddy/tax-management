@@ -30,7 +30,13 @@ export function DividendForm({
 
   // ─── Form State ───────────────────────────────────────────────────────
 
-  const [date, setDate] = useState(editRecord?.date ?? '');
+  const [date, setDate] = useState(() => {
+    if (editRecord?.date) {
+      return editRecord.date;
+    }
+    // Default to today's date (YYYY-MM-DD) for new dividend
+    return new Date().toISOString().split('T')[0];
+  });
   const [symbol, setSymbol] = useState(editRecord?.symbol ?? '');
   const [country, setCountry] = useState<CountryCode>(editRecord?.country ?? 'US');
   const [grossAmountUSD, setGrossAmountUSD] = useState(editRecord?.grossAmountUSD ?? 0);

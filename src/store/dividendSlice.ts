@@ -125,6 +125,19 @@ export const dividendSlice = createSlice({
       saveDividends(state.records);
     },
 
+    repairRemittanceData: (state) => {
+      let repaired = false;
+      state.records.forEach((record) => {
+        record.remittances.forEach((remit) => {
+          if (remit.reportableIncomeTHB !== remit.remitTHB) {
+            remit.reportableIncomeTHB = remit.remitTHB;
+            repaired = true;
+          }
+        });
+      });
+      if (repaired) saveDividends(state.records);
+    },
+
     setDividendDisplayYear: (state, action: PayloadAction<number>) => {
       state.displayYear = action.payload;
     },
@@ -156,6 +169,7 @@ export const {
   setDividendDisplayYear,
   importDividends,
   clearAllDividends,
+  repairRemittanceData,
 } = dividendSlice.actions;
 
 export default dividendSlice.reducer;

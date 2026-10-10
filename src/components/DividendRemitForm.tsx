@@ -208,7 +208,7 @@ export function DividendRemitForm({
           <button
             className="btn btn-primary"
             onClick={handleSubmit}
-            disabled={amountUSD <= 0 || remitFxRate <= 0}
+            disabled={!(Number(amountUSD) > 0 && !isNaN(Number(amountUSD)) && Number(remitFxRate) > 0 && !isNaN(Number(remitFxRate)) && !!remitDate)}
           >
             {t('dividend:remitSubmit')}
           </button>

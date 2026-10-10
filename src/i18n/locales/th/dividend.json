@@ -61,6 +61,7 @@
   "formSave": "💾 บันทึก",
   "formNoSymbols": "-- ยังไม่มีหุ้นในพอร์ต กรุณาเพิ่มรายการซื้อก่อน --",
   "formSymbolSelect": "-- เลือก Symbol --",
+  "formDateFutureError": "วันที่ได้รับไม่สามารถเลือกเกินวันปัจจุบันได้",
 
   "remitBtn": "💰 นำเข้าไทย",
   "remitDialogTitle": "💰 นำเงินปันผลเข้าไทย",

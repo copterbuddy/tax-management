@@ -61,6 +61,7 @@
   "formSave": "💾 Save",
   "formNoSymbols": "-- No stocks in portfolio. Add a BUY trade first. --",
   "formSymbolSelect": "-- Select Symbol --",
+  "formDateFutureError": "Date received cannot be later than today",
 
   "remitBtn": "💰 Remit",
   "remitDialogTitle": "💰 Remit Dividend to Thailand",

@@ -28,6 +28,9 @@ export function DividendForm({
   const { t } = useTranslation();
   const isEdit = !!editRecord;
 
+  // ─── Helper: today's date ───────────────────────────
+  const today = useMemo(() => new Date().toISOString().split('T')[0], []);
+
   // ─── Form State ───────────────────────────────────────────────────────
 
   const [date, setDate] = useState(() => {
@@ -35,7 +38,7 @@ export function DividendForm({
       return editRecord.date;
     }
     // Default to today's date (YYYY-MM-DD) for new dividend
-    return new Date().toISOString().split('T')[0];
+    return today;
   });
   const [symbol, setSymbol] = useState(editRecord?.symbol ?? '');
   const [country, setCountry] = useState<CountryCode>(editRecord?.country ?? 'US');
@@ -74,6 +77,10 @@ export function DividendForm({
     setError('');
 
     if (!date) { setError(t('dividend:formDate') + ' required'); return; }
+    if (date > today) {
+      setError(t('dividend:formDateFutureError'));
+      return;
+    }
     if (!symbol && !isEdit) { setError(t('dividend:formSymbol') + ' required'); return; }
     if (grossAmountUSD <= 0) { setError(t('dividend:formGrossUSD') + ' must be > 0'); return; }
     if (dividendFxRate <= 0) { setError(t('dividend:formFxRate') + ' must be > 0'); return; }
@@ -131,7 +138,7 @@ export function DividendForm({
       >
         <div className="modal-header">
           <h2>{isEdit ? t('dividend:editDividend') : t('dividend:addDividend')}</h2>
-          <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
+          <button className="btn-close" onClick={onClose} aria-label="Close">×</button>
         </div>
 
         <div className="modal-body">
@@ -144,11 +151,13 @@ export function DividendForm({
             <div className="form-group">
               <label htmlFor="div-date">{t('dividend:formDate')}</label>
               <input
-                id="div-date"
-                type="date"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                className="form-input"
+              id="div-date"
+              type="date"
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              max={today}  // prevent selecting future dates
+              className="form-input"
+              style={{ borderColor: date > today ? '#dc2626' : '' }}  // visual feedback
               />
             </div>
             <div className="form-group">

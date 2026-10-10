@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { DividendForm } from './DividendForm';
 
 // ─── Unit test for DividendForm modal display ───────────────────────────────────
@@ -124,5 +124,120 @@ describe('DividendForm modal display', () => {
     
     const dateInput = screen.getByLabelText(/date/i) as HTMLInputElement;
     expect(dateInput.value).toBe('2026-03-15');
+  });
+
+  // ─── Date Validation Tests ──────────────────────────────────────────────
+  
+  test('date input has max attribute set to today', () => {
+    render(
+      <DividendForm 
+        open={true} 
+        onClose={mockOnClose}
+        onSave={() => {}}
+        editRecord={undefined}
+        availableSymbols={[]}
+      />
+    );
+    
+    const dateInput = screen.getByLabelText(/date/i) as HTMLInputElement;
+    const today = new Date().toISOString().split('T')[0];
+    expect(dateInput.max).toBe(today);
+  });
+
+  test('rejects future date with validation error', async () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    
+    render(
+      <DividendForm 
+        open={true} 
+        onClose={mockOnClose}
+        onSave={() => {}}
+        editRecord={undefined}
+        availableSymbols={['AAPL']}
+      />
+    );
+    
+    const dateInput = screen.getByLabelText(/date/i) as HTMLInputElement;
+    fireEvent.change(dateInput, { target: { value: tomorrowStr } });
+    
+    const saveBtn = screen.getByRole('button', { name: /บันทึก|Save/i });
+    fireEvent.click(saveBtn);
+    
+    // wait for state update and error render
+    await act(async () => {});
+    
+    // i18n not configured in test — check for key
+    expect(screen.getByText(/dividend:formDateFutureError|วันที่ได้รับไม่สามารถเลือกเกินวันปัจจุบันได้|Date received cannot be later than today/i)).toBeInTheDocument();
+    expect(mockOnClose).not.toHaveBeenCalled();
+  });
+
+  test('accepts today as valid date', async () => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    render(
+      <DividendForm 
+        open={true} 
+        onClose={mockOnClose}
+        onSave={() => {}}
+        editRecord={undefined}
+        availableSymbols={['AAPL']}
+      />
+    );
+    
+    const dateInput = screen.getByLabelText(/date/i) as HTMLInputElement;
+    expect(dateInput.value).toBe(today);
+    
+    const symbolSelect = screen.getByLabelText(/symbol/i) as HTMLSelectElement;
+    fireEvent.change(symbolSelect, { target: { value: 'AAPL' } });
+    
+    const grossInput = screen.getByLabelText(/gross|จำนวนเงินปันผล/i) as HTMLInputElement;
+    fireEvent.change(grossInput, { target: { value: '100' } });
+    
+    const fxInput = screen.getByLabelText(/fx|fx rate/i) as HTMLInputElement;
+    fireEvent.change(fxInput, { target: { value: '35' } });
+    
+    const saveBtn = screen.getByRole('button', { name: /บันทึก|Save/i });
+    fireEvent.click(saveBtn);
+    
+    await act(async () => {});
+    
+    expect(screen.queryByText(/วันที่ได้รับไม่สามารถเลือกเกินวันปัจจุบันได้|Date received cannot be later than today/i)).not.toBeInTheDocument();
+  });
+
+  test('accepts past date as valid', async () => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    render(
+      <DividendForm 
+        open={true} 
+        onClose={mockOnClose}
+        onSave={() => {}}
+        editRecord={undefined}
+        availableSymbols={['AAPL']}
+      />
+    );
+    
+    const dateInput = screen.getByLabelText(/date/i) as HTMLInputElement;
+    fireEvent.change(dateInput, { target: { value: yesterdayStr } });
+    
+    const symbolSelect = screen.getByLabelText(/symbol/i) as HTMLSelectElement;
+    fireEvent.change(symbolSelect, { target: { value: 'AAPL' } });
+    
+    const grossInput = screen.getByLabelText(/gross|จำนวนเงินปันผล/i) as HTMLInputElement;
+    fireEvent.change(grossInput, { target: { value: '100' } });
+    
+    const fxInput = screen.getByLabelText(/fx|fx rate/i) as HTMLInputElement;
+    fireEvent.change(fxInput, { target: { value: '35' } });
+    
+    const saveBtn = screen.getByRole('button', { name: /บันทึก|Save/i });
+    fireEvent.click(saveBtn);
+    
+    await act(async () => {});
+    
+    expect(screen.queryByText(/วันที่ได้รับไม่สามารถเลือกเกินวันปัจจุบันได้|Date received cannot be later than today/i)).not.toBeInTheDocument();
   });
 });

@@ -1082,6 +1082,10 @@ a:hover {
   border-bottom: 1px solid var(--color-border);
 }
 
+.modal-body {
+  padding: var(--space-5) var(--space-6);
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;

@@ -18,16 +18,15 @@ import {
   removeDividendRemittance,
   setDividendDisplayYear,
 } from '../store/dividendSlice';
-import { formatGainIndicator, validateSellLots, computeAllRealizedGains } from '../engine/fifoEngine';
+import { validateSellLots, computeAllRealizedGains } from '../engine/fifoEngine';
 import { computeDividendSummary, getAvailableSymbols } from '../engine/dividendEngine';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import type { SupportedLang } from '../i18n/index';
 import i18next from 'i18next';
 import { persistLanguage } from '../i18n/index';
-import { KpiCard } from './KpiCard';
 import { TradeForm } from './TradeForm';
-import { TradeTable } from './TradeTable';
+import { TradesTab } from './TradesTab';
 import { RemitForm } from './RemitForm';
 import { ConfirmDialog } from './ConfirmDialog';
 import { RemittanceLog } from './RemittanceLog';
@@ -232,14 +231,6 @@ export function Dashboard() {
     return dates[0];
   }, [trades]);
 
-  // Number formatter respecting locale
-  const fmtUSD = useCallback((n: number) =>
-    n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-  []);
-
-  // KPI labels are now all from translation keys — no inline lang conditions
-  const remitCount = summary?.totalRemittanceCount ?? 0;
-
   return (
     <div className="dashboard">
       {/* Header */}
@@ -279,90 +270,6 @@ export function Dashboard() {
         </div>
       </header>
 
-      {/* Year Filter + Data Freshness */}
-      <div className="year-filter">
-        <label htmlFor="year-select">{t('common:taxYear')}:</label>
-        <select
-          id="year-select"
-          value={selectedTaxYear}
-          onChange={e => dispatch(setSelectedTaxYear(Number(e.target.value)))}
-        >
-          {allYears.map(year => (
-            <option key={year} value={year}>{year}</option>
-          ))}
-        </select>
-        {lastUpdated && (
-          <span className="data-freshness">
-            <span className="fresh-dot" />
-            {t('common:lastUpdated')}: {lastUpdated}
-          </span>
-        )}
-      </div>
-
-      {/* KPI Cards */}
-      <div className="kpi-grid">
-        <KpiCard
-          title={t('common:kpiEstTax')}
-          value={summary ? formatGainIndicator(summary.taxableGainTHB) : '฿0.00'}
-          subValue={summary ? `≈ $${fmtUSD(summary.taxableGainUSD)} USD` : undefined}
-          subValue2={remitCount > 0
-            ? `${t('common:kpiRemitFrom')} ${remitCount} ${remitCount === 1 ? t('common:kpiRemitCountSingular') : t('common:kpiRemitCountPlural')}`
-            : undefined}
-          variant={summary?.taxableGainTHB > 0 ? 'highlight' : 'neutral'}
-          icon="💰"
-          tooltip={t('common:tooltipEstTax')}
-        />
-        <KpiCard
-          title={t('common:kpiRemitted')}
-          value={summary ? `$${fmtUSD(summary.totalRemittedUSD)}` : '$0.00'}
-          subValue={summary ? `${summary.totalSellCount} ${t('common:sellsCount')}` : undefined}
-          variant="neutral"
-          icon="🏦"
-          tooltip={t('common:tooltipRemitted')}
-        />
-        <KpiCard
-          title={t('common:kpiNetGain')}
-          value={summary ? `$${fmtUSD(summary.netGainUSD)}` : '$0.00'}
-          subValue={summary?.netGainUSD !== 0 && summary
-            ? `${summary.totalBuyCount} ${t('common:buys')} / ${summary.totalSellCount} ${t('common:sells')}`
-            : undefined}
-          variant={summary?.netGainUSD > 0 ? 'positive' : summary?.netGainUSD < 0 ? 'negative' : 'neutral'}
-          icon="📈"
-          tooltip={t('common:tooltipNetGain')}
-        />
-        <KpiCard
-          title={t('common:kpiNotRemitted')}
-          value={summary ? `$${fmtUSD(summary.totalRevenueUSD - summary.totalRemittedUSD)}` : '$0.00'}
-          subValue={t('common:kpiNotRemittedSub')}
-          variant="neutral"
-          icon="🌏"
-          tooltip={t('common:tooltipNotRemitted')}
-        />
-      </div>
-
-      {/* Provider KPI Row */}
-      {summary?.providerBreakdown && summary.providerBreakdown.length > 0 && (
-        <div className="kpi-grid kpi-provider-row">
-          {summary.providerBreakdown.map(pb => {
-            const pctText = summary.taxableGainTHB > 0
-              ? ` (${((pb.taxableGainTHB / summary.taxableGainTHB) * 100).toFixed(0)}%)`
-              : '';
-            return (
-              <KpiCard
-                key={pb.provider}
-                title={`🏢 ${pb.provider}`}
-                value={formatGainIndicator(pb.taxableGainTHB)}
-                subValue={`$${fmtUSD(pb.totalRemittedUSD)} remitted${pctText}`}
-                subValue2={pb.sellCount > 0
-                  ? `${pb.sellCount} sell${pb.sellCount !== 1 ? 's' : ''} | Net: ${pb.netGainUSD >= 0 ? '+' : ''}$${fmtUSD(pb.netGainUSD)}`
-                  : t('common:noData')}
-                variant={pb.taxableGainTHB > 0 ? 'positive' : pb.taxableGainTHB < 0 ? 'negative' : 'neutral'}
-              />
-            );
-          })}
-        </div>
-      )}
-
       {/* Tabs */}
       <div className="tab-nav">
         <button
@@ -386,10 +293,14 @@ export function Dashboard() {
       </div>
 
       {activeTab === 'trades' ? (
-        <TradeTable
+        <TradesTab
           trades={trades}
           gains={gains}
+          summary={summary}
           selectedYear={selectedTaxYear}
+          availableYears={allYears}
+          lastUpdated={lastUpdated}
+          onYearChange={year => dispatch(setSelectedTaxYear(year))}
           onEdit={handleEditTrade}
           onDelete={handleDeleteTrade}
           onAddNew={() => setShowForm(true)}
@@ -451,7 +362,7 @@ export function Dashboard() {
             setEditingDividend(null);
           }}
           onSave={editingDividend ? handleUpdateDividend : handleAddDividend}
-          editRecord={editingDividend}
+          editRecord={editingDividend ?? undefined}
           availableSymbols={availableSymbols}
         />
       )}

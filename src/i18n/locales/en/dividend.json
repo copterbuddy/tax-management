@@ -5,7 +5,7 @@
   "noDividends": "No dividend records yet",
   "noDividendsHint": "Record dividends received from foreign stocks to prepare your PND 90 filing.",
   "noDividendsYear": "No dividend records for",
-  "noDividendsYearHint": "Try a different year, or add a new dividend record.",
+  "noDividendsYearHint": "Try a different dividend year above this table, or add a new dividend record.",
   "deleteConfirm": "Are you sure you want to delete this dividend record?",
   "deleteRemitConfirm": "Are you sure you want to delete this dividend remittance?",
   "hasRemittance": "⚠️ This dividend has remittance records. Delete remittances first.",

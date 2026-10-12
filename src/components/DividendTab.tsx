@@ -2,9 +2,9 @@
 // Main content for the Dividend tab in Dashboard.
 // Shows KPI cards, year filter, dividend table with expandable remittance history.
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DividendRecord, DividendRemittance } from '../types/trade';
+import type { DividendRecord } from '../types/trade';
 import { KpiCard } from './KpiCard';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -90,15 +90,19 @@ export function DividendTab({
       <div>
         <div className="table-header">
           <h2>{t('dividend:tabDividends')}</h2>
-          <select
-            className="year-select"
-            value={displayYear}
-            onChange={e => onYearChange(Number(e.target.value))}
-          >
-            {availableYears.map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-          </select>
+          <div className="year-filter">
+            <label htmlFor="dividend-year-select">{t('dividend:divYear')}:</label>
+            <select
+              id="dividend-year-select"
+              className="year-select"
+              value={displayYear}
+              onChange={e => onYearChange(Number(e.target.value))}
+            >
+              {availableYears.map(y => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
           <button className="btn btn-primary" onClick={onAdd}>
             {t('dividend:addDividend')}
           </button>
@@ -238,15 +242,19 @@ export function DividendTab({
           <span className="count-badge">({filteredDividends.length})</span>
         </h2>
         <div className="header-controls">
-          <select
-            className="year-select"
-            value={displayYear}
-            onChange={e => onYearChange(Number(e.target.value))}
-          >
-            {availableYears.map(year => (
-              <option key={year} value={year}>{year}</option>
-            ))}
-          </select>
+          <div className="year-filter">
+            <label htmlFor="dividend-year-select">{t('dividend:divYear')}:</label>
+            <select
+              id="dividend-year-select"
+              className="year-select"
+              value={displayYear}
+              onChange={e => onYearChange(Number(e.target.value))}
+            >
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
           <button className="btn btn-primary" onClick={onAdd}>
             {t('dividend:addDividend')}
           </button>
@@ -274,9 +282,8 @@ export function DividendTab({
           </thead>
           <tbody>
             {filteredDividends.map(record => (
-              <>
+              <Fragment key={record.id}>
                 <tr
-                  key={record.id}
                   className="trade-row"
                   onClick={() => setExpandedId(expandedId === record.id ? null : record.id)}
                 >
@@ -341,7 +348,7 @@ export function DividendTab({
                   </td>
                 </tr>
                 {renderRemittanceHistory(record)}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

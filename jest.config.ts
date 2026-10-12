@@ -16,6 +16,7 @@ const config: Config = {
         tsconfig: {
           esModuleInterop: true,
           allowJs: true,
+          resolveJsonModule: true,
           strict: false,
           noImplicitAny: false,
           jsx: "react-jsx",

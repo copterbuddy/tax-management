@@ -8,7 +8,7 @@ interface KpiCardProps {
   subValue2?: string;
   tooltip?: string;
   icon?: ReactNode;
-  variant?: 'default' | 'positive' | 'negative' | 'neutral' | 'highlight';
+  variant?: 'default' | 'positive' | 'negative' | 'neutral' | 'highlight' | 'warning';
 }
 
 export function KpiCard({

@@ -561,6 +561,10 @@ a:hover {
   border-color: var(--color-primary-border);
   background: linear-gradient(135deg, var(--color-primary-bg), var(--color-surface));
 }
+.kpi-card.kpi-warning {
+  border-color: var(--color-warning-border);
+  background: linear-gradient(135deg, var(--color-warning-bg), var(--color-surface));
+}
 
 .kpi-icon {
   font-size: 28px;
@@ -713,6 +717,13 @@ a:hover {
 .tab-btn:focus-visible {
   outline: none;
   box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+/* Tab content wrapper — keeps the same vertical rhythm as .dashboard */
+.trades-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

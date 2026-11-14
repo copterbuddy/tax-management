@@ -11,6 +11,42 @@ context: |
   Single-user, client-side only React app. No backend, no server, no auth.
   Data lives entirely in localStorage.
 
+  ## Code Navigation — start from graphify-out/, never from the tree
+
+  graphify-out/ at the repo root is the pre-built knowledge graph of this repo
+  (160 indexed files: graph.json, GRAPH_REPORT.md, graph.html). It is the
+  mandated starting point for every code-path question. Do NOT explore the
+  filesystem directory by directory, glob-sweep the repo, or guess file paths.
+
+  If graphify-out/ is missing when work starts, do not begin by reading source
+  files: build the graph first, then start the task. Run `graphify extract .
+  --code-only` (local AST, no API key, no LLM cost), then `graphify cluster-only .
+  --no-label` to generate GRAPH_REPORT.md and graph.html. Only then run the
+  lookups below.
+
+  1. `graphify query "<question>"` — BFS over graphify-out/graph.json. First step
+     for "where is X", "what calls Y", "how does Z work".
+  2. `graphify explain "<node>"` — one node plus its neighbours (`--all` for all).
+  3. `graphify path "<A>" "<B>"` — how two nodes connect.
+  Nodes accept an id, a label, or a repo-relative file path.
+
+  Query output is token-budgeted (~2000 tokens). If it reports TRUNCATED, narrow
+  the query with `--seed` / `--context` (edge-context filter) or raise `--budget`;
+  do not fall back to a filesystem sweep to fill the gap.
+
+  graphify-out/GRAPH_REPORT.md is the human summary: community hubs (god nodes),
+  core abstractions, and per-community file lists. Read it instead of asking for
+  an inventory of the codebase.
+
+  After a graph lookup, open only the files the graph returned, and read them
+  bounded (view_range) rather than whole-file. Paths from the graph are relative
+  to the repo root.
+
+  Freshness: the graph was built from commit 342bec51. Compare with
+  `git rev-parse --short HEAD`; after code changes run `graphify update .` (no API
+  cost) rather than re-reading files to rebuild the picture. If a graph result and
+  the actual source disagree, the source wins — say so and note the graph is stale.
+
   ## Tech Stack
 
   | Layer | Choice | Notes |
@@ -147,3 +183,19 @@ context: |
 #     archive:
 #       guidance:
 #         - Summarize the archive outcome before finishing
+
+operations:
+  apply:
+    guidance:
+      - Start every code lookup in graphify-out/, never in the directory tree. Run
+        graphify query with the question, then graphify explain on the node it
+        returns, and open only the files the graph names. Do not walk directories
+        or glob-sweep the repo to find code.
+      - Graph node paths are repo-root relative. Read them bounded and grep to
+        confirm before editing.
+      - Run graphify update . after implementation so the graph stays truthful for
+        the next change.
+      - If graphify-out/ is missing when work starts, generate the graph before
+        anything else. Run graphify extract . --code-only, then graphify
+        cluster-only . --no-label. Do not start reading source files because the
+        graph is absent.

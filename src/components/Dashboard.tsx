@@ -80,9 +80,15 @@ export function Dashboard() {
   }, [dispatch]);
 
   const handleUpdateTrade = useCallback((trade: TradeTransaction) => {
-    dispatch(updateTrade(trade));
+      // Backstop: the pre-flight in handleValidate should already have caught this
+      try {
+        dispatch(updateTrade(trade));
+      } catch {
+        alert(t('trade:fifoLotsConflict') ?? 'This change leaves a later SELL trade without enough lots to match');
+        return;
+      }
     setEditingTrade(null);
-  }, [dispatch]);
+    }, [dispatch, t]);
 
   const handleDeleteTrade = useCallback((id: string) => {
     setDeleteConfirmId(id);
@@ -108,17 +114,28 @@ export function Dashboard() {
   }, [gains, t]);
 
   const handleValidate = useCallback((trade: TradeTransaction): string | null => {
-    if (trade.type !== 'SELL') return null;
+      if (trade.type === 'SELL') {
+        // R4: exclude tradeId ที่กำลัง edit — คืน lots ที่ SELL ตัวนี้กินอยู่
+        const tempResult = computeAllRealizedGains(trades, trade.id);
+        const relevantLots = tempResult.remainingLots.filter(
+          lot => lot.symbol === trade.symbol && lot.provider === trade.provider
+        );
 
-    // R4: exclude tradeId ที่กำลัง edit — คืน lots ที่ SELL ตัวนี้กินอยู่
-    const tempResult = computeAllRealizedGains(trades, trade.id);
-    const relevantLots = tempResult.remainingLots.filter(
-      lot => lot.symbol === trade.symbol && lot.provider === trade.provider
-    );
+        const validation = validateSellLots(trade, relevantLots);
+        if (!validation.valid) return validation.message!;
+      }
 
-    const validation = validateSellLots(trade, relevantLots);
-    return validation.valid ? null : validation.message!;
-  }, [trades]);
+      // R5: full-set FIFO pre-flight — the candidate trade set must still resolve every later SELL
+      const candidateSet = trades.some(t => t.id === trade.id)
+        ? trades.map(t => (t.id === trade.id ? trade : t))
+        : [...trades, trade];
+      try {
+        computeAllRealizedGains(candidateSet);
+      } catch {
+        return t('trade:fifoLotsConflict') ?? 'This change leaves a later SELL trade without enough lots to match';
+      }
+      return null;
+    }, [trades, t]);
 
   const handleAddRemittance = useCallback((remit: RemittanceRecord) => {
     dispatch(addRemittance(remit));

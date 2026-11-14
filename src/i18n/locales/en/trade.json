@@ -56,5 +56,6 @@
   "sellSelectFirst": "Select a Symbol above first",
   "sellSelectSymbol": "-- Select a stock --",
   "sellAutoFilled": "Auto-filled from Symbol selection",
-  "remitBeforeEdit": "⚠️ Please delete all remittances before editing this sell trade"
+  "remitBeforeEdit": "⚠️ Please delete all remittances before editing this sell trade",
+  "fifoLotsConflict": "This change would leave a later SELL trade without enough lots to match — adjust the quantity or date"
 }

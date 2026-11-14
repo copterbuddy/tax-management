@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render, fireEvent, act } from '@testing-library/react';
+import { render, fireEvent, act, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import i18next from '../i18n/index';
 
@@ -12,11 +12,15 @@ const TRADES = [
   { id: 't2', date: '2026-03-10', symbol: 'AAPL', type: 'SELL', provider: 'Dime', quantity: 10, priceUSD: 250, commissionUSD: 1, exchangeFeeUSD: 0.5, tafFeeUSD: 0.02, commissionRebateUSD: 0, vatUSD: 0.1 },
   { id: 't3', date: '2026-02-01', symbol: 'MSFT', type: 'BUY', provider: 'Liberator', quantity: 5, priceUSD: 400, commissionUSD: 1, exchangeFeeUSD: 0.5, tafFeeUSD: 0, commissionRebateUSD: 0, vatUSD: 0.1 },
   { id: 't4', date: '2026-04-01', symbol: 'MSFT', type: 'SELL', provider: 'Liberator', quantity: 5, priceUSD: 480, commissionUSD: 1, exchangeFeeUSD: 0.5, tafFeeUSD: 0.02, commissionRebateUSD: 0, vatUSD: 0.1 },
+    { id: 't5', date: '2026-01-20', symbol: 'NVDA', type: 'BUY', provider: 'Dime', quantity: 10, priceUSD: 200, commissionUSD: 1, exchangeFeeUSD: 0.5, tafFeeUSD: 0, commissionRebateUSD: 0, vatUSD: 0.1 },
+    // SELL with no remittances — used to prove the edit guard only blocks remitted sells
+    { id: 't6', date: '2026-06-15', symbol: 'NVDA', type: 'SELL', provider: 'Dime', quantity: 3, priceUSD: 300, commissionUSD: 1, exchangeFeeUSD: 0.5, tafFeeUSD: 0.02, commissionRebateUSD: 0, vatUSD: 0.1 },
 ];
 
 const GAINS = [
   { sellTradeId: 't2', sellDate: '2026-03-10', symbol: 'AAPL', provider: 'Dime', sellQuantity: 10, sellRevenueUSD: 2498.5, buyCostBasisUSD: 1801.5, gainUSD: 697, gainPercent: 0.2789, matchedLots: [], totalRemittedUSD: 1500, remainingProceedsUSD: 998.5, remittances: [{ id: 'r1', sellTradeId: 't2', amountUSD: 1500, remitDate: '2026-05-20', fxRateTHB: 34.5 }], taxableGainTHB: 418.35 },
   { sellTradeId: 't4', sellDate: '2026-04-01', symbol: 'MSFT', provider: 'Liberator', sellQuantity: 5, sellRevenueUSD: 2398.5, buyCostBasisUSD: 2001.5, gainUSD: 397, gainPercent: 0.1655, matchedLots: [], totalRemittedUSD: 1000, remainingProceedsUSD: 1398.5, remittances: [{ id: 'r2', sellTradeId: 't4', amountUSD: 1000, remitDate: '2025-12-01', fxRateTHB: 34.0 }], taxableGainTHB: 165.5 },
+    { sellTradeId: 't6', sellDate: '2026-06-15', symbol: 'NVDA', provider: 'Dime', sellQuantity: 3, sellRevenueUSD: 898.5, buyCostBasisUSD: 601.5, gainUSD: 297, gainPercent: 0.4938, matchedLots: [], totalRemittedUSD: 0, remainingProceedsUSD: 898.5, remittances: [], taxableGainTHB: 178.2 },
 ];
 
 const DIVIDENDS = [
@@ -120,6 +124,63 @@ describe('tab-scoped capital-gain summary', () => {
     expect(container.querySelector('.trades-tab')).toBeNull();
     expect(container.querySelector('.kpi-provider-row')).toBeNull();
     expect(container.querySelectorAll('.kpi-card')).toHaveLength(0);
+  });
+});
+
+// ─── Requirement: Editing cannot break lot matching for later trades ───────
+
+function editButtonsByRow(container: HTMLElement) {
+  return Array.from(container.querySelectorAll('tbody tr')).map(row => ({
+    row,
+    button: row.querySelector('.btn-edit') as HTMLButtonElement,
+  }));
+}
+
+function clickEditForDate(container: HTMLElement, date: string) {
+  const match = editButtonsByRow(container).find(({ row }) => row.textContent?.includes(date));
+  expect(match).toBeDefined();
+  fireEvent.click(match!.button);
+}
+
+describe('edit-mode type safety guards', () => {
+  it('refuses to open a SELL trade that still has remittances', async () => {
+    const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    const { container } = await renderDashboard();
+
+    clickEditForDate(container, '2026-03-10');
+
+    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('form.trade-form')).toBeNull();
+    alertSpy.mockRestore();
+  });
+
+  it('opens a SELL trade that has no remittances', async () => {
+    const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
+    const { container } = await renderDashboard();
+
+    clickEditForDate(container, '2026-06-15');
+
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(container.querySelector('form.trade-form')).not.toBeNull();
+    alertSpy.mockRestore();
+  });
+
+  it('blocks an edit that would leave a later SELL without enough lots', async () => {
+    const { container } = await renderDashboard();
+
+    clickEditForDate(container, '2026-01-15');
+    const quantity = container.querySelector('#trade-quantity') as HTMLInputElement;
+    expect(quantity).not.toBeNull();
+    fireEvent.change(quantity, { target: { value: '1' } });
+    fireEvent.click(container.querySelector('form.trade-form button[type="submit"]') as HTMLButtonElement);
+
+    await waitFor(() => {
+      expect(container.querySelector('.validation-error')).not.toBeNull();
+    });
+        expect(container.querySelector('.validation-error')!.textContent).toBe(
+          i18next.t('trade:fifoLotsConflict'),
+        );
+    expect(container.querySelector('form.trade-form')).not.toBeNull();
   });
 });
 

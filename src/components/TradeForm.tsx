@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { TradeTransaction, TradeType, ProviderType, FifoLot } from '../types/trade';
 import { PROVIDER_OPTIONS, DATE_LIMITS, VALIDATION } from '../constants';
 import { useTranslation } from 'react-i18next';
+import { TradeTypeToggle } from './TradeTypeToggle';
 
 // ─── Form Schema ───────────────────────────────────────────────────────────
 
@@ -65,6 +66,8 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
     watch,
     setValue,
     setError,
+    getValues,
+    clearErrors,
     formState: { errors },
   } = useForm<TradeFormData>({
     resolver: zodResolver(tradeFormSchema),
@@ -153,17 +156,27 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
   const watchedSymbol = watch('symbol');
   const watchedProvider = watch('provider');
 
-  // ─── Type toggle reset ───────────────────────────────────────────────────
+  // ─── Type change: clear everything except the date ───────────────────────
 
-  const previousTypeRef = useRef(watchedType);
+  const handleTypeChange = (next: TradeType) => {
+    if (next === getValues('type')) return;
 
-  useEffect(() => {
-    if (watchedType !== previousTypeRef.current) {
-      setValue('symbol', '');
-      setValue('provider', 'Dime');
-      previousTypeRef.current = watchedType;
-    }
-  }, [watchedType, setValue]);
+    clearErrors();
+    reset({
+      date: getValues('date'),
+      symbol: '',
+      type: next,
+      provider: 'Dime',
+      quantity: 0,
+      priceUSD: 0,
+      commissionUSD: 0,
+      exchangeFeeUSD: 0,
+      tafFeeUSD: 0,
+      commissionRebateUSD: 0,
+      vatUSD: 0,
+      notes: '',
+    });
+  };
 
   // ─── On Submit ───────────────────────────────────────────────────────────
 
@@ -204,8 +217,8 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       }
     }
 
-    // DIP: Delegate business validation via injected callback
-    if (tradeData.type === 'SELL' && onValidate) {
+    // DIP: Delegate business validation via injected callback (all trade types)
+    if (onValidate) {
       const validationMessage = onValidate(tradeData);
       if (validationMessage) {
         setError('root', { message: validationMessage });
@@ -247,6 +260,10 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
           <button className="btn-close" onClick={onCancel} aria-label={t('common:close')}>&times;</button>
         </div>
         <form onSubmit={handleSubmit(onFormSubmit)} className="trade-form">
+          <div className="form-group">
+            <label id="trade-type-label">{t('trade:formTradeType')}</label>
+            <TradeTypeToggle value={watchedType} onChange={handleTypeChange} labelId="trade-type-label" />
+          </div>
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="trade-date">{t('trade:formDate')}</label>
@@ -337,22 +354,6 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
                   {errors.symbol && <span className="error-msg">{errors.symbol.message}</span>}
                 </>
               )}
-            </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="trade-type">{t('trade:formTradeType')}</label>
-              <Controller
-                name="type"
-                control={control}
-                render={({ field }) => (
-                  <select id="trade-type" {...field} disabled={!!trade}>
-                    <option value="BUY">{t('trade:tradeTypeBuy')}</option>
-                    <option value="SELL">{t('trade:tradeTypeSell')}</option>
-                  </select>
-                )}
-              />
             </div>
           </div>
 

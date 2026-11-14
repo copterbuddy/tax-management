@@ -1,0 +1,26 @@
+[
+    {
+      "id": "div_20260311_spgi",
+      "symbol": "SPGI",
+      "provider": "Dime",
+      "payDate": "2026-03-11",
+      "grossAmountUSD": 0.49,
+      "whtRate": 0.15,
+      "whtAmountUSD": 0.07,
+      "netAmountUSD": 0.42,
+      "dividendFxRateTHB": 32.53,
+      "totalRemittedUSD": 0.22,
+      "remainingToRemitUSD": 0.2,
+      "remittances": [
+        {
+          "id": "rem_1785251335432_46emzl_div",
+          "dividendId": "div_20260311_spgi",
+          "amountUSD": 0.22,
+          "remitDate": "2026-04-07",
+          "fxRateTHB": 32.53
+        }
+      ],
+      "reportableIncomeTHB": 7.16,
+      "whtCreditTHB": 1.19
+    }
+  ]

@@ -153,6 +153,28 @@ describe('tradeTransactionSchema', () => {
       expect(result.data.vatUSD).toBe(0);
     }
   });
+
+  it('parses a trade with no grossAmountUSD as absent, not zero', () => {
+    const result = tradeTransactionSchema.safeParse(validTrade);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.grossAmountUSD).toBeUndefined();
+    }
+  });
+
+  it('treats grossAmountUSD of 0 as a present value', () => {
+    const result = tradeTransactionSchema.safeParse({ ...validTrade, grossAmountUSD: 0 });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.grossAmountUSD).toBe(0);
+    }
+  });
+
+  it('keeps grossAmountUSD through a parse → serialize → parse round trip', () => {
+    const parsed = tradeTransactionSchema.parse({ ...validTrade, grossAmountUSD: 6647.13 });
+    const reloaded = tradeTransactionSchema.parse(JSON.parse(JSON.stringify(parsed)));
+    expect(reloaded.grossAmountUSD).toBe(6647.13);
+  });
 });
 
 describe('remittanceRecordSchema', () => {

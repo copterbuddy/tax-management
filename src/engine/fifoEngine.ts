@@ -7,14 +7,58 @@ function lotKey(symbol: string, provider: ProviderType): string {
 
 // ─── USD helpers ─────────────────────────────────────────────────────────
 
+/**
+ * Pre-fee trade value in USD. The broker slip's gross amount is authoritative
+ * when present; older trades without one fall back to quantity × price.
+ */
+export type NotionalTrade = Pick<TradeTransaction, 'quantity' | 'priceUSD' | 'grossAmountUSD'>;
+
+export function notionalUSD(trade: NotionalTrade): number {
+  return trade.grossAmountUSD ?? trade.quantity * trade.priceUSD;
+}
+
+/** True when the notional had to be derived instead of read from the slip. */
+export function isNotionalFromFallback(trade: NotionalTrade): boolean {
+  return trade.grossAmountUSD === undefined;
+}
+
+export interface NotionalMismatch {
+  derived: number;
+  gross: number;
+  delta: number;
+}
+
+const MISMATCH_REL_TOLERANCE = 0.005;
+const MISMATCH_ABS_TOLERANCE = 0.01;
+
+/**
+ * Binary float error on cent amounts (e.g. 6647.13 − 10.86 land on
+ * 6636.2699999999995) must not reject a legitimate full remittance.
+ */
+const MONEY_TOLERANCE_USD = 0.005;
+
+/**
+ * Compare the slip gross amount with quantity × price.
+ * Returns null when the field is absent or the gap is within tolerance
+ * (half a cent per share plus one cent for rounding).
+ */
+export function notionalMismatchUSD(trade: NotionalTrade): NotionalMismatch | null {
+  const gross = trade.grossAmountUSD;
+  if (gross === undefined) return null;
+  const derived = trade.quantity * trade.priceUSD;
+  const delta = gross - derived;
+  const tolerance = trade.quantity * MISMATCH_REL_TOLERANCE + MISMATCH_ABS_TOLERANCE;
+  return Math.abs(delta) > tolerance ? { derived, gross, delta } : null;
+}
+
 export function calculateBuyCostUSD(trade: TradeTransaction): number {
   if (trade.type !== 'BUY') return 0;
-  return trade.quantity * trade.priceUSD + trade.commissionUSD + (trade.exchangeFeeUSD ?? 0) + (trade.vatUSD ?? 0) - (trade.commissionRebateUSD ?? 0);
+  return notionalUSD(trade) + trade.commissionUSD + (trade.exchangeFeeUSD ?? 0) + (trade.vatUSD ?? 0) - (trade.commissionRebateUSD ?? 0);
 }
 
 export function calculateSellRevenueUSD(trade: TradeTransaction): number {
   if (trade.type !== 'SELL') return 0;
-  return trade.quantity * trade.priceUSD - trade.commissionUSD - (trade.exchangeFeeUSD ?? 0) - (trade.tafFeeUSD ?? 0) - (trade.vatUSD ?? 0) + (trade.commissionRebateUSD ?? 0);
+  return notionalUSD(trade) - trade.commissionUSD - (trade.exchangeFeeUSD ?? 0) - (trade.tafFeeUSD ?? 0) - (trade.vatUSD ?? 0) + (trade.commissionRebateUSD ?? 0);
 }
 
 export function calculateUnitCostUSD(trade: TradeTransaction): number {
@@ -180,7 +224,7 @@ export function applyRemittance(
   }
 
   const newTotalRemitted = gainResult.totalRemittedUSD + remittance.amountUSD;
-  if (newTotalRemitted > gainResult.sellRevenueUSD) {
+  if (newTotalRemitted > gainResult.sellRevenueUSD + MONEY_TOLERANCE_USD) {
     throw new Error(
       `Remittance exceeds remaining proceeds. Available: $${(gainResult.sellRevenueUSD - gainResult.totalRemittedUSD).toFixed(2)}`
     );

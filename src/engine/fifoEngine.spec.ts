@@ -14,6 +14,9 @@ import {
   computeTaxableGainsTHB,
   computeTaxSummary,
   formatGainIndicator,
+  notionalUSD,
+  isNotionalFromFallback,
+  notionalMismatchUSD,
 } from './fifoEngine';
 import type { TradeTransaction, FifoLot } from '../types/trade';
 
@@ -490,5 +493,110 @@ describe('formatGainIndicator', () => {
 
   it('zero — shows ฿0.00', () => {
     expect(formatGainIndicator(0)).toBe('฿0.00');
+  });
+});
+
+// ─── Notional (slip gross amount) ───────────────────────────────────────
+
+describe('notionalUSD', () => {
+  it('prefers a recorded gross amount over quantity × price', () => {
+    const trade = makeTrade({ quantity: 224, priceUSD: 29.67, grossAmountUSD: 6647.13 });
+    expect(notionalUSD(trade)).toBe(6647.13);
+  });
+
+  it('falls back to quantity × price when the gross amount is absent', () => {
+    const trade = makeTrade({ quantity: 173, priceUSD: 29.15 });
+    expect(notionalUSD(trade)).toBeCloseTo(5042.95, 2);
+  });
+
+  it('uses a recorded gross amount even when it is 0', () => {
+    const trade = makeTrade({ quantity: 10, priceUSD: 150, grossAmountUSD: 0 });
+    expect(notionalUSD(trade)).toBe(0);
+  });
+});
+
+describe('isNotionalFromFallback', () => {
+  it('is true when the gross amount is absent', () => {
+    expect(isNotionalFromFallback(makeTrade({ quantity: 10, priceUSD: 150 }))).toBe(true);
+  });
+
+  it('is false when the gross amount is 0', () => {
+    expect(isNotionalFromFallback(makeTrade({ quantity: 10, priceUSD: 150, grossAmountUSD: 0 }))).toBe(false);
+  });
+
+  it('is false when the gross amount is recorded', () => {
+    expect(isNotionalFromFallback(makeTrade({ quantity: 224, priceUSD: 29.67, grossAmountUSD: 6647.13 }))).toBe(false);
+  });
+});
+
+describe('notionalMismatchUSD', () => {
+  it('stays silent for the 224-share price rounding gap of 1.05', () => {
+    const trade = makeTrade({ quantity: 224, priceUSD: 29.67, grossAmountUSD: 6647.13 });
+    expect(notionalMismatchUSD(trade)).toBeNull();
+  });
+
+  it('stays silent for the one-cent gap on 43 shares', () => {
+    const trade = makeTrade({ quantity: 43, priceUSD: 28.61, grossAmountUSD: 1230.22 });
+    expect(notionalMismatchUSD(trade)).toBeNull();
+  });
+
+  it('reports a material gap, naming both figures', () => {
+    const trade = makeTrade({ quantity: 173, priceUSD: 29.15, grossAmountUSD: 5103.50 });
+    const mismatch = notionalMismatchUSD(trade);
+    expect(mismatch).not.toBeNull();
+    expect(mismatch!.gross).toBe(5103.5);
+    expect(mismatch!.derived).toBeCloseTo(5042.95, 2);
+    expect(mismatch!.delta).toBeCloseTo(60.55, 2);
+  });
+
+  it('stays silent when the gross amount is absent', () => {
+    expect(notionalMismatchUSD(makeTrade({ quantity: 173, priceUSD: 29.15 }))).toBeNull();
+  });
+});
+
+describe('slip gross amount reaching the tax figure', () => {
+  const grossSell = makeTrade({
+    id: 'sell224', date: '2026-05-18', type: 'SELL', quantity: 224, priceUSD: 29.67, grossAmountUSD: 6647.13,
+    commissionUSD: 9.97, exchangeFeeUSD: 0.14, tafFeeUSD: 0.05, vatUSD: 0.7,
+  });
+  const legacySell = makeTrade({
+    id: 'sell224', date: '2026-05-18', type: 'SELL', quantity: 224, priceUSD: 29.67,
+    commissionUSD: 9.97, exchangeFeeUSD: 0.14, tafFeeUSD: 0.05, vatUSD: 0.7,
+  });
+  const remittance = {
+    id: 'r224', sellTradeId: 'sell224', amountUSD: 6636.27, remitDate: '2026-07-29', fxRateTHB: 32.68,
+  };
+
+  function sellIntoLot(sell: TradeTransaction) {
+    const lot = makeLot({
+      tradeId: 'buy323',
+      unitCostUSD: 28.52,
+      remainingQuantity: 224,
+      originalQuantity: 323,
+    });
+    return processSellTrade(sell, [lot]).result;
+  }
+
+  it('revenue matches the remittance when the gross amount is recorded', () => {
+    const result = sellIntoLot(grossSell);
+    expect(result.sellRevenueUSD).toBeCloseTo(6636.27, 2);
+    expect(() => applyRemittance(result, remittance)).not.toThrow();
+  });
+
+  it('revenue falls short of the remittance without the gross amount', () => {
+    const result = sellIntoLot(legacySell);
+    expect(result.sellRevenueUSD).toBeCloseTo(6635.22, 2);
+    expect(() => applyRemittance(result, remittance)).toThrow(/exceeds remaining proceeds/);
+  });
+
+  it('costs lots by their slip gross amount', () => {
+    const lots = [
+      makeLot({ tradeId: 'b323', unitCostUSD: 9211.96 / 323, originalQuantity: 323, remainingQuantity: 8 }),
+      makeLot({ tradeId: 'b173', unitCostUSD: 5042.93 / 173, originalQuantity: 173, remainingQuantity: 173 }),
+      makeLot({ tradeId: 'b43', unitCostUSD: 1230.22 / 43, originalQuantity: 43, remainingQuantity: 43 }),
+    ];
+    const result = processSellTrade(grossSell, lots).result;
+    expect(result.buyCostBasisUSD).toBeCloseTo(6501.31, 2);
+    expect(result.gainUSD).toBeCloseTo(134.96, 2);
   });
 });

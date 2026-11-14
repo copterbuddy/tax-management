@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import type { TradeTransaction, RealizedGainResult, ProviderType } from '../types/trade';
-import { formatGainIndicator } from '../engine/fifoEngine';
+import {
+  formatGainIndicator,
+  calculateBuyCostUSD,
+  calculateSellRevenueUSD,
+  isNotionalFromFallback,
+} from '../engine/fifoEngine';
 import { PROVIDER_OPTIONS } from '../constants';
 import { useTranslation } from 'react-i18next';
 
@@ -14,6 +19,20 @@ interface TradeTableProps {
 }
 
 type SortField = 'date' | 'symbol' | 'provider';
+
+function totalFeesUSD(trade: TradeTransaction): number {
+  return (
+    (trade.commissionUSD ?? 0) +
+    (trade.exchangeFeeUSD ?? 0) +
+    (trade.tafFeeUSD ?? 0) +
+    (trade.vatUSD ?? 0) -
+    (trade.commissionRebateUSD ?? 0)
+  );
+}
+
+function tradeTotalUSD(trade: TradeTransaction): number {
+  return trade.type === 'BUY' ? calculateBuyCostUSD(trade) : calculateSellRevenueUSD(trade);
+}
 
 export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAddNew }: TradeTableProps) {
   const { t } = useTranslation();
@@ -129,10 +148,11 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
             </thead>
             <tbody>
               {sortedTrades.map(trade => {
-                const fees = (trade.commissionUSD ?? 0) + (trade.exchangeFeeUSD ?? 0) + (trade.tafFeeUSD ?? 0) + (trade.vatUSD ?? 0) - (trade.commissionRebateUSD ?? 0);
-                const totalUSD = trade.type === 'BUY'
-                  ? (trade.quantity * trade.priceUSD + fees)
-                  : (trade.quantity * trade.priceUSD - fees);
+                const fees = totalFeesUSD(trade);
+                const totalUSD = tradeTotalUSD(trade);
+                const fallbackNote = isNotionalFromFallback(trade)
+                  ? t('trade:totalFallbackNote', { quantity: trade.quantity, price: trade.priceUSD.toFixed(2) })
+                  : undefined;
 
                 const gain = trade.type === 'SELL' ? gainMap.get(trade.id) : null;
 
@@ -151,7 +171,11 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                     <td className="num">{trade.quantity}</td>
                     <td className="num col-optional col-price">${trade.priceUSD.toFixed(2)}</td>
                     <td className="num col-optional col-total-fees">${fees.toFixed(2)}</td>
-                    <td className="num">${totalUSD.toFixed(2)}</td>
+                    <td className="num">
+                      <span className={fallbackNote ? 'value-fallback' : undefined} title={fallbackNote}>
+                        ${totalUSD.toFixed(2)}
+                      </span>
+                    </td>
                     <td className="num gain-cell">
                       {gain ? (
                         <span className={`gain-indicator ${gain.gainUSD >= 0 ? 'gain-positive' : 'gain-negative'}`}>
@@ -205,10 +229,11 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
           {/* Mobile Card View */}
           <div className="trade-cards">
             {sortedTrades.map(trade => {
-              const fees = (trade.commissionUSD ?? 0) + (trade.exchangeFeeUSD ?? 0) + (trade.tafFeeUSD ?? 0);
-              const totalUSD = trade.type === 'BUY'
-                ? (trade.quantity * trade.priceUSD + fees)
-                : (trade.quantity * trade.priceUSD - fees);
+              const fees = totalFeesUSD(trade);
+              const totalUSD = tradeTotalUSD(trade);
+              const fallbackNote = isNotionalFromFallback(trade)
+                ? t('trade:totalFallbackNote', { quantity: trade.quantity, price: trade.priceUSD.toFixed(2) })
+                : undefined;
 
               const gain = trade.type === 'SELL' ? gainMap.get(trade.id) : null;
 
@@ -240,7 +265,9 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                     </div>
                     <div className="trade-card-row">
                       <span className="card-label">{t('trade:colTotal')}</span>
-                      <span className="card-value">${totalUSD.toFixed(2)}</span>
+                      <span className={`card-value ${fallbackNote ? 'value-fallback' : ''}`} title={fallbackNote}>
+                        ${totalUSD.toFixed(2)}
+                      </span>
                     </div>
                     {gain && (
                       <>

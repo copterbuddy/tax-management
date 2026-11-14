@@ -1,0 +1,183 @@
+[
+    {
+      "sellTradeId": "trd_1785232568871_qzm559",
+      "sellDate": "2026-02-13",
+      "symbol": "ALLW",
+      "provider": "Dime",
+      "sellQuantity": 7,
+      "sellRevenueUSD": 204.75,
+      "buyCostBasisUSD": 199.64,
+      "gainUSD": 5.11,
+      "gainPercent": 0.024957264957265024,
+      "matchedLots": [
+        {
+          "buyTradeId": "trd_1785060301053_kc2ph5",
+          "buyDate": "2026-01-15",
+          "buyProvider": "Dime",
+          "matchedQuantity": 7,
+          "buyUnitCostUSD": 28.52,
+          "buyTotalCostUSD": 199.64
+        }
+      ],
+      "totalRemittedUSD": 58.32,
+      "remainingProceedsUSD": 146.43,
+      "remittances": [
+        {
+          "id": "rem_1785251335432_46emzl",
+          "sellTradeId": "trd_1785232568871_qzm559",
+          "amountUSD": 58.32,
+          "remitDate": "2026-03-09",
+          "fxRateTHB": 32.0355
+        }
+      ],
+      "taxableGainTHB": 46.63
+    },
+    {
+      "sellTradeId": "trd_1785240739807_dl3r30",
+      "sellDate": "2026-04-06",
+      "symbol": "ALLW",
+      "provider": "Dime",
+      "sellQuantity": 244,
+      "sellRevenueUSD": 7102.84,
+      "buyCostBasisUSD": 6958.88,
+      "gainUSD": 143.96,
+      "gainPercent": 0.02023996454798409,
+      "matchedLots": [
+        {
+          "buyTradeId": "trd_1785060301053_kc2ph5",
+          "buyDate": "2026-01-15",
+          "buyProvider": "Dime",
+          "matchedQuantity": 244,
+          "buyUnitCostUSD": 28.52,
+          "buyTotalCostUSD": 6958.88
+        }
+      ],
+      "totalRemittedUSD": 7102.84,
+      "remainingProceedsUSD": 0,
+      "remittances": [
+        {
+          "id": "rem_1785330250421_jmncy0",
+          "sellTradeId": "trd_1785240739807_dl3r30",
+          "amountUSD": 7102.84,
+          "remitDate": "2026-04-07",
+          "fxRateTHB": 32.53
+        }
+      ],
+      "taxableGainTHB": 4683.0188
+    },
+    {
+      "sellTradeId": "trd_1785241013299_5tosbd",
+      "sellDate": "2026-04-08",
+      "symbol": "ALLW",
+      "provider": "Dime",
+      "sellQuantity": 64,
+      "sellRevenueUSD": 1877.25,
+      "buyCostBasisUSD": 1825.28,
+      "gainUSD": 51.97,
+      "gainPercent": 0.027684566318213,
+      "matchedLots": [
+        {
+          "buyTradeId": "trd_1785060301053_kc2ph5",
+          "buyDate": "2026-01-15",
+          "buyProvider": "Dime",
+          "matchedQuantity": 64,
+          "buyUnitCostUSD": 28.52,
+          "buyTotalCostUSD": 1825.28
+        }
+      ],
+      "totalRemittedUSD": 1877.25,
+      "remainingProceedsUSD": 0,
+      "remittances": [
+        {
+          "id": "rem_1785330834509_nxv0ct",
+          "sellTradeId": "trd_1785241013299_5tosbd",
+          "amountUSD": 1877.25,
+          "remitDate": "2026-04-09",
+          "fxRateTHB": 31.99
+        }
+      ],
+      "taxableGainTHB": 1662.5203
+    },
+    {
+      "sellTradeId": "trd_1785330921285_rgfypc",
+      "sellDate": "2026-05-18",
+      "symbol": "ALLW",
+      "provider": "Dime",
+      "sellQuantity": 224,
+      "sellRevenueUSD": 6636.27,
+      "buyCostBasisUSD": 6501.34,
+      "gainUSD": 134.93,
+      "gainPercent": 0.020333209733536,
+      "matchedLots": [
+        {
+          "buyTradeId": "trd_1785060301053_kc2ph5",
+          "buyDate": "2026-01-15",
+          "buyProvider": "Dime",
+          "matchedQuantity": 8,
+          "buyUnitCostUSD": 28.52,
+          "buyTotalCostUSD": 228.16000000000003
+        },
+        {
+          "buyTradeId": "trd_1785060326317_7ymkz4",
+          "buyDate": "2026-01-30",
+          "buyProvider": "Dime",
+          "matchedQuantity": 173,
+          "buyUnitCostUSD": 29.15,
+          "buyTotalCostUSD": 5042.95
+        },
+        {
+          "buyTradeId": "trd_1785060370783_ki6sfc",
+          "buyDate": "2026-02-03",
+          "buyProvider": "Dime",
+          "matchedQuantity": 43,
+          "buyUnitCostUSD": 28.61,
+          "buyTotalCostUSD": 1230.23
+        }
+      ],
+      "totalRemittedUSD": 6636.27,
+      "remainingProceedsUSD": 0,
+      "remittances": [
+        {
+          "id": "rem_1785331478363_trkgpc",
+          "sellTradeId": "trd_1785330921285_rgfypc",
+          "amountUSD": 6636.27,
+          "remitDate": "2026-05-19",
+          "fxRateTHB": 32.68
+        }
+      ],
+      "taxableGainTHB": 4409.5124
+    },
+    {
+      "sellTradeId": "trd_1785331978337_9huvw4",
+      "sellDate": "2026-05-26",
+      "symbol": "SPGI",
+      "provider": "Dime",
+      "sellQuantity": 0.5,
+      "sellRevenueUSD": 207.18,
+      "buyCostBasisUSD": 202.4,
+      "gainUSD": 4.78,
+      "gainPercent": 0.023071725841876,
+      "matchedLots": [
+        {
+          "buyTradeId": "trd_1785331657097_wkeisq",
+          "buyDate": "2026-02-13",
+          "buyProvider": "Dime",
+          "matchedQuantity": 0.5,
+          "buyUnitCostUSD": 404.8,
+          "buyTotalCostUSD": 202.4
+        }
+      ],
+      "totalRemittedUSD": 207.18,
+      "remainingProceedsUSD": 0,
+      "remittances": [
+        {
+          "id": "rem_1785332207093_jshipy",
+          "sellTradeId": "trd_1785331978337_9huvw4",
+          "amountUSD": 207.18,
+          "remitDate": "2026-05-27",
+          "fxRateTHB": 32.55
+        }
+      ],
+      "taxableGainTHB": 155.589
+    }
+  ]

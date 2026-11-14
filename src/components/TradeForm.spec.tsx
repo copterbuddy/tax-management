@@ -90,6 +90,16 @@ describe('TradeForm trade type toggle', () => {
       expect((document.querySelector('#trade-commission') as HTMLInputElement).value).toBe('0');
   });
 
+      it('clears the slip gross amount when the type changes', () => {
+        renderForm({ remainingLots: [aaplLot] });
+        fillBuyFields();
+        fireEvent.change(document.querySelector('#trade-gross-amount')!, { target: { value: '1855.5' } });
+
+        fireEvent.click(sellButton());
+
+        expect((document.querySelector('#trade-gross-amount') as HTMLInputElement).value).toBe('');
+      });
+
   it('does not clear the fields when the active type is clicked again', () => {
     renderForm();
     fillBuyFields();
@@ -149,3 +159,64 @@ describe('TradeForm trade type toggle', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 });
+
+    describe('TradeForm slip gross amount', () => {
+      const grossInput = () => document.querySelector('#trade-gross-amount') as HTMLInputElement;
+
+      it('stores no slip gross amount when the field is left empty', async () => {
+        const onSubmit = jest.fn();
+        renderForm({ onSubmit });
+        fillBuyFields();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Add Trade' }));
+
+        await waitFor(() => { expect(onSubmit).toHaveBeenCalledTimes(1); });
+        const saved = onSubmit.mock.calls[0][0] as TradeTransaction;
+        expect('grossAmountUSD' in saved).toBe(false);
+      });
+
+      it('keeps the slip gross amount that was entered', async () => {
+        const onSubmit = jest.fn();
+        renderForm({ onSubmit });
+        fillBuyFields();
+        fireEvent.change(grossInput(), { target: { value: '1855.50' } });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Add Trade' }));
+
+        await waitFor(() => { expect(onSubmit).toHaveBeenCalledTimes(1); });
+        expect((onSubmit.mock.calls[0][0] as TradeTransaction).grossAmountUSD).toBe(1855.5);
+      });
+
+      it('warns when the slip gross amount is outside the round-off tolerance', async () => {
+        const onSubmit = jest.fn();
+        renderForm({ onSubmit });
+        fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-01-30' } });
+        fireEvent.change(screen.getByLabelText('Symbol'), { target: { value: 'ALLW' } });
+        fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '173' } });
+        fireEvent.change(screen.getByLabelText('Unit Price (USD)'), { target: { value: '29.15' } });
+        fireEvent.change(grossInput(), { target: { value: '5103.50' } });
+
+        expect(document.querySelector('.warning-msg')).toHaveTextContent('5103.50');
+        expect(document.querySelector('.warning-msg')).toHaveTextContent('5042.95');
+
+        fireEvent.click(screen.getByRole('button', { name: 'Add Trade' }));
+
+        await waitFor(() => { expect(onSubmit).toHaveBeenCalledTimes(1); });
+        expect((onSubmit.mock.calls[0][0] as TradeTransaction).grossAmountUSD).toBe(5103.5);
+      });
+
+      it('does not warn when the difference is within the round-off tolerance', () => {
+        renderForm();
+        fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '224' } });
+        fireEvent.change(screen.getByLabelText('Unit Price (USD)'), { target: { value: '29.67' } });
+        fireEvent.change(grossInput(), { target: { value: '6647.13' } });
+
+        expect(document.querySelector('.warning-msg')).toBeNull();
+      });
+
+      it('prefills the slip gross amount in edit mode', () => {
+        renderForm({ trade: { ...editTrade, grossAmountUSD: 500.25 } });
+
+        expect(grossInput().value).toBe('500.25');
+      });
+    });

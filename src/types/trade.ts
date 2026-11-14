@@ -20,6 +20,7 @@ export interface TradeTransaction {
   provider: ProviderType;
   quantity: number;
   priceUSD: number; // Unit price in USD
+  grossAmountUSD?: number; // Pre-fee notional printed on the broker slip — authoritative when present
   commissionUSD: number; // Total commission in USD
   exchangeFeeUSD: number; // Exchange/market fee in USD
   tafFeeUSD: number; // TAF (Trading Activity Fee) in USD — SELL only

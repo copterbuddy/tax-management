@@ -310,4 +310,35 @@ describe('tradeSlice', () => {
       expect(store.getState().trade.gains).toEqual([]);
     });
   });
+
+  describe('Hydration — grossAmountUSD is optional and never defaulted', () => {
+    // initialState is built once at import time, so re-import the slice to
+    // exercise the real loadTrades → migrateTrade path against seeded storage.
+    function hydrate(rawTrades: unknown[]): TradeState {
+      localStorageMock.getStore()['tax_tracker_trades'] = JSON.stringify(rawTrades);
+      let state: TradeState | undefined;
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const isolated = require('./tradeSlice');
+        state = isolated.default(undefined, { type: '@@INIT' });
+      });
+      return state as TradeState;
+    }
+
+    it('keeps grossAmountUSD undefined for a legacy trade that never had it', () => {
+      const legacy = { ...makeTrade({ id: 'legacy1' }) } as Record<string, unknown>;
+      delete legacy.grossAmountUSD;
+
+      const { trades } = hydrate([legacy]);
+
+      expect(trades).toHaveLength(1);
+      expect('grossAmountUSD' in trades[0]).toBe(false);
+    });
+
+    it('preserves grossAmountUSD across hydration', () => {
+      const { trades } = hydrate([makeTrade({ id: 'g1', grossAmountUSD: 6647.13 })]);
+
+      expect(trades[0].grossAmountUSD).toBe(6647.13);
+    });
+  });
 });

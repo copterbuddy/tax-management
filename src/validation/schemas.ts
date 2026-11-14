@@ -25,6 +25,7 @@ export const tradeTransactionSchema = z.object({
   provider: providerTypeSchema,
   quantity: z.number().positive().max(VALIDATION.QUANTITY_MAX),
   priceUSD: z.number().min(VALIDATION.PRICE_MIN).max(VALIDATION.PRICE_MAX),
+  grossAmountUSD: z.number().min(0).optional(),
   commissionUSD: z.number().min(0),
   exchangeFeeUSD: z.number().min(0).default(0),
   tafFeeUSD: z.number().min(0).default(0),

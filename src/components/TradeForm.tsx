@@ -1,9 +1,10 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { TradeTransaction, TradeType, ProviderType, FifoLot } from '../types/trade';
 import { PROVIDER_OPTIONS, DATE_LIMITS, VALIDATION } from '../constants';
+import { notionalMismatchUSD } from '../engine/fifoEngine';
 import { useTranslation } from 'react-i18next';
 import { TradeTypeToggle } from './TradeTypeToggle';
 
@@ -16,6 +17,8 @@ const tradeFormSchema = z.object({
   provider: z.enum(PROVIDER_OPTIONS as [string, ...string[]]),
   quantity: z.number().positive('Must be positive').max(VALIDATION.QUANTITY_MAX),
   priceUSD: z.number().min(VALIDATION.PRICE_MIN).max(VALIDATION.PRICE_MAX),
+  /** Optional slip gross amount; undefined means "not recorded", never 0. */
+  grossAmountUSD: z.number().min(0).optional(),
   commissionUSD: z.number().min(0),
   exchangeFeeUSD: z.number().min(0),
   tafFeeUSD: z.number().min(0),
@@ -78,6 +81,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       provider: (trade?.provider as string) ?? 'Dime',
       quantity: trade?.quantity ?? 0,
       priceUSD: trade?.priceUSD ?? 0,
+      grossAmountUSD: trade?.grossAmountUSD,
       commissionUSD: trade?.commissionUSD ?? 0,
       exchangeFeeUSD: trade?.exchangeFeeUSD ?? 0,
       tafFeeUSD: trade?.tafFeeUSD ?? 0,
@@ -86,6 +90,15 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       notes: trade?.notes ?? '',
     },
   });
+
+  // react-hook-form's reset() skips DOM updates for `undefined` values, so the
+  // optional slip gross amount has to be cleared on the input itself.
+  const grossAmountRef = useRef<HTMLInputElement | null>(null);
+  const syncGrossAmountInput = (value?: number) => {
+    if (grossAmountRef.current) {
+      grossAmountRef.current.value = value === undefined ? '' : String(value);
+    }
+  };
 
   // Reset form when trade prop changes (edit vs add)
   useEffect(() => {
@@ -96,6 +109,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       provider: (trade?.provider as string) ?? 'Dime',
       quantity: trade?.quantity ?? 0,
       priceUSD: trade?.priceUSD ?? 0,
+      grossAmountUSD: trade?.grossAmountUSD,
       commissionUSD: trade?.commissionUSD ?? 0,
       exchangeFeeUSD: trade?.exchangeFeeUSD ?? 0,
       tafFeeUSD: trade?.tafFeeUSD ?? 0,
@@ -103,6 +117,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       vatUSD: trade?.vatUSD ?? 0,
       notes: trade?.notes ?? '',
     });
+    syncGrossAmountInput(trade?.grossAmountUSD);
   }, [trade, reset]);
 
   // ─── Sellable Options (SELL mode Symbol dropdown) ─────────────────────────
@@ -155,6 +170,24 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
   const watchedType = watch('type');
   const watchedSymbol = watch('symbol');
   const watchedProvider = watch('provider');
+  const watchedQuantity = watch('quantity');
+  const watchedPriceUSD = watch('priceUSD');
+  const watchedGrossAmountUSD = watch('grossAmountUSD');
+
+  // ─── Slip gross amount vs quantity × price (warn, never block) ───────────
+
+  const grossMismatch = useMemo(() => {
+    if (watchedGrossAmountUSD === undefined || watchedGrossAmountUSD === null) return null;
+    const quantity = Number(watchedQuantity);
+    const priceUSD = Number(watchedPriceUSD);
+    if (!Number.isFinite(quantity) || !Number.isFinite(priceUSD)) return null;
+    if (quantity <= 0 || priceUSD <= 0) return null;
+    return notionalMismatchUSD({
+      quantity,
+      priceUSD,
+      grossAmountUSD: Number(watchedGrossAmountUSD),
+    });
+  }, [watchedQuantity, watchedPriceUSD, watchedGrossAmountUSD]);
 
   // ─── Type change: clear everything except the date ───────────────────────
 
@@ -169,6 +202,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       provider: 'Dime',
       quantity: 0,
       priceUSD: 0,
+      grossAmountUSD: undefined,
       commissionUSD: 0,
       exchangeFeeUSD: 0,
       tafFeeUSD: 0,
@@ -176,11 +210,13 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       vatUSD: 0,
       notes: '',
     });
+    syncGrossAmountInput(undefined);
   };
 
   // ─── On Submit ───────────────────────────────────────────────────────────
 
   const onFormSubmit = (data: TradeFormData) => {
+    const slipGrossUSD = data.grossAmountUSD;
     const tradeData: TradeTransaction = {
       id: trade?.id || generateId(),
       date: data.date,
@@ -189,6 +225,7 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       provider: data.provider as ProviderType,
       quantity: Number(data.quantity),
       priceUSD: Number(data.priceUSD),
+      ...(slipGrossUSD === undefined ? {} : { grossAmountUSD: Number(slipGrossUSD) }),
       commissionUSD: Number(data.commissionUSD),
       exchangeFeeUSD: Number(data.exchangeFeeUSD),
       tafFeeUSD: Number(data.tafFeeUSD),
@@ -251,6 +288,17 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
     : null;
 
   const hasQuantityError = !!errors.quantity || (watchedType === 'SELL' && currentAvailableQty !== null && currentAvailableQty === 0);
+
+  const grossAmountRegistration = register('grossAmountUSD', {
+    setValueAs: v => (v === '' || v == null ? undefined : Number(v)),
+  });
+  const grossAmountInputProps = {
+    ...grossAmountRegistration,
+    ref: (el: HTMLInputElement | null) => {
+      grossAmountRegistration.ref(el);
+      grossAmountRef.current = el;
+    },
+  };
 
   return (
     <div className="trade-form-overlay">
@@ -426,6 +474,34 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
                 className={errors.priceUSD ? 'input-error' : ''}
               />
               {errors.priceUSD && <span className="error-msg">{errors.priceUSD.message}</span>}
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="trade-gross-amount">{t('trade:formGrossAmount')}</label>
+              <input
+                id="trade-gross-amount"
+                type="number"
+                step="any"
+                min="0"
+                placeholder="e.g. 6647.13"
+                {...grossAmountInputProps}
+                className={errors.grossAmountUSD ? 'input-error' : ''}
+              />
+              {errors.grossAmountUSD && (
+                <span className="error-msg">{errors.grossAmountUSD.message}</span>
+              )}
+              {grossMismatch ? (
+                <span className="warning-msg">
+                  {t('trade:formGrossMismatch', {
+                    derived: grossMismatch.derived.toFixed(2),
+                    gross: grossMismatch.gross.toFixed(2),
+                  })}
+                </span>
+              ) : (
+                <span className="hint-text">{t('trade:formGrossHint')}</span>
+              )}
             </div>
           </div>
 

@@ -64,5 +64,20 @@
   "providerGainLabel": "Gain in this year's remittances",
   "ledgerErrorReinvestedExceedsBalance": "Not recorded — the amount is above what this sale still has outside Thailand. Nothing was changed.",
   "dismiss": "Dismiss",
-  "freshnessLabel": "Last updated"
+  "freshnessLabel": "Last updated",
+  "filingSummary": "Filing summary {{year}}",
+  "filingSummaryTitle": "Filing Summary — Tax Year {{year}}",
+  "filingSummarySubtitle": "Figures for the PND 90 return of tax year {{year}} — assessable income before deductions, not tax payable",
+  "filingDividendGross": "Dividend income (gross)",
+  "filingDividendCredit": "Withholding credit",
+  "filingCapitalGain": "Capital gain remitted",
+  "filingTotal": "Total assessable income",
+  "filingIssueNoData": "No remittances recorded for {{year}}",
+  "filingIssueUnapplied": "{{count}} remittance(s) flagged unresolved — fix before filing",
+  "filingReady": "Nothing blocks filing",
+  "filingExport": "Download CSV",
+  "filingClose": "Close",
+  "filingCsvYear": "Tax year",
+  "filingCsvItem": "Item",
+  "filingCsvAmount": "Amount (THB)"
 }

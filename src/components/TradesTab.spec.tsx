@@ -237,3 +237,27 @@ describe('TradesTab tax-year control', () => {
       expect(container.querySelector('.ledger-error')).toBeNull();
     });
   });
+
+// ─── The card names assessable income, not tax ─────────────────────────────
+
+describe('TradesTab — assessable-income wording', () => {
+  it('titles the first card as income and never as tax', () => {
+    const { container } = renderTab();
+    const card = container.querySelectorAll('.kpi-grid:not(.kpi-provider-row) .kpi-card')[0] as HTMLElement;
+    const title = card.querySelector('.kpi-title')?.textContent ?? '';
+
+    expect(title).toContain('เงินได้ที่ต้องยื่น');
+    expect(title).not.toContain('ภาษี');
+  });
+
+  it('explains the exemption and the method in the tooltip', () => {
+    const { container } = renderTab();
+    const card = container.querySelectorAll('.kpi-grid:not(.kpi-provider-row) .kpi-card')[0] as HTMLElement;
+    fireEvent.click(card.querySelector('.tooltip-trigger') as HTMLElement);
+    const tip = card.querySelector('.tooltip-content')?.textContent ?? '';
+
+    expect(tip).toContain('150,000');
+    expect(tip).toContain('FIFO');
+    expect(tip).toContain('ไม่ใช่ภาษีที่ต้องจ่าย');
+  });
+});

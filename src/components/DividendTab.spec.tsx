@@ -152,10 +152,15 @@ describe('DividendTab list identity', () => {
   });
 });
 
-describe('DividendTab — gross equivalent', () => {
-  it('shows the gross equivalent beside the reportable income', () => {
-    renderTab([record()]);
-    expect(screen.getByText(/5,751\.50/)).toBeInTheDocument();
-    expect(screen.getByText(/4,888\.80/)).toBeInTheDocument();
+describe('DividendTab — amount to declare', () => {
+  it('headlines the gross figure and puts the received amount beneath it', () => {
+    const { container } = renderTab([record()]);
+    const card = [...container.querySelectorAll('.kpi-card')].find(c =>
+      (c.querySelector('.kpi-title')?.textContent ?? '').includes('เงินได้ที่ต้องยื่น'),
+    ) as HTMLElement | undefined;
+
+    expect(card).toBeTruthy();
+    expect(card!.querySelector('.kpi-value')?.textContent).toContain('5,751.50');
+    expect(card!.querySelector('.kpi-sub')?.textContent).toContain('4,888.80');
   });
 });

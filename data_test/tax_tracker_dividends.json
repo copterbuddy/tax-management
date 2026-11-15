@@ -1,26 +1,30 @@
 [
-    {
-      "id": "div_20260311_spgi",
-      "symbol": "SPGI",
-      "provider": "Dime",
-      "payDate": "2026-03-11",
-      "grossAmountUSD": 0.49,
-      "whtRate": 0.15,
-      "whtAmountUSD": 0.07,
-      "netAmountUSD": 0.42,
-      "dividendFxRateTHB": 32.53,
-      "totalRemittedUSD": 0.22,
-      "remainingToRemitUSD": 0.2,
-      "remittances": [
-        {
-          "id": "rem_1785251335432_46emzl_div",
-          "dividendId": "div_20260311_spgi",
-          "amountUSD": 0.22,
-          "remitDate": "2026-04-07",
-          "fxRateTHB": 32.53
-        }
-      ],
-      "reportableIncomeTHB": 7.16,
-      "whtCreditTHB": 1.19
-    }
-  ]
+  {
+    "id": "ea4d9edc-aaff-4635-9b3e-91192dd6fda2",
+    "date": "2026-03-11",
+    "symbol": "SPGI",
+    "country": "US",
+    "grossAmountUSD": 0.49,
+    "whtRate": 15,
+    "whtAmountUSD": 0.0735,
+    "netAmountUSD": 0.4165,
+    "dividendFxRate": 32.53,
+    "grossAmountTHB": 15.9397,
+    "whtAmountTHB": 2.390955,
+    "netAmountTHB": 13.548745,
+    "totalRemittedUSD": 0.4165,
+    "remainingToRemitUSD": 0,
+    "remittances": [
+      {
+        "id": "9a736d52-bdab-4436-915f-251cd59bf78a",
+        "dividendId": "ea4d9edc-aaff-4635-9b3e-91192dd6fda2",
+        "amountUSD": 0.4165,
+        "remitDate": "2026-04-07",
+        "remitFxRate": 32.53,
+        "remitTHB": 13.548745,
+        "reportableIncomeTHB": 13.548745,
+        "whtCreditTHB": 2.390955
+      }
+    ]
+  }
+]

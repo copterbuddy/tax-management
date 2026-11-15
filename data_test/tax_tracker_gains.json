@@ -20,7 +20,7 @@
         }
       ],
       "totalRemittedUSD": 58.32,
-      "remainingProceedsUSD": 146.43,
+      "remainingProceedsUSD": 0.0,
       "remittances": [
         {
           "id": "rem_1785251335432_46emzl",
@@ -30,7 +30,9 @@
           "fxRateTHB": 32.0355
         }
       ],
-      "taxableGainTHB": 46.63
+      "taxableGainTHB": 46.63,
+      "reinvestedUSD": 146.43,
+      "note": "เงิน 204.75 ถูกใช้ซื้อ SPGI 202.40 ในวันเดียวกัน (13/02) เหลือ 2.35 เป็นเงินสด; ส่วนที่โอนกลับ 58.32 เมื่อ 09/03 มาจากเงินสดในบัญชี ไม่ใช่ส่วนที่เหลือของรายการนี้"
     },
     {
       "sellTradeId": "trd_1785240739807_dl3r30",
@@ -63,7 +65,8 @@
           "fxRateTHB": 32.53
         }
       ],
-      "taxableGainTHB": 4683.0188
+      "taxableGainTHB": 4683.0188,
+      "reinvestedUSD": 0
     },
     {
       "sellTradeId": "trd_1785241013299_5tosbd",
@@ -96,7 +99,8 @@
           "fxRateTHB": 31.99
         }
       ],
-      "taxableGainTHB": 1662.5203
+      "taxableGainTHB": 1662.5203,
+      "reinvestedUSD": 0
     },
     {
       "sellTradeId": "trd_1785330921285_rgfypc",
@@ -145,7 +149,8 @@
           "fxRateTHB": 32.68
         }
       ],
-      "taxableGainTHB": 4409.5124
+      "taxableGainTHB": 4409.5124,
+      "reinvestedUSD": 0
     },
     {
       "sellTradeId": "trd_1785331978337_9huvw4",
@@ -178,6 +183,7 @@
           "fxRateTHB": 32.55
         }
       ],
-      "taxableGainTHB": 155.589
+      "taxableGainTHB": 155.589,
+      "reinvestedUSD": 0
     }
   ]

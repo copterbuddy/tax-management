@@ -1,6 +1,8 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { TradeTransaction, RemittanceRecord, DividendRecord, DividendRemittance, OutstandingProceedsRow } from '../types/trade';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { useActiveTab } from '../hooks/useActiveTab';
+import { TabNav } from './TabNav';
 import {
   addTrade,
   updateTrade,
@@ -57,7 +59,8 @@ export function Dashboard() {
   const [reinvestedTarget, setReinvestedTarget] = useState<OutstandingProceedsRow | null>(null);
   const [editingTrade, setEditingTrade] = useState<TradeTransaction | null>(null);
   const [editingRemittance, setEditingRemittance] = useState<RemittanceRecord | null>(null);
-  const [activeTab, setActiveTab] = useState<'trades' | 'dividends' | 'remittances'>('trades');
+  // Tab state lives in the URL fragment (hooks/useActiveTab), so F5 keeps the tab.
+  const [activeTab, selectTab] = useActiveTab();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteRemitConfirm, setDeleteRemitConfirm] = useState<RemittanceRecord | null>(null);
 
@@ -327,27 +330,7 @@ export function Dashboard() {
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="tab-nav">
-        <button
-          className={`tab-btn ${activeTab === 'trades' ? 'active' : ''}`}
-          onClick={() => setActiveTab('trades')}
-        >
-          📊 {t('common:tabTrades')}
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'dividends' ? 'active' : ''}`}
-          onClick={() => setActiveTab('dividends')}
-        >
-          💵 {t('dividend:tabDividends')}
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'remittances' ? 'active' : ''}`}
-          onClick={() => setActiveTab('remittances')}
-        >
-          🏦 {t('common:tabRemittances')}
-        </button>
-      </div>
+      <TabNav activeTab={activeTab} onSelect={selectTab} />
 
       {activeTab === 'trades' ? (
         <TradesTab

@@ -96,7 +96,7 @@ describe('tab navigation placement', () => {
     const nav = container.querySelector('.tab-nav')!;
     const firstCard = container.querySelector('.kpi-card')!;
     expect(precedes(nav, firstCard)).toBe(true);
-    expect(firstCard.closest('.kpi-dividend-grid')).not.toBeNull();
+    expect(firstCard.closest('.kpi-grid')).not.toBeNull();
   });
 });
 
@@ -113,7 +113,8 @@ describe('tab-scoped capital-gain summary', () => {
   it('shows no capital-gain card or provider row on the Dividend tab', async () => {
     const { container } = await renderDashboard();
     clickTab(container, 1);
-    expect(container.querySelector('.trades-tab')).toBeNull();
+    // No capital-gain summary: the trades year selector and provider row are absent.
+    expect(container.querySelector('#year-select')).toBeNull();
     expect(container.querySelector('.kpi-provider-row')).toBeNull();
     expect(container.querySelectorAll('.kpi-card')).toHaveLength(6);
   });
@@ -121,7 +122,7 @@ describe('tab-scoped capital-gain summary', () => {
   it('shows no capital-gain card or provider row on the Remittances tab', async () => {
     const { container } = await renderDashboard();
     clickTab(container, 2);
-    expect(container.querySelector('.trades-tab')).toBeNull();
+    expect(container.querySelector('#year-select')).toBeNull();
     expect(container.querySelector('.kpi-provider-row')).toBeNull();
     expect(container.querySelectorAll('.kpi-card')).toHaveLength(0);
   });
@@ -200,7 +201,7 @@ describe('tab-scoped year controls', () => {
     expect(container.querySelector('#year-select')).toBeNull();
     expect(container.querySelector('#remit-year-select')).toBeNull();
     expect(container.querySelectorAll('select')).toHaveLength(1);
-    expect(container.querySelector('.table-header select')).not.toBeNull();
+    expect(container.querySelector('#dividend-year-select')).not.toBeNull();
   });
 
   it('shows no tax-year selector on the Remittances tab, only the remittance year control', async () => {

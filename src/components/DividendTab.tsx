@@ -67,20 +67,24 @@ export function DividendTab({
 
   if (dividends.length === 0) {
     return (
-      <div>
-        <div className="table-header">
-          <h2>{t('dividend:tabDividends')}</h2>
-          <button className="btn btn-primary" onClick={onAdd}>
-            {t('dividend:addDividend')}
-          </button>
-        </div>
-        <div className="empty-state">
-          <div className="empty-state-icon">💵</div>
-          <div className="empty-state-title">{t('dividend:noDividends')}</div>
-          <div className="empty-state-desc">{t('dividend:noDividendsHint')}</div>
-          <button className="btn btn-primary" onClick={onAdd}>
-            {t('dividend:addDividend')}
-          </button>
+      <div className="trades-tab">
+        <div className="trade-table-section">
+          <div className="trade-table-header">
+            <div className="trade-table-title">
+              <h2>{t('dividend:tabDividends')}</h2>
+            </div>
+            <button className="btn btn-primary" onClick={onAdd}>
+              {t('dividend:addDividend')}
+            </button>
+          </div>
+          <div className="empty-state">
+            <div className="empty-state-icon">💵</div>
+            <div className="empty-state-title">{t('dividend:noDividends')}</div>
+            <div className="empty-state-desc">{t('dividend:noDividendsHint')}</div>
+            <button className="btn btn-primary" onClick={onAdd}>
+              {t('dividend:addDividend')}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -88,30 +92,33 @@ export function DividendTab({
 
   if (filteredDividends.length === 0) {
     return (
-      <div>
-        <div className="table-header">
-          <h2>{t('dividend:tabDividends')}</h2>
-          <div className="year-filter">
-            <label htmlFor="dividend-year-select">{t('dividend:divYear')}:</label>
-            <select
-              id="dividend-year-select"
-              className="year-select"
-              value={displayYear}
-              onChange={e => onYearChange(Number(e.target.value))}
-            >
-              {availableYears.map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-          <button className="btn btn-primary" onClick={onAdd}>
-            {t('dividend:addDividend')}
-          </button>
+      <div className="trades-tab">
+        <div className="year-filter">
+          <label htmlFor="dividend-year-select">{t('dividend:divYear')}:</label>
+          <select
+            id="dividend-year-select"
+            value={displayYear}
+            onChange={e => onYearChange(Number(e.target.value))}
+          >
+            {availableYears.map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
         </div>
-        <div className="empty-state">
-          <div className="empty-state-icon">🔍</div>
-          <div className="empty-state-title">{t('dividend:noDividendsYear')} {displayYear}</div>
-          <div className="empty-state-desc">{t('dividend:noDividendsYearHint')}</div>
+        <div className="trade-table-section">
+          <div className="trade-table-header">
+            <div className="trade-table-title">
+              <h2>{t('dividend:tabDividends')}</h2>
+            </div>
+            <button className="btn btn-primary" onClick={onAdd}>
+              {t('dividend:addDividend')}
+            </button>
+          </div>
+          <div className="empty-state">
+            <div className="empty-state-icon">🔍</div>
+            <div className="empty-state-title">{t('dividend:noDividendsYear')} {displayYear}</div>
+            <div className="empty-state-desc">{t('dividend:noDividendsYearHint')}</div>
+          </div>
         </div>
       </div>
     );
@@ -189,9 +196,23 @@ export function DividendTab({
     n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <div>
+    <div className="trades-tab">
+      {/* Year Filter — same position as the trades tab */}
+      <div className="year-filter">
+        <label htmlFor="dividend-year-select">{t('dividend:divYear')}:</label>
+        <select
+          id="dividend-year-select"
+          value={displayYear}
+          onChange={e => onYearChange(Number(e.target.value))}
+        >
+          {availableYears.map(year => (
+            <option key={year} value={year}>{year}</option>
+          ))}
+        </select>
+      </div>
+
       {/* KPI Row — 6 cards */}
-      <div className="kpi-grid kpi-dividend-grid">
+      <div className="kpi-grid">
         <KpiCard
           title={t('dividend:kpiGrossDiv')}
           value={`$${summary ? fmtUSD(summary.totalGrossUSD) : '0.00'}`}
@@ -237,34 +258,18 @@ export function DividendTab({
         />
       </div>
 
-      {/* Header */}
-      <div className="table-header">
-        <h2>
-          {t('dividend:tabDividends')}
-          <span className="count-badge">({filteredDividends.length})</span>
-        </h2>
-        <div className="header-controls">
-          <div className="year-filter">
-            <label htmlFor="dividend-year-select">{t('dividend:divYear')}:</label>
-            <select
-              id="dividend-year-select"
-              className="year-select"
-              value={displayYear}
-              onChange={e => onYearChange(Number(e.target.value))}
-            >
-              {availableYears.map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
-            </select>
+      {/* Table — same card/header pattern as the trades tab */}
+      <div className="trade-table-section">
+        <div className="trade-table-header">
+          <div className="trade-table-title">
+            <h2>{t('dividend:tabDividends')} — {displayYear}</h2>
+            <span className="trade-count">({filteredDividends.length})</span>
           </div>
           <button className="btn btn-primary" onClick={onAdd}>
             {t('dividend:addDividend')}
           </button>
         </div>
-      </div>
-
-      {/* Table */}
-      <div className="trade-table-container">
+        <div className="table-wrapper">
         <table className="trade-table">
           <thead>
             <tr>
@@ -316,7 +321,7 @@ export function DividendTab({
                     <div className="action-buttons">
                       {record.remainingToRemitUSD > 0 && (
                         <button
-                          className="btn btn-sm btn-primary"
+                          className="btn-icon btn-remit"
                           onClick={e => { e.stopPropagation(); onRemit(record.id); }}
                           title={t('dividend:remitBtn')}
                         >
@@ -326,14 +331,14 @@ export function DividendTab({
                       {record.remittances.length === 0 && (
                         <>
                           <button
-                            className="btn btn-sm btn-ghost"
+                            className="btn-icon btn-edit"
                             onClick={e => { e.stopPropagation(); onEdit(record.id); }}
                             title={t('common:edit')}
                           >
                             ✏️
                           </button>
                           <button
-                            className="btn btn-sm btn-ghost"
+                            className="btn-icon btn-delete"
                             onClick={e => { e.stopPropagation(); setDeleteConfirm(record.id); }}
                             title={t('common:delete')}
                           >
@@ -354,6 +359,7 @@ export function DividendTab({
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Mobile Cards */}
@@ -367,12 +373,12 @@ export function DividendTab({
               </span>
               <div className="action-buttons">
                 {record.remainingToRemitUSD > 0 && (
-                  <button className="btn btn-sm btn-primary" onClick={() => onRemit(record.id)}>💰</button>
+                  <button className="btn-icon btn-remit" onClick={() => onRemit(record.id)}>💰</button>
                 )}
                 {record.remittances.length === 0 && (
                   <>
-                    <button className="btn btn-sm btn-ghost" onClick={() => onEdit(record.id)}>✏️</button>
-                    <button className="btn btn-sm btn-ghost" onClick={() => setDeleteConfirm(record.id)}>🗑️</button>
+                    <button className="btn-icon btn-edit" onClick={() => onEdit(record.id)}>✏️</button>
+                    <button className="btn-icon btn-delete" onClick={() => setDeleteConfirm(record.id)}>🗑️</button>
                   </>
                 )}
               </div>

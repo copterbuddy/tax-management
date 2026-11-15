@@ -88,5 +88,15 @@
   "filingField_dividendGross": "เงินปันผล (ยอดเต็ม)",
   "filingField_dividendCredit": "เครดิตภาษี",
   "filingField_capitalGain": "กำไรจากเงินลงทุน",
-  "filingField_totalAssessable": "รวมเงินได้ที่ต้องยื่น"
+  "filingField_totalAssessable": "รวมเงินได้ที่ต้องยื่น",
+  "filingEstimate": "ประมาณการภาษี",
+  "estimateOtherIncome": "รายได้อื่นที่ต้องรวม (บาท)",
+  "estimateDeductions": "ค่าลดหย่อนรวม (บาท)",
+  "estimateNetIncome": "เงินได้สุทธิ",
+  "estimateTax": "ภาษีตามขั้นบันได",
+  "estimateCredit": "เครดิตภาษีหัก ณ ที่จ่าย",
+  "estimatePayable": "ยังต้องชำระ",
+  "estimateOverpaid": "ชำระเกิน (ขอคืนได้)",
+  "estimateMarginal": "อัตราสูงสุด",
+  "estimateHint": "นับเฉพาะเครดิตเงินปันผลในแอป; ภาษีหักจากเงินเดือนไม่ถูกนำมาคำนวณ"
 }

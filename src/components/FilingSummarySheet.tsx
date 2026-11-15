@@ -1,6 +1,9 @@
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { changedFilingFields, type FilingFigures, type FilingIssue } from '../engine/filingSummary';
 import type { YearLock } from '../store/filingSlice';
+import { estimateThaiTax } from '../engine/taxEstimate';
+import { THAI_TAX } from '../constants';
 
 interface FilingSummarySheetProps {
   figures: FilingFigures;
@@ -20,6 +23,23 @@ export function FilingSummarySheet({ figures, issues, locked, onLock, onUnlock, 
   const { t } = useTranslation();
   const fmt = (n: number) =>
     n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const [otherIncome, setOtherIncome] = useState('');
+  const [deductions, setDeductions] = useState(String(THAI_TAX.DEFAULT_DEDUCTION));
+
+  const estimate = useMemo(
+    () =>
+      estimateThaiTax({
+        assessableTHB: figures.totalAssessableTHB,
+        otherIncomeTHB: Number(otherIncome) || 0,
+        deductionsTHB: Number(deductions) || 0,
+        creditTHB: figures.dividendCreditTHB,
+      }),
+    [figures.totalAssessableTHB, figures.dividendCreditTHB, otherIncome, deductions],
+  );
+
+  const money = (value: number): string =>
+    `฿${value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <div
@@ -72,6 +92,51 @@ export function FilingSummarySheet({ figures, issues, locked, onLock, onUnlock, 
             </ul>
           )}
         </div>
+
+        <details className="filing-estimate">
+          <summary>{t('common:filingEstimate')}</summary>
+
+          <div className="estimate-inputs">
+            <div className="form-group">
+              <label htmlFor="estimate-other-income">{t('common:estimateOtherIncome')}</label>
+              <input
+                id="estimate-other-income"
+                type="number"
+                min="0"
+                step="1000"
+                inputMode="decimal"
+                value={otherIncome}
+                onChange={e => setOtherIncome(e.target.value)}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="estimate-deductions">{t('common:estimateDeductions')}</label>
+              <input
+                id="estimate-deductions"
+                type="number"
+                min="0"
+                step="1000"
+                inputMode="decimal"
+                value={deductions}
+                onChange={e => setDeductions(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <dl className="estimate-lines">
+            <div><dt>{t('common:estimateNetIncome')}</dt><dd>{money(estimate.netIncomeTHB)}</dd></div>
+            <div><dt>{t('common:estimateTax')}</dt><dd>{money(estimate.taxTHB)}</dd></div>
+            <div><dt>{t('common:estimateCredit')}</dt><dd>{money(estimate.creditTHB)}</dd></div>
+            {estimate.overpaidTHB > 0 ? (
+              <div><dt>{t('common:estimateOverpaid')}</dt><dd className="estimate-overpaid">{money(estimate.overpaidTHB)}</dd></div>
+            ) : (
+              <div><dt>{t('common:estimatePayable')}</dt><dd className="estimate-payable">{money(estimate.payableTHB)}</dd></div>
+            )}
+            <div><dt>{t('common:estimateMarginal')}</dt><dd>{Math.round(estimate.marginalRate * 100)}%</dd></div>
+          </dl>
+
+          <p className="estimate-hint">{t('common:estimateHint')}</p>
+        </details>
 
         <div className="filing-lock">
           {locked ? (

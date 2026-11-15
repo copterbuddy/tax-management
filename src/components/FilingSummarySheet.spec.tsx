@@ -23,7 +23,7 @@ describe('FilingSummarySheet', () => {
 
     expect(screen.getByRole('heading', { name: /2569|2026/ })).toBeInTheDocument();
     expect(screen.getByText('฿15.94')).toBeInTheDocument();
-    expect(screen.getByText('฿2.39')).toBeInTheDocument();
+    expect(screen.getAllByText('฿2.39').length).toBeGreaterThan(0);
     expect(screen.getByText('฿10,958.25')).toBeInTheDocument();
     expect(screen.getByText('฿10,974.19')).toBeInTheDocument();
   });
@@ -121,5 +121,49 @@ describe('FilingSummarySheet — year lock', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /ปลดล็อก/ }));
     expect(onUnlock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── Tax estimate ───────────────────────────────────────────────────────────
+
+describe('FilingSummarySheet — tax estimate', () => {
+  const renderSheet = () =>
+    render(
+      <FilingSummarySheet figures={figures} issues={[]} onLock={() => {}} onUnlock={() => {}}
+        onExport={() => {}} onClose={() => {}} />,
+    );
+
+  it('is collapsed until asked, with the standard deduction prefilled', () => {
+    const { container } = renderSheet();
+    const details = container.querySelector('.filing-estimate') as HTMLDetailsElement;
+
+    expect(details.open).toBe(false);
+    expect((container.querySelector('#estimate-deductions') as HTMLInputElement).value).toBe('160000');
+  });
+
+  it('recomputes the tax when other income is entered', () => {
+    const { container } = renderSheet();
+    (container.querySelector('.filing-estimate') as HTMLDetailsElement).open = true;
+
+    fireEvent.change(container.querySelector('#estimate-other-income') as HTMLInputElement, {
+      target: { value: '500000' },
+    });
+
+    const lines = container.querySelector('.estimate-lines')?.textContent ?? '';
+    expect(lines).toContain('350,974.19');
+    expect(lines).toContain('12,597.42');
+    expect(lines).toContain('12,595.03');
+    expect(lines).toContain('10%');
+  });
+
+  it('shows the overpaid line when the credit covers the tax', () => {
+    const { container } = renderSheet();
+    (container.querySelector('.filing-estimate') as HTMLDetailsElement).open = true;
+
+    fireEvent.change(container.querySelector('#estimate-deductions') as HTMLInputElement, {
+      target: { value: '200000' },
+    });
+
+    expect(container.querySelector('.estimate-overpaid')?.textContent).toBe('฿2.39');
   });
 });

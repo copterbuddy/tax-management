@@ -203,10 +203,11 @@ describe('addDividendRemittance', () => {
     expect(state.availableYears).toContain(2027);
   });
 
-  it('over-balance remittance leaves state unchanged (reducer catches the thrown error)', () => {
+  it('refuses an over-balance remittance before the record is touched', () => {
     const store = createTestStore();
-    const record = makeDividend();
-    store.dispatch(addDividend(record));
+      store.dispatch(addDividend(makeDividend()));
+      const before = JSON.stringify(store.getState().dividend);
+      const storedBefore = localStorage.getItem(STORAGE_KEYS_DIVIDEND.DIVIDENDS);
 
     const overBalanceRemit = makeRemittance({
       amountUSD: 1000,
@@ -214,12 +215,25 @@ describe('addDividendRemittance', () => {
       remitFxRate: 31,
     });
 
-    // Should not throw — the reducer wraps in try/catch
+      // Refused by the engine pre-check, so nothing can throw
     expect(() => store.dispatch(addDividendRemittance(overBalanceRemit))).not.toThrow();
 
-    const state = store.getState().dividend;
-    expect(state.records[0].remittances).toHaveLength(0);
-    expect(state.records[0].remainingToRemitUSD).toBe(850);
+      expect(JSON.stringify(store.getState().dividend)).toBe(before);
+      expect(localStorage.getItem(STORAGE_KEYS_DIVIDEND.DIVIDENDS)).toBe(storedBefore);
+      expect(store.getState().dividend.records[0].remittances).toHaveLength(0);
+      expect(store.getState().dividend.records[0].totalRemittedUSD).toBe(0);
+      expect(store.getState().dividend.records[0].remainingToRemitUSD).toBe(850);
+    });
+
+    it('refuses a non-positive remittance at the same pre-check', () => {
+      const store = createTestStore();
+      store.dispatch(addDividend(makeDividend()));
+      const before = JSON.stringify(store.getState().dividend);
+
+      expect(() => store.dispatch(addDividendRemittance(makeRemittance({ amountUSD: 0 })))).not.toThrow();
+      expect(() => store.dispatch(addDividendRemittance(makeRemittance({ amountUSD: -5 })))).not.toThrow();
+
+      expect(JSON.stringify(store.getState().dividend)).toBe(before);
   });
 });
 

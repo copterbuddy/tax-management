@@ -9,6 +9,7 @@ import {
   updateRemittance,
   deleteRemittance,
   setReinvestedAmount,
+    clearLedgerError,
   setSelectedTaxYear,
 } from '../store/tradeSlice';
 import {
@@ -19,8 +20,8 @@ import {
   removeDividendRemittance,
   setDividendDisplayYear,
 } from '../store/dividendSlice';
-import { validateSellLots, computeAllRealizedGains } from '../engine/fifoEngine';
-import { computeDividendSummary, getAvailableSymbols } from '../engine/dividendEngine';
+import { validateSellLots, computeAllRealizedGains, validateRemittance } from '../engine/fifoEngine';
+import { computeDividendSummary, getAvailableSymbols, validateRemittance as validateDividendRemittance } from '../engine/dividendEngine';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import type { SupportedLang } from '../i18n/index';
@@ -47,6 +48,7 @@ export function Dashboard() {
     remainingLots,
     selectedTaxYear,
     taxSummaries,
+        ledgerError,
   } = useAppSelector(state => state.trade);
 
   const [showForm, setShowForm] = useState(false);
@@ -142,11 +144,17 @@ export function Dashboard() {
       return null;
     }, [trades, t]);
 
-  const handleAddRemittance = useCallback((remit: RemittanceRecord) => {
+  // Last gate before the slice: the form already validated, but state may have
+    // moved since it rendered, so report the outcome and let the form stay open.
+    const handleAddRemittance = useCallback((remit: RemittanceRecord): boolean => {
+      const gain = gains.find(g => g.sellTradeId === remit.sellTradeId);
+      if (!gain || !validateRemittance(gain, remit).valid) return false;
+
     dispatch(addRemittance(remit));
     setShowRemitForm(false);
     setRemittingGainId(null);
-  }, [dispatch]);
+      return true;
+    }, [dispatch, gains]);
 
   const handleRemitGain = useCallback((sellTradeId: string) => {
     setRemittingGainId(sellTradeId);
@@ -159,6 +167,9 @@ export function Dashboard() {
 
   const handleSubmitReinvested = useCallback((input: ReinvestedAmountInput) => {
     dispatch(setReinvestedAmount(input));
+      // Closing is safe even if the record is refused: the outstanding row is
+      // unchanged, so reopening the dialog prefills the same balance, and the
+      // refusal surfaces inline on the list instead of trapping the user.
     setReinvestedTarget(null);
   }, [dispatch]);
 
@@ -166,10 +177,16 @@ export function Dashboard() {
     setEditingRemittance(remit);
   }, []);
 
-  const handleUpdateRemittance = useCallback((remit: RemittanceRecord) => {
+  // An edit is always applied: the slice re-replays the sale's records and flags
+    // any that no longer fit, so there is nothing to refuse here.
+    const handleUpdateRemittance = useCallback((remit: RemittanceRecord): boolean => {
+      const exists = gains.some(g => g.remittances.some(r => r.id === remit.id));
+      if (!exists) return false;
+
     dispatch(updateRemittance(remit));
     setEditingRemittance(null);
-  }, [dispatch]);
+      return true;
+    }, [dispatch, gains]);
 
   const handleDeleteRemittance = useCallback((remit: RemittanceRecord) => {
     setDeleteRemitConfirm(remit);
@@ -241,10 +258,13 @@ export function Dashboard() {
   }, [dividendRecords]);
 
   const handleAddDividendRemittance = useCallback((remittance: DividendRemittance) => {
+      const record = dividendRecords.find(r => r.id === remittance.dividendId);
+      if (!record || !validateDividendRemittance(record, remittance.amountUSD).valid) return false;
     dispatch(addDividendRemittance(remittance));
     setShowDividendRemitForm(false);
     setRemittingDividend(null);
-  }, [dispatch]);
+      return true;
+    }, [dispatch, dividendRecords]);
 
   const handleDeleteDividendRemittance = useCallback((dividendId: string, remittanceId: string) => {
     dispatch(removeDividendRemittance({ dividendId, remittanceId }));
@@ -343,6 +363,8 @@ export function Dashboard() {
           onAddNew={() => setShowForm(true)}
           onRemitGain={handleRemitGain}
           onMarkReinvested={handleMarkReinvested}
+                    ledgerError={ledgerError}
+                    onDismissLedgerError={() => dispatch(clearLedgerError())}
         />
       ) : activeTab === 'dividends' ? (
         <DividendTab

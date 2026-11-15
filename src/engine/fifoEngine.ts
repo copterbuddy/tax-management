@@ -1,4 +1,5 @@
 import type { TradeTransaction, FifoLot, FifoMatchDetail, RealizedGainResult, RemittanceRecord, TaxSummary, ProviderType, ProviderBreakdown, OutstandingProceedsRow } from '../types/trade';
+import type { ValidationResult } from './dividendEngine';
 
 // ─── Key generation ──────────────────────────────────────────────────────
 function lotKey(symbol: string, provider: ProviderType): string {
@@ -216,21 +217,11 @@ export function applyRemittance(
   gainResult: RealizedGainResult,
   remittance: RemittanceRecord
 ): RealizedGainResult {
-  if (remittance.amountUSD <= 0) {
-    throw new Error('Remittance amount must be positive');
-  }
-  if (remittance.sellTradeId !== gainResult.sellTradeId) {
-    throw new Error('Remittance does not match sell trade');
-  }
+  const validation = validateRemittance(gainResult, remittance);
+  if (!validation.valid) throw new Error(validation.message!);
 
   const reinvested = reinvestedUSDOf(gainResult);
   const newTotalRemitted = gainResult.totalRemittedUSD + remittance.amountUSD;
-  const remittableRevenue = gainResult.sellRevenueUSD - reinvested;
-  if (newTotalRemitted > remittableRevenue + MONEY_TOLERANCE_USD) {
-    throw new Error(
-      `Remittance exceeds remaining proceeds. Available: $${(remittableRevenue - gainResult.totalRemittedUSD).toFixed(2)}`
-    );
-  }
 
   // Only the gain portion is taxable — gainPercent × amountUSD
   // Losses cannot create a negative taxable amount
@@ -244,6 +235,59 @@ export function applyRemittance(
     remittances: [...gainResult.remittances, remittance],
     taxableGainTHB: gainResult.taxableGainTHB + taxableTHB,
   };
+}
+
+// ─── Remittance validation ───────────────────────────────────────────────
+
+/**
+ * Proceeds a sale can still return to Thailand: everything but the part that
+ * was spent on another offshore purchase.
+ */
+function remittableRevenueOf(gain: RealizedGainResult): number {
+  return gain.sellRevenueUSD - reinvestedUSDOf(gain);
+}
+
+/** Nothing to apply when the amount carries no positive value. */
+function hasNonPositiveAmount(amountUSD: number): boolean {
+  return amountUSD <= 0;
+}
+
+/** A remittance belongs to exactly one sale. */
+function belongsToAnotherSale(gain: RealizedGainResult, remittance: RemittanceRecord): boolean {
+  return remittance.sellTradeId !== gain.sellTradeId;
+}
+
+/** Adding it would push the total past the remittable proceeds, to the cent. */
+function exceedsRemittableProceeds(gain: RealizedGainResult, amountUSD: number): boolean {
+  return gain.totalRemittedUSD + amountUSD > remittableRevenueOf(gain) + MONEY_TOLERANCE_USD;
+}
+
+/** What a sale can still take before the next remittance would not fit. */
+function availableForRemittance(gain: RealizedGainResult): number {
+  return remittableRevenueOf(gain) - gain.totalRemittedUSD;
+}
+
+/**
+ * Decide whether a remittance may be applied, with the reason when it may not.
+ * `applyRemittance` and the forms both call this, so the limit is defined once.
+ */
+export function validateRemittance(
+  gain: RealizedGainResult,
+  remittance: RemittanceRecord
+): ValidationResult {
+  if (hasNonPositiveAmount(remittance.amountUSD)) {
+    return { valid: false, message: 'Remittance amount must be positive' };
+  }
+  if (belongsToAnotherSale(gain, remittance)) {
+    return { valid: false, message: 'Remittance does not match sell trade' };
+  }
+  if (exceedsRemittableProceeds(gain, remittance.amountUSD)) {
+    return {
+      valid: false,
+      message: `Remittance exceeds remaining proceeds. Available: $${availableForRemittance(gain).toFixed(2)}`,
+    };
+  }
+  return { valid: true };
 }
 
 // ─── Reinvested proceeds ─────────────────────────────────────────────────
@@ -362,9 +406,12 @@ export function computeTaxSummary(
   const baseGains = allGains.length ? allGains : computeAllRealizedGains(trades).gains;
 
   const saleYearGains = baseGains.filter(g => g.sellDate.startsWith(year));
+  // The flags filter lives here, not in each reducer below: every derived
+  // figure reads this one array, so a record the sale can no longer support
+  // (kept for the audit trail) is excluded from all of them at once.
   const yearRemittances = baseGains.flatMap(g =>
     g.remittances
-      .filter(r => r.remitDate.startsWith(year))
+      .filter(r => r.remitDate.startsWith(year) && r.unapplied !== true)
       .map(r => ({ gain: g, remittance: r }))
   );
 

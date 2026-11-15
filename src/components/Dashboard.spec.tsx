@@ -316,3 +316,145 @@ describe('outstanding proceeds list', () => {
     expect(outstandingSymbols(container)).toHaveLength(3);
   });
 });
+
+    // ─── Requirement: A refused reinvested record is reported to the user ──────
+
+    describe('refused reinvested record is reported inline', () => {
+      // The store module is a singleton, so a refusal raised by one test outlives it.
+      beforeEach(async () => {
+        const { store } = await import('../store');
+        const { setReinvestedAmount, clearLedgerError } = await import('../store/tradeSlice');
+        await act(async () => {
+          store.dispatch(setReinvestedAmount({ sellTradeId: 't6', amountUSD: 0 }));
+          store.dispatch(clearLedgerError());
+        });
+      });
+
+      async function refuseRecording() {
+        const { store } = await import('../store');
+        const { setReinvestedAmount } = await import('../store/tradeSlice');
+        await act(async () => {
+          // NVDA t6 has 898.38 left, so this is refused
+          store.dispatch(setReinvestedAmount({ sellTradeId: 't6', amountUSD: 5000 }));
+        });
+      }
+
+      it('shows the refusal message on the Trades tab only', async () => {
+        const { container } = await renderDashboard();
+        await refuseRecording();
+
+        expect(container.querySelector('.ledger-error')!.textContent).toContain(
+          i18next.t('common:ledgerErrorReinvestedExceedsBalance'),
+        );
+
+        clickTab(container, 1);
+        expect(container.querySelector('.ledger-error')).toBeNull();
+        clickTab(container, 2);
+        expect(container.querySelector('.ledger-error')).toBeNull();
+      });
+
+      it('reports the refusal in English as well', async () => {
+        const { container } = await renderDashboard();
+        await refuseRecording();
+        await act(async () => { await i18next.changeLanguage('en'); });
+
+        expect(container.querySelector('.ledger-error')!.textContent).toContain(
+          i18next.t('common:ledgerErrorReinvestedExceedsBalance'),
+        );
+      });
+
+      it('clears the message on dismissal without changing any figure', async () => {
+        const { container } = await renderDashboard();
+        await refuseRecording();
+        const before = kpiValue(container, 'common:kpiNotRemitted');
+
+        fireEvent.click(container.querySelector('.ledger-error button')!);
+
+        expect(container.querySelector('.ledger-error')).toBeNull();
+        expect(kpiValue(container, 'common:kpiNotRemitted')).toBe(before);
+        expect(outstandingSymbols(container)).toHaveLength(3);
+      });
+
+      it('leaves no message once a record is accepted', async () => {
+        const { container } = await renderDashboard();
+        await refuseRecording();
+        expect(container.querySelector('.ledger-error')).not.toBeNull();
+
+        fireEvent.click(outstandingRow(container, 'NVDA').querySelectorAll('button')[1]);
+        await submitAmount(container, 400);
+
+        expect(container.querySelector('.ledger-error')).toBeNull();
+        expect(outstandingRow(container, 'NVDA').textContent).toContain('498.38');
+      });
+    });
+
+            // ─── Requirement: A remittance is validated before it is recorded ──────────
+
+            describe('remit form submission outcome', () => {
+              // The store module is a singleton, so drop anything an earlier test added.
+              beforeEach(async () => {
+                const { store } = await import('../store');
+                const { deleteRemittance, clearLedgerError, setReinvestedAmount } = await import('../store/tradeSlice');
+                await act(async () => {
+                  store.dispatch(clearLedgerError());
+                  // An earlier test left a reinvested amount recorded for NVDA t6.
+                  store.dispatch(setReinvestedAmount({ sellTradeId: 't6', amountUSD: 0 }));
+                  const gain = store.getState().trade.gains.find(g => g.sellTradeId === 't6')!;
+                  for (const r of gain.remittances) {
+                    store.dispatch(deleteRemittance({ id: r.id, sellTradeId: 't6' }));
+                  }
+                });
+              });
+
+              async function openRemitFor(container: HTMLElement, symbol: string) {
+                fireEvent.click(outstandingRow(container, symbol).querySelectorAll('button')[0]);
+                await waitFor(() => {
+                  expect(container.querySelector('#remit-trade')).not.toBeNull();
+                });
+              }
+
+              function fillRemittance(container: HTMLElement, amount: number) {
+                fireEvent.change(container.querySelector('#remit-amount')!, { target: { value: String(amount) } });
+                fireEvent.change(container.querySelector('#remit-fx')!, { target: { value: '34.5' } });
+              }
+
+              function submitRemittance(container: HTMLElement) {
+                fireEvent.click(container.querySelector('.form-actions .btn-primary') as HTMLButtonElement);
+              }
+
+              it('keeps the form open and records nothing when the amount exceeds the balance', async () => {
+                const { container } = await renderDashboard();
+                await openRemitFor(container, 'NVDA');
+
+                fillRemittance(container, 5000);
+                submitRemittance(container);
+
+                await waitFor(() => {
+                  expect(container.querySelector('.error-msg')).not.toBeNull();
+                });
+                expect(container.querySelector('.error-msg')!.textContent).toContain('898.38');
+                expect(container.querySelector('#remit-amount')).not.toBeNull();
+
+                const { store } = await import('../store');
+                expect(
+                  store.getState().trade.gains.find(g => g.sellTradeId === 't6')!.remittances,
+                ).toHaveLength(0);
+              });
+
+              it('closes the form and records the remittance when the amount fits', async () => {
+                const { container } = await renderDashboard();
+                await openRemitFor(container, 'NVDA');
+
+                fillRemittance(container, 100);
+                submitRemittance(container);
+
+                await waitFor(() => {
+                  expect(container.querySelector('#remit-amount')).toBeNull();
+                });
+
+                const { store } = await import('../store');
+                const gain = store.getState().trade.gains.find(g => g.sellTradeId === 't6')!;
+                expect(gain.remittances).toHaveLength(1);
+                expect(gain.remittances[0].amountUSD).toBe(100);
+              });
+            });

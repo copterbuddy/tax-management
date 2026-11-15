@@ -36,6 +36,11 @@ export interface RemittanceRecord {
   remitDate: string; // YYYY-MM-DD — date funds arrived in Thailand
   fxRateTHB: number; // Exchange rate on remittance date
   notes?: string;
+  /**
+   * True when the sale can no longer support this record (its proceeds shrank
+   * below what was remitted). Kept for the audit trail, excluded from totals.
+   */
+  unapplied?: boolean;
 }
 
 export interface FifoLot {
@@ -119,6 +124,12 @@ export interface TaxSummary {
   outstandingRows: OutstandingProceedsRow[];
   providerBreakdown: ProviderBreakdown[]; // Per-provider KPI
 }
+
+/**
+ * Why the last ledger write was refused, as the UI needs it. Exactly one code
+ * today, so the union grows only when a second refusal exists.
+ */
+export type LedgerError = { code: 'reinvestedExceedsBalance' };
 
 // ─── Dividend Types ──────────────────────────────────────────────────────────
 

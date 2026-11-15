@@ -46,6 +46,8 @@ export const remittanceRecordSchema = z.object({
   remitDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
   fxRateTHB: z.number().min(VALIDATION.FX_RATE_MIN).max(VALIDATION.FX_RATE_MAX),
   notes: z.string().optional(),
+  /** Absent means applied, so records saved before this flag load unchanged. */
+  unapplied: z.boolean().optional(),
 });
 
 /** Array of RemittanceRecord */

@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
-import type { TradeTransaction, RealizedGainResult, FifoLot, TaxSummary, RemittanceRecord } from '../types/trade';
-import { computeAllRealizedGains, computeTaxSummary, applyRemittance, applyReinvestedAmount } from '../engine/fifoEngine';
+import type { TradeTransaction, RealizedGainResult, FifoLot, TaxSummary, RemittanceRecord, LedgerError } from '../types/trade';
+import { computeAllRealizedGains, computeTaxSummary, applyRemittance, applyReinvestedAmount, validateRemittance } from '../engine/fifoEngine';
 import { STORAGE_KEYS } from '../constants';
 import { tradeArraySchema, gainsArraySchema, safeParse } from '../validation/schemas';
 
@@ -84,6 +84,11 @@ export interface TradeState {
   selectedTaxYear: number;
   taxSummaries: Record<number, TaxSummary>;
   displayTaxYear: number;
+  /**
+   * Why the last ledger write was refused, for the user to see. Transient —
+   * never persisted, cleared by the next successful write or on dismissal.
+   */
+  ledgerError: LedgerError | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -96,6 +101,9 @@ function getAvailableYears(trades: TradeTransaction[], gains: RealizedGainResult
   }
   for (const g of gains) {
     for (const r of g.remittances) {
+      // A flagged record is not money that arrived, so it must not add a year
+      // of its own; the Remittances tab lists it under every record it keeps.
+      if (r.unapplied === true) continue;
       const year = parseInt(r.remitDate.substring(0, 4), 10);
       if (!isNaN(year)) years.add(year);
     }
@@ -113,13 +121,40 @@ function recomputeGains(trades: TradeTransaction[], existingGains: RealizedGainR
     const old = oldGainMap.get(fg.sellTradeId);
     // A reinvested amount is a user-recorded fact about the sale that FIFO
     // cannot derive, so it survives every recompute (design D5).
-    let result = withReinvestedAmount({ ...fg }, old?.reinvestedUSD);
-    for (const r of old?.remittances ?? []) {
-      try { result = applyRemittance(result, r); }
-      catch { /* skip invalid remittances */ }
-    }
-    return result;
+    const result = withReinvestedAmount({ ...fg }, old?.reinvestedUSD);
+    return replayRemittances(result, old?.remittances ?? []);
   });
+}
+
+/**
+ * Rebuild a sale's remittance history in order. A record the sale can no
+ * longer support is kept and flagged `unapplied` instead of being dropped, so
+ * the user sees the conflict and the audit trail survives a shrinking trade
+ * (spec: trade-import-safety). Each record is judged against the balance the
+ * earlier applied records left, so one that still fits stays applied.
+ */
+function replayRemittances(
+  gain: RealizedGainResult,
+  records: RemittanceRecord[]
+): RealizedGainResult {
+  let result = gain;
+  for (const record of records) {
+    const applied = withoutUnappliedFlag(record);
+    if (validateRemittance(result, applied).valid) {
+      result = applyRemittance(result, applied);
+    } else {
+      result = { ...result, remittances: [...result.remittances, { ...applied, unapplied: true }] };
+    }
+  }
+  return result;
+}
+
+/** A record that is applied again must not carry the stale flag. */
+function withoutUnappliedFlag(record: RemittanceRecord): RemittanceRecord {
+  if (record.unapplied === undefined) return record;
+  const applied = { ...record };
+  delete applied.unapplied;
+  return applied;
 }
 
 /**
@@ -142,22 +177,14 @@ function recomputeGainsWithModifiedRemittances(
   newRemittances: RemittanceRecord[]
 ): RealizedGainResult[] {
   const { gains: freshGains } = computeAllRealizedGains(trades);
+  const oldGainMap = new Map<string, RealizedGainResult>();
+  for (const g of existingGains) oldGainMap.set(g.sellTradeId, g);
+
   return freshGains.map(fg => {
-    if (fg.sellTradeId === sellTradeId) {
-      let result = withReinvestedAmount({ ...fg }, existingGains.find(g => g.sellTradeId === sellTradeId)?.reinvestedUSD);
-      for (const r of newRemittances) {
-        try { result = applyRemittance(result, r); }
-        catch { /* skip invalid remittances */ }
-      }
-      return result;
-    }
-    const otherGain = existingGains.find(g => g.sellTradeId === fg.sellTradeId);
-    let result = withReinvestedAmount({ ...fg }, otherGain?.reinvestedUSD);
-    for (const r of otherGain?.remittances ?? []) {
-      try { result = applyRemittance(result, r); }
-      catch { /* skip invalid remittances */ }
-    }
-    return result;
+    const old = oldGainMap.get(fg.sellTradeId);
+    const records = fg.sellTradeId === sellTradeId ? newRemittances : old?.remittances ?? [];
+    const result = withReinvestedAmount({ ...fg }, old?.reinvestedUSD);
+    return replayRemittances(result, records);
   });
 }
 
@@ -189,6 +216,7 @@ function buildInitialState(): TradeState {
     selectedTaxYear,
     displayTaxYear: selectedTaxYear,
     taxSummaries: recomputeSummaries(trades, gains),
+    ledgerError: null,
   };
 }
 
@@ -234,13 +262,17 @@ export const tradeSlice = createSlice({
       const gainIndex = state.gains.findIndex(g => g.sellTradeId === action.payload.sellTradeId);
       if (gainIndex === -1) return;
 
-      try {
-        state.gains[gainIndex] = applyRemittance(state.gains[gainIndex], action.payload);
-        state.taxSummaries = recomputeSummaries(state.trades, state.gains);
-        saveGains(state.gains);
-      } catch (e) {
-        console.error('Failed to add remittance:', e);
+      const check = validateRemittance(state.gains[gainIndex], action.payload);
+      if (!check.valid) {
+        // Leave the ledger untouched and keep the reason for diagnostics; the
+        // form shows the same message to the user before dispatching.
+        console.error('Rejected remittance:', check.message);
+        return;
       }
+
+      state.gains[gainIndex] = applyRemittance(state.gains[gainIndex], action.payload);
+      state.taxSummaries = recomputeSummaries(state.trades, state.gains);
+      saveGains(state.gains);
     },
 
     setReinvestedAmount: (state, action: PayloadAction<{ sellTradeId: string; amountUSD: number }>) => {
@@ -249,11 +281,18 @@ export const tradeSlice = createSlice({
 
       try {
         state.gains[gainIndex] = applyReinvestedAmount(state.gains[gainIndex], action.payload.amountUSD);
+        state.ledgerError = null;
         state.taxSummaries = recomputeSummaries(state.trades, state.gains);
         saveGains(state.gains);
-      } catch (e) {
-        console.error('Failed to record reinvested amount:', e);
+      } catch {
+        // The engine refused the amount (the balance moved under the dialog),
+        // so nothing was written. Report it instead of closing silently.
+        state.ledgerError = { code: 'reinvestedExceedsBalance' };
       }
+    },
+
+    clearLedgerError: (state) => {
+      state.ledgerError = null;
     },
 
     updateRemittance: (state, action: PayloadAction<RemittanceRecord>) => {
@@ -289,13 +328,14 @@ export const tradeSlice = createSlice({
     importTrades: (state, action: PayloadAction<TradeTransaction[]>) => {
       state.trades = action.payload;
       saveTrades(state.trades);
-      // Import replaces the gains wholesale, so no reinvested amount survives:
-      // an imported trade list carries no such record, and inventing one would
-      // attach a user decision to a sale the user just replaced.
-      state.gains = recomputeGains(state.trades, []);
+      // Records belong to the sale, not to the list it arrived in: replaying the
+      // existing gains keeps every remittance and reinvested amount for sales the
+      // import still contains, and drops records only for sales that are gone.
+      state.gains = recomputeGains(state.trades, state.gains);
       state.remainingLots = computeAllRealizedGains(state.trades).remainingLots;
       state.taxSummaries = recomputeSummaries(state.trades, state.gains);
       saveGains(state.gains);
+      state.ledgerError = null;
     },
 
     clearAllTrades: (state) => {
@@ -305,6 +345,7 @@ export const tradeSlice = createSlice({
       state.remainingLots = [];
       state.taxSummaries = {};
       saveGains([]);
+      state.ledgerError = null;
     },
 
     setSelectedTaxYear: (state, action: PayloadAction<number>) => {
@@ -323,6 +364,7 @@ export const {
   deleteTrade,
   addRemittance,
   setReinvestedAmount,
+  clearLedgerError,
   updateRemittance,
   deleteRemittance,
   importTrades,

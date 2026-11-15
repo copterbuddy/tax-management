@@ -57,6 +57,8 @@ function renderTab(overrides: Partial<Parameters<typeof TradesTab>[0]> = {}) {
       onAddNew={() => {}}
       onRemitGain={() => {}}
       onMarkReinvested={() => {}}
+            ledgerError={null}
+            onDismissLedgerError={() => {}}
       {...overrides}
     />,
   );
@@ -189,3 +191,49 @@ describe('TradesTab tax-year control', () => {
     expect(container.querySelector('.data-freshness')).toBeNull();
   });
 });
+
+  // ─── Refused ledger write ───────────────────────────────────────────────────
+
+  describe('TradesTab ledger error banner', () => {
+    const refusal = { code: 'reinvestedExceedsBalance' } as const;
+
+    it('renders the refusal message in Thai with a dismiss control', () => {
+      const onDismissLedgerError = jest.fn();
+      const { container } = renderTab({ ledgerError: refusal, onDismissLedgerError });
+      const banner = container.querySelector('.ledger-error')!;
+      expect(banner).not.toBeNull();
+      expect(banner.textContent).toContain(i18next.t('common:ledgerErrorReinvestedExceedsBalance'));
+
+      fireEvent.click(banner.querySelector('button')!);
+      expect(onDismissLedgerError).toHaveBeenCalledTimes(1);
+    });
+
+    it('renders the refusal message in English after the language switch', async () => {
+      await act(async () => { await i18next.changeLanguage('en'); });
+      const { container } = renderTab({ ledgerError: refusal });
+      expect(container.querySelector('.ledger-error')!.textContent).toContain(
+        i18next.t('common:ledgerErrorReinvestedExceedsBalance'),
+      );
+    });
+
+    it('leaves every figure untouched while the banner is shown', () => {
+      const { container } = renderTab({ ledgerError: refusal });
+      expect(container.querySelectorAll('.kpi-grid:not(.kpi-provider-row) .kpi-card')).toHaveLength(4);
+      expect(container.querySelectorAll('.kpi-grid:not(.kpi-provider-row) .kpi-card')[3].textContent).toContain('146.43');
+      expect(container.querySelector('.outstanding-proceeds')!.textContent).toContain('146.43');
+    });
+
+    it('shows the banner even when no row is outstanding', () => {
+      const { container } = renderTab({
+        ledgerError: refusal,
+        summary: { ...summary, unremittedUSD: 0, outstandingRows: [] },
+      });
+      expect(container.querySelector('.outstanding-proceeds')).toBeNull();
+      expect(container.querySelector('.ledger-error')).not.toBeNull();
+    });
+
+    it('renders no banner without a refusal', () => {
+      const { container } = renderTab();
+      expect(container.querySelector('.ledger-error')).toBeNull();
+    });
+  });

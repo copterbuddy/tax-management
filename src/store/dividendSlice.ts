@@ -9,6 +9,7 @@ import {
   applyDividendRemittance,
   computeDividendSummary,
   getDividendYears,
+  validateRemittance,
 } from '../engine/dividendEngine';
 import { STORAGE_KEYS_DIVIDEND } from '../constants';
 import { dividendArraySchema, safeParse } from '../validation/schemas';
@@ -91,6 +92,12 @@ export const dividendSlice = createSlice({
     addDividendRemittance: (state, action: PayloadAction<DividendRemittance>) => {
       const index = state.records.findIndex(r => r.id === action.payload.dividendId);
       if (index === -1) return;
+
+          const check = validateRemittance(state.records[index], action.payload.amountUSD);
+          if (!check.valid) {
+            console.error('Rejected dividend remittance:', check.message);
+            return;
+          }
 
       try {
         state.records[index] = applyDividendRemittance(state.records[index], action.payload);

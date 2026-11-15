@@ -36,9 +36,13 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
     .sort((a, b) => b - a);
   if (!years.includes(remitYear)) years.unshift(remitYear);
 
-  const totalRemitted = yearRemittances.reduce((s, r) => s + r.amountUSD, 0);
-  const totalRemittedTHB = yearRemittances.reduce((s, r) => s + r.amountTHB, 0);
-  const totalTaxable = yearRemittances.reduce((s, r) => s + r.taxableTHB, 0);
+  // Flagged records stay listed so they can be corrected, but they never count toward a total —
+  // the engine excludes them too, so the footer must agree with the tax-year figures.
+  const countedRemittances = yearRemittances.filter(r => r.unapplied !== true);
+
+  const totalRemitted = countedRemittances.reduce((s, r) => s + r.amountUSD, 0);
+  const totalRemittedTHB = countedRemittances.reduce((s, r) => s + r.amountTHB, 0);
+  const totalTaxable = countedRemittances.reduce((s, r) => s + r.taxableTHB, 0);
 
   return (
     <div className="trade-table-section">
@@ -98,18 +102,34 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
             </thead>
             <tbody>
               {yearRemittances.map(r => (
-                <tr key={r.id}>
-                  <td>{r.remitDate}</td>
+                <tr key={r.id} className={r.unapplied ? 'remittance-row-unapplied' : undefined}>
+                  <td>
+                    {r.remitDate}
+                    {r.unapplied && (
+                      <span className="unapplied-badge" title={t('remittance:unappliedReason')}>
+                        {t('remittance:unappliedMarker')}
+                      </span>
+                    )}
+                  </td>
                   <td><span className="symbol-badge">{r.symbol}</span></td>
                   <td>{r.provider}</td>
-                  <td className="num">${r.amountUSD.toFixed(2)}</td>
+                  <td className="num">
+                    ${r.amountUSD.toFixed(2)}
+                    {r.unapplied && (
+                      <div className="unapplied-reason">{t('remittance:unappliedReason')}</div>
+                    )}
+                  </td>
                   <td className="num">฿{r.amountTHB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                   <td className="num">{r.fxRateTHB.toFixed(2)}</td>
                   <td className="num">{(r.gainPercent * 100).toFixed(1)}%</td>
                   <td className="num gain-cell">
-                    <span className="gain-indicator gain-positive">
-                      ฿{r.taxableTHB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
+                    {r.unapplied ? (
+                      <span className="gain-indicator">—</span>
+                    ) : (
+                      <span className="gain-indicator gain-positive">
+                        ฿{r.taxableTHB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    )}
                   </td>
                   <td>{r.notes || '-'}</td>
                   <td className="actions-cell">
@@ -149,7 +169,7 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
             </tbody>
             <tfoot>
               <tr className="summary-row">
-                <td colSpan={3}><strong>{t('common:total')} ({yearRemittances.length} {t('remittance:remittanceCount')})</strong></td>
+                <td colSpan={3}><strong>{t('common:total')} ({countedRemittances.length} {t('remittance:remittanceCount')})</strong></td>
                 <td className="num"><strong>${totalRemitted.toFixed(2)}</strong></td>
                 <td className="num"><strong>฿{totalRemittedTHB.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></td>
                 <td></td>

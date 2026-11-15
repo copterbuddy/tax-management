@@ -298,3 +298,34 @@ describe('realizedGainSchema', () => {
     expect(realizedGainSchema.safeParse({ ...baseGain, reinvestedUSD: -1 }).success).toBe(false);
   });
 });
+
+// ─── unapplied remittance flag ──────────────────────────────────────────────
+
+describe('remittanceRecordSchema unapplied flag', () => {
+  const applied = {
+    id: 'r1', sellTradeId: 's1', amountUSD: 1000, remitDate: '2026-02-01', fxRateTHB: 36,
+  };
+
+  it('keeps a record saved without the flag exactly as stored', () => {
+    const parsed = remittanceRecordSchema.safeParse(applied);
+
+    expect(parsed.success && parsed.data.unapplied).toBeUndefined();
+  });
+
+  it('round-trips unapplied: true through gainsArraySchema', () => {
+    const parsed = gainsArraySchema.parse([
+      {
+        sellTradeId: 's1', sellDate: '2026-01-10', symbol: 'AAPL', provider: 'Dime',
+        sellQuantity: 10, sellRevenueUSD: 1998, buyCostBasisUSD: 1501, gainUSD: 497,
+        gainPercent: 0.249, matchedLots: [], totalRemittedUSD: 0, remainingProceedsUSD: 1998,
+        remittances: [{ ...applied, unapplied: true }], taxableGainTHB: 0,
+      },
+    ]);
+
+    expect(parsed[0].remittances[0].unapplied).toBe(true);
+  });
+
+  it('rejects a non-boolean flag', () => {
+    expect(remittanceRecordSchema.safeParse({ ...applied, unapplied: 'yes' }).success).toBe(false);
+  });
+});

@@ -9,7 +9,8 @@ import { calculateWhtCredit, validateRemittance } from '../engine/dividendEngine
 interface DividendRemitFormProps {
   open: boolean;
   onClose: () => void;
-  onRemit: (remittance: DividendRemittance) => void;
+  /** Returns `false` when the dispatch was refused, so the form can stay open. */
+  onRemit: (remittance: DividendRemittance) => boolean | void;
   dividend: DividendRecord;
 }
 
@@ -53,16 +54,22 @@ export function DividendRemitForm({
     setAmountUSD(dividend.remainingToRemitUSD);
   };
 
-  const handleSubmit = () => {
+  const rejectionMessage = (reason: string | undefined): string => {
+      if (reason?.includes('เกิน')) {
+        return `${t('remittance:remitExceeds')}: $${dividend.remainingToRemitUSD.toFixed(2)}`;
+      }
+      if (reason?.includes('มากกว่า 0')) {
+        return t('remittance:remitAmountPositive');
+      }
+      return t('dividend:remitInvalidAmount');
+    };
+
+    const handleSubmit = () => {
     setError('');
 
-    if (!remitDate) { setError('Remittance date is required'); return; }
-    if (remitFxRate <= 0) { setError('FX rate must be > 0'); return; }
-    if (!validation.valid) { setError(validation.message ?? 'Invalid amount'); return; }
-    if (amountUSD > dividend.remainingToRemitUSD) {
-      setError(`Amount exceeds remaining $${dividend.remainingToRemitUSD.toFixed(2)}`);
-      return;
-    }
+      if (!remitDate) { setError(t('dividend:remitDateRequired')); return; }
+      if (remitFxRate <= 0) { setError(t('dividend:remitFxRequired')); return; }
+      if (!validation.valid) { setError(rejectionMessage(validation.message)); return; }
 
     const remittance: DividendRemittance = {
       id: crypto.randomUUID(),
@@ -76,7 +83,11 @@ export function DividendRemitForm({
       notes: notes || undefined,
     };
 
-    onRemit(remittance);
+      if (onRemit(remittance) === false) {
+        setError(t('remittance:remitRejected'));
+        return;
+      }
+
     setAmountUSD(0);
     setRemitDate('');
     setRemitFxRate(0);

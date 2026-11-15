@@ -19,6 +19,7 @@ import {
   notionalUSD,
   isNotionalFromFallback,
   notionalMismatchUSD,
+  validateRemittance,
 } from './fifoEngine';
 import type {
   TradeTransaction,
@@ -443,6 +444,19 @@ describe('applyRemittance', () => {
     expect(() => applyRemittance(gainResult, remittance)).toThrow('exceeds remaining proceeds');
   });
 
+  it('accepts the exact remaining proceeds as the last remittance', () => {
+    const gainResult = {
+      sellTradeId: 's1', sellDate: '2026-01-10', symbol: 'AAPL', provider: 'Dime' as const,
+      sellQuantity: 10, sellRevenueUSD: 2000, buyCostBasisUSD: 1500, gainUSD: 500,
+      gainPercent: 0.25, matchedLots: [], totalRemittedUSD: 1500, remainingProceedsUSD: 500,
+      remittances: [], taxableGainTHB: 0,
+    };
+    const remittance = { id: 'r1', sellTradeId: 's1', amountUSD: 500, remitDate: '2026-02-01', fxRateTHB: 36 };
+
+    expect(validateRemittance(gainResult, remittance)).toEqual({ valid: true });
+    expect(applyRemittance(gainResult, remittance).remainingProceedsUSD).toBe(0);
+  });
+
   it('loss trade — taxableGainTHB stays 0', () => {
     const gainResult = {
       sellTradeId: 's1', sellDate: '2026-01-10', symbol: 'AAPL', provider: 'Dime' as const,
@@ -457,6 +471,61 @@ describe('applyRemittance', () => {
     // Even though we remitted money, there's no gain so taxable = 0
     expect(result.taxableGainTHB).toBe(0);
     expect(result.totalRemittedUSD).toBe(500);
+  });
+});
+
+// ─── validateRemittance ─────────────────────────────────────────────────
+
+describe('validateRemittance', () => {
+  /** Sale with 2,000 of proceeds, 1,500 remitted, so 500 still available. */
+  const gainWithRoom = (): RealizedGainResult => ({
+    sellTradeId: 's1', sellDate: '2026-01-10', symbol: 'AAPL', provider: 'Dime' as const,
+    sellQuantity: 10, sellRevenueUSD: 2000, buyCostBasisUSD: 1500, gainUSD: 500,
+    gainPercent: 0.25, matchedLots: [], totalRemittedUSD: 1500, remainingProceedsUSD: 500,
+    remittances: [], taxableGainTHB: 0,
+  });
+
+  const remittanceOf = (amountUSD: number, sellTradeId = 's1'): RemittanceRecord => ({
+    id: `r-${amountUSD}`, sellTradeId, amountUSD, remitDate: '2026-02-01', fxRateTHB: 36,
+  });
+
+  it('rejects zero and negative amounts', () => {
+    expect(validateRemittance(gainWithRoom(), remittanceOf(0)).valid).toBe(false);
+    expect(validateRemittance(gainWithRoom(), remittanceOf(-1)).valid).toBe(false);
+  });
+
+  it('accepts an amount inside the tolerance above the remaining proceeds', () => {
+    expect(validateRemittance(gainWithRoom(), remittanceOf(500.004))).toEqual({ valid: true });
+  });
+
+  it('rejects an amount outside the tolerance above the remaining proceeds', () => {
+    const result = validateRemittance(gainWithRoom(), remittanceOf(500.006));
+
+    expect(result.valid).toBe(false);
+    expect(result.message).toContain('500.00');
+  });
+
+  it('rejects a remittance recorded against another sale', () => {
+    const result = validateRemittance(gainWithRoom(), remittanceOf(100, 's2'));
+
+    expect(result.valid).toBe(false);
+    expect(result.message).toContain('does not match');
+  });
+
+  it('agrees with applyRemittance for the same input', () => {
+    const cases = [500, 500.004, 500.006, 0, -1];
+
+    for (const amountUSD of cases) {
+      const gain = gainWithRoom();
+      const remittance = remittanceOf(amountUSD);
+      const verdict = validateRemittance(gain, remittance);
+
+      if (verdict.valid) {
+        expect(() => applyRemittance(gain, remittance)).not.toThrow();
+      } else {
+        expect(() => applyRemittance(gain, remittance)).toThrow(verdict.message);
+      }
+    }
   });
 });
 
@@ -1020,5 +1089,42 @@ describe('computeTaxSummary', () => {
     const summary = computeTaxSummary([], 2026, [gain]);
     expect(summary.unremittedUSD).toBeCloseTo(321.5, 2);
     expect(summary.outstandingRows).toHaveLength(1);
+  });
+
+  it('leaves a flagged remittance out of every total while the applied one still counts', () => {
+    const applied = makeRemittance('trd_flag', 200, '2026-03-10', 32);
+    const flagged = { ...makeRemittance('trd_flag', 100, '2026-04-10', 32), unapplied: true as const };
+    const gain = makeGain({
+      sellTradeId: 'trd_flag',
+      sellRevenueUSD: 1000,
+      gainPercent: 0.1,
+      totalRemittedUSD: 200,
+      remittances: [applied, flagged],
+    });
+
+    const withFlag = computeTaxSummary([], 2026, [gain]);
+
+    expect(withFlag.totalRemittedUSD).toBeCloseTo(200, 2);
+    expect(withFlag.taxableGainUSD).toBeCloseTo(20, 2);
+    expect(withFlag.taxableGainTHB).toBeCloseTo(640, 2);
+    expect(withFlag.totalRemittanceCount).toBe(1);
+    // The stored figure was never recomputed for the flagged record.
+    expect(gain.remainingProceedsUSD).toBeCloseTo(800, 2);
+    expect(withFlag.providerBreakdown).toHaveLength(1);
+    expect(withFlag.providerBreakdown[0].totalRemittedUSD).toBeCloseTo(200, 2);
+    expect(withFlag.providerBreakdown[0].taxableGainTHB).toBeCloseTo(640, 2);
+    expect(withFlag.providerBreakdown.reduce((s, p) => s + p.totalRemittedUSD, 0))
+      .toBeCloseTo(withFlag.totalRemittedUSD, 2);
+
+    const corrected = computeTaxSummary([], 2026, [
+      { ...gain, remittances: [applied, { ...flagged, unapplied: false }], totalRemittedUSD: 300, remainingProceedsUSD: 700 },
+    ]);
+
+    expect(corrected.totalRemittedUSD).toBeCloseTo(300, 2);
+    expect(corrected.taxableGainUSD).toBeCloseTo(30, 2);
+    expect(corrected.taxableGainTHB).toBeCloseTo(960, 2);
+    expect(corrected.totalRemittanceCount).toBe(2);
+    expect(corrected.providerBreakdown[0].totalRemittedUSD).toBeCloseTo(300, 2);
+    expect(corrected.providerBreakdown[0].taxableGainTHB).toBeCloseTo(960, 2);
   });
 });

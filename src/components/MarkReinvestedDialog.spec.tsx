@@ -75,6 +75,42 @@ describe('MarkReinvestedDialog', () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
+  it('accepts its own prefilled amount when the balance carries float noise', async () => {
+    const { onSubmit } = renderDialog({ availableBalanceUSD: 0.30000000000000004 });
+    expect(Number((screen.getByLabelText(/Reinvested amount/i) as HTMLInputElement).value)).toBe(0.3);
+
+    fireEvent.click(screen.getByRole('button', { name: /record reinvested amount/i }));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit).toHaveBeenCalledWith({ sellTradeId: 'sell_allw', amountUSD: 0.3 });
+  });
+
+  it('refuses one cent above the noisy balance, showing the balance it displays', async () => {
+    const { onSubmit } = renderDialog({ availableBalanceUSD: 0.30000000000000004 });
+    submit('0.31');
+
+    const error = await screen.findByText(/Amount cannot exceed/i);
+    expect(error.textContent).toContain('0.30');
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('accepts an amount exactly equal to a two-decimal balance', async () => {
+    const { onSubmit } = renderDialog();
+    submit('146.43');
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+    expect(onSubmit).toHaveBeenCalledWith({ sellTradeId: 'sell_allw', amountUSD: 146.43 });
+  });
+
+  it('refuses one cent above a two-decimal balance, showing that balance', async () => {
+    const { onSubmit } = renderDialog();
+    submit('146.44');
+
+    const error = await screen.findByText(/Amount cannot exceed/i);
+    expect(error.textContent).toContain('146.43');
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it('cancels without emitting an amount', () => {
     const { onSubmit, onCancel } = renderDialog();
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));

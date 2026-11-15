@@ -123,3 +123,42 @@ describe('RemitForm gain preselection', () => {
     expect(options.some(o => o.value === 'sell_done')).toBe(false);
   });
 });
+
+  // ─── Tolerance agreement with the engine ────────────────────────────────────
+
+  describe('RemitForm cent tolerance', () => {
+    const noisy = makeGain({
+      sellTradeId: 'sell_noise',
+      symbol: 'NOISE',
+      sellRevenueUSD: 6636.2699999999995,
+      totalRemittedUSD: 0,
+      remainingProceedsUSD: 6636.2699999999995,
+    });
+
+    it('accepts a slip-exact amount that exceeds the float by rounding noise', async () => {
+      const onSubmit = jest.fn();
+      renderForm({ gains: [noisy], initialSellTradeId: 'sell_noise', onSubmit });
+
+      fireEvent.change(screen.getByLabelText(/Amount/i), { target: { value: '6636.27' } });
+      fireEvent.change(screen.getByLabelText(/FX Rate/i), { target: { value: '32.5' } });
+      fireEvent.click(screen.getByRole('button', { name: /record/i }));
+
+      await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
+      expect(onSubmit.mock.calls[0][0]).toMatchObject({ amountUSD: 6636.27 });
+    });
+
+    it('keeps the form open with a message when the dispatch reports a refusal', async () => {
+      const onSubmit = jest.fn(() => false);
+      renderForm({ initialSellTradeId: 'sell_allw', onSubmit });
+
+      fireEvent.change(screen.getByLabelText(/Amount/i), { target: { value: '100' } });
+      fireEvent.change(screen.getByLabelText(/FX Rate/i), { target: { value: '32.5' } });
+      fireEvent.click(screen.getByRole('button', { name: /record/i }));
+
+      await waitFor(() => {
+        expect(document.querySelector('.validation-error')?.textContent).toContain('could not be recorded');
+      });
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: /record/i })).toBeInTheDocument();
+    });
+  });

@@ -36,6 +36,9 @@
   "remitFormPreviewCost": "Cost basis (not taxable)",
   "remitFormPreviewTaxable": "Estimated tax: {{usd}} USD × {{fx}} = ฿{{thb}}",
   "remitExceeds": "Remittance exceeds remaining proceeds. Available",
+  "remitAmountPositive": "Enter an amount greater than zero",
+  "remitWrongSale": "This remittance does not belong to the selected sell trade",
+  "remitRejected": "The remittance could not be recorded. Check the amount and try again.",
   "remitEditTitle": "Edit Remittance",
   "remitEditSubmit": "Save Changes",
   "editRemit": "Edit",
@@ -48,5 +51,7 @@
   "markReinvestedAmountHint": "Defaults to the full outstanding balance of ${{balance}}. A smaller amount leaves the remainder outstanding.",
   "markReinvestedSubmit": "Record reinvested amount",
   "markReinvestedExceeds": "Amount cannot exceed the outstanding balance of ${{balance}}",
-  "markReinvestedInvalid": "Enter a valid amount"
+  "markReinvestedInvalid": "Enter a valid amount",
+  "unappliedMarker": "Not counted",
+  "unappliedReason": "This remittance exceeds the proceeds the sale can still support, so it is left out of every total. Reduce its amount or correct the sale to count it again."
 }

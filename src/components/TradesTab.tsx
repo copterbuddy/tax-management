@@ -12,10 +12,16 @@ import type {
   RealizedGainResult,
   TaxSummary,
   OutstandingProceedsRow,
+  LedgerError,
 } from '../types/trade';
 import { formatGainIndicator } from '../engine/fifoEngine';
 import { KpiCard } from './KpiCard';
 import { TradeTable } from './TradeTable';
+
+/** Each refusal code owns exactly one message key — no branching in the JSX. */
+const LEDGER_ERROR_KEYS = {
+  reinvestedExceedsBalance: 'common:ledgerErrorReinvestedExceedsBalance',
+} as const;
 
 interface TradesTabProps {
   trades: TradeTransaction[];
@@ -30,6 +36,8 @@ interface TradesTabProps {
   onAddNew: () => void;
   onRemitGain: (sellTradeId: string) => void;
   onMarkReinvested: (row: OutstandingProceedsRow) => void;
+    ledgerError: LedgerError | null;
+    onDismissLedgerError: () => void;
 }
 
 export function TradesTab({
@@ -45,6 +53,8 @@ export function TradesTab({
   onAddNew,
   onRemitGain,
   onMarkReinvested,
+    ledgerError,
+    onDismissLedgerError,
 }: TradesTabProps) {
   const { t } = useTranslation();
 
@@ -119,7 +129,17 @@ export function TradesTab({
         />
       </div>
 
-      {/* Outstanding proceeds — the gains behind the "not yet returned" figure */}
+      {/* A refused ledger write — inline and dismissible, never a blocking alert */}
+            {ledgerError && (
+              <div className="ledger-error" role="alert">
+                <span>{t(LEDGER_ERROR_KEYS[ledgerError.code])}</span>
+                <button type="button" className="btn btn-secondary" onClick={onDismissLedgerError}>
+                  {t('common:dismiss')}
+                </button>
+              </div>
+            )}
+
+            {/* Outstanding proceeds — the gains behind the "not yet returned" figure */}
       {outstandingRows.length > 0 && (
               <div className="outstanding-proceeds">
                 <h3>{t('common:outstandingTitle', { year: selectedYear })}</h3>

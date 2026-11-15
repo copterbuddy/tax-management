@@ -2,6 +2,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { RealizedGainResult, RemittanceRecord } from '../types/trade';
+import { validateRemittance } from '../engine/fifoEngine';
 import { useTranslation } from 'react-i18next';
 
 // ─── Form Schema ───────────────────────────────────────────────────────────
@@ -23,7 +24,8 @@ interface RemitFormProps {
   remittance?: RemittanceRecord | null;
   /** Gain to preselect when the form is opened for a specific outstanding sale. */
   initialSellTradeId?: string;
-  onSubmit: (remittance: RemittanceRecord) => void;
+    /** Returns `false` when the dispatch was refused, so the form can stay open. */
+      onSubmit: (remittance: RemittanceRecord) => boolean | void;
   onCancel: () => void;
 }
 
@@ -67,21 +69,25 @@ export function RemitForm({ gains, remittance, initialSellTradeId, onSubmit, onC
   });
   const selectedGain = gains.find(g => g.sellTradeId === sellTradeId);
 
+  const rejectionMessage = (reason: string | undefined, availableUSD: number): string => {
+    if (reason?.includes('exceeds remaining')) {
+      return `${t('remittance:remitExceeds')}: $${availableUSD.toFixed(2)}`;
+    }
+    if (reason?.includes('positive')) {
+      return t('remittance:remitAmountPositive');
+    }
+    return t('remittance:remitWrongSale');
+  };
+
   const onFormSubmit = (data: RemitFormData) => {
     const amount = Number(data.amountUSD);
 
     // When editing, the old remittance still counts toward totalRemitted,
     // so the effective available = remaining + oldAmount
+        const previousAmount = isEdit && remittance ? remittance.amountUSD : 0;
     const effectiveRemaining = selectedGain
-      ? selectedGain.remainingProceedsUSD + (isEdit && remittance ? remittance.amountUSD : 0)
+          ? selectedGain.remainingProceedsUSD + previousAmount
       : 0;
-
-    if (selectedGain && amount > effectiveRemaining) {
-      setError('amountUSD', {
-        message: `${t('remittance:remitExceeds')}: $${effectiveRemaining.toFixed(2)}`,
-      });
-      return;
-    }
 
     const remittanceRecord: RemittanceRecord = {
       id: remittance?.id || generateId(),
@@ -92,7 +98,25 @@ export function RemitForm({ gains, remittance, initialSellTradeId, onSubmit, onC
       notes: data.notes?.trim() || undefined,
     };
 
-    onSubmit(remittanceRecord);
+      if (selectedGain) {
+            // Validate against a candidate gain that does not double-count the record being edited.
+            const candidate: RealizedGainResult = {
+              ...selectedGain,
+              totalRemittedUSD: selectedGain.totalRemittedUSD - previousAmount,
+              remainingProceedsUSD: effectiveRemaining,
+            };
+            const result = validateRemittance(candidate, remittanceRecord);
+            if (!result.valid) {
+              setError('amountUSD', {
+                message: rejectionMessage(result.message, effectiveRemaining),
+              });
+              return;
+      }
+          }
+
+          if (onSubmit(remittanceRecord) === false) {
+            setError('root', { message: t('remittance:remitRejected') });
+          }
   };
 
   const estimatedTaxable = selectedGain && amountUSD && fxRateTHB

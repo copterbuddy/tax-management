@@ -17,6 +17,7 @@ interface DividendTabProps {
     totalRemittedUSD: number;
     totalReportableIncomeTHB: number;
     totalWhtCreditTHB: number;
+    totalGrossEquivalentTHB: number;
     totalUnremittedUSD: number;
     recordCount: number;
     remittedCount: number;
@@ -216,6 +217,7 @@ export function DividendTab({
         <KpiCard
           title={t('dividend:kpiReportable')}
           value={`฿${summary ? fmtTHB(summary.totalReportableIncomeTHB) : '0.00'}`}
+          subValue={summary ? `${t('dividend:kpiGrossEquivalent')}: ฿${fmtTHB(summary.totalGrossEquivalentTHB)}` : undefined}
           variant={summary && summary.totalReportableIncomeTHB > 0 ? 'highlight' : 'neutral'}
           icon="💰"
           tooltip={t('dividend:kpiTooltipReportable')}

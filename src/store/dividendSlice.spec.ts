@@ -419,3 +419,59 @@ describe('reportable-income FX rule (BR2 regression guard)', () => {
     expect(storedB).not.toBe(500 * 40);
   });
 });
+// ─── Import preservation ───────────────────────────────────────────────────
+
+describe('importDividends — remittance preservation', () => {
+  function seeded() {
+    const store = createTestStore();
+    store.dispatch(addDividend(makeDividend()));
+    store.dispatch(addDividendRemittance(makeRemittance({ id: 'rem_1', amountUSD: 500 })));
+    return store;
+  }
+
+  it('keeps a stored remittance when the file carries none', () => {
+    const store = seeded();
+    store.dispatch(importDividends([makeDividend()]));
+
+    const record = store.getState().dividend.records[0];
+    expect(record.remittances).toHaveLength(1);
+    expect(record.remittances[0].id).toBe('rem_1');
+    expect(record.totalRemittedUSD).toBeCloseTo(500, 2);
+    expect(record.remainingToRemitUSD).toBeCloseTo(350, 2);
+  });
+
+  it('adds a remittance the file brings', () => {
+    const store = seeded();
+    const incoming = makeDividend({ remittances: [makeRemittance({ id: 'rem_2', amountUSD: 100, remitDate: '2026-06-01' })] });
+    store.dispatch(importDividends([incoming]));
+
+    const record = store.getState().dividend.records[0];
+    expect(record.remittances.map(r => r.id).sort()).toEqual(['rem_1', 'rem_2']);
+    expect(record.totalRemittedUSD).toBeCloseTo(600, 2);
+  });
+
+  it('does not duplicate a shared remittance id', () => {
+    const store = seeded();
+    const updated = makeRemittance({ id: 'rem_1', amountUSD: 700 });
+    store.dispatch(importDividends([makeDividend({ remittances: [updated] })]));
+
+    const record = store.getState().dividend.records[0];
+    expect(record.remittances).toHaveLength(1);
+    expect(record.remittances[0].amountUSD).toBeCloseTo(700, 2);
+    expect(record.totalRemittedUSD).toBeCloseTo(700, 2);
+  });
+
+  it('drops a record the import no longer contains', () => {
+    const store = seeded();
+    store.dispatch(importDividends([makeDividend({ id: 'div_other' })]));
+
+    expect(store.getState().dividend.records.map(r => r.id)).toEqual(['div_other']);
+  });
+
+  it('leaves the loaded list untouched on a no-op import', () => {
+    const store = seeded();
+    const before = JSON.parse(JSON.stringify(store.getState().dividend.records));
+    store.dispatch(importDividends(store.getState().dividend.records));
+    expect(store.getState().dividend.records).toEqual(before);
+  });
+});

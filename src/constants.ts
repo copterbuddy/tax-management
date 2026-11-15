@@ -6,6 +6,10 @@ import type { ProviderType, CountryCode, CountryWhtInfo } from './types/trade';
 
 // ─── Storage Keys ──────────────────────────────────────────────────────────
 
+// Half a cent. Money is compared on the cent grid everywhere: a figure shown to
+// the user rounded to cents must be enterable, and float noise must not reject it.
+export const MONEY_TOLERANCE_USD = 0.005;
+
 export const STORAGE_KEYS = {
   TRADES: 'tax_tracker_trades',
   GAINS: 'tax_tracker_gains',

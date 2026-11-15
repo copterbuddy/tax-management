@@ -509,3 +509,79 @@ describe('getDividendYears', () => {
 beforeEach(() => {
   localStorage.clear();
 });
+// ─── Rounding tolerance on the remittance balance ──────────────────────────
+
+describe('validateRemittance — cent tolerance', () => {
+  // The SPGI shape: 0.49 gross, 15% WHT, 0.4165 net. A 0.22 remittance leaves a
+  // repeating decimal that the UI displays as 0.20.
+  const partial = makeDividend({
+    grossAmountUSD: 0.49, whtRate: 15, whtAmountUSD: 0.0735, netAmountUSD: 0.4165,
+    totalRemittedUSD: 0.22, remainingToRemitUSD: 0.19649999999999998,
+    remittances: [makeRemittance({ id: 'r1', amountUSD: 0.22 })],
+  });
+
+  it('accepts the balance the interface displays', () => {
+    expect(validateRemittance(partial, 0.2).valid).toBe(true);
+    const applied = applyDividendRemittance(partial, makeRemittance({ id: 'r2', amountUSD: 0.2 }));
+    expect(applied.remainingToRemitUSD).toBe(0);
+  });
+
+  it('accepts the exact remainder', () => {
+    expect(validateRemittance(partial, 0.1965).valid).toBe(true);
+    const applied = applyDividendRemittance(partial, makeRemittance({ id: 'r3', amountUSD: 0.1965 }));
+    expect(applied.remainingToRemitUSD).toBe(0);
+  });
+
+  it('still rejects an amount clearly above the balance, naming it', () => {
+    const result = validateRemittance(partial, 0.21);
+    expect(result.valid).toBe(false);
+    expect(result.message).toContain('0.20');
+  });
+});
+
+// ─── Gross equivalent in the annual summary ────────────────────────────────
+
+describe('computeDividendSummary — gross equivalent', () => {
+  const spgi = makeDividend({
+    date: '2026-03-11', grossAmountUSD: 0.49, whtRate: 15, whtAmountUSD: 0.0735,
+    netAmountUSD: 0.4165, totalRemittedUSD: 0.4165, remainingToRemitUSD: 0,
+    remittances: [makeRemittance({
+      id: 'r1', amountUSD: 0.4165, remitDate: '2026-04-07', remitFxRate: 32.53,
+      remitTHB: 13.548745, reportableIncomeTHB: 13.548745, whtCreditTHB: 2.390955,
+    })],
+  });
+
+  it('adds the withheld credit back to the reportable income', () => {
+    const summary = computeDividendSummary([spgi], 2026);
+    expect(summary.totalReportableIncomeTHB).toBeCloseTo(13.548745, 4);
+    expect(summary.totalWhtCreditTHB).toBeCloseTo(2.390955, 4);
+    expect(summary.totalGrossEquivalentTHB).toBeCloseTo(15.9397, 3);
+  });
+
+  it('equals the reportable income when nothing was withheld', () => {
+    const noWht = makeDividend({
+      grossAmountUSD: 100, whtRate: 0, whtAmountUSD: 0, netAmountUSD: 100,
+      totalRemittedUSD: 100, remainingToRemitUSD: 0,
+      remittances: [makeRemittance({ amountUSD: 100, remitDate: '2026-05-01', remitFxRate: 32,
+        remitTHB: 3200, reportableIncomeTHB: 3200, whtCreditTHB: 0 })],
+    });
+    const summary = computeDividendSummary([noWht], 2026);
+    expect(summary.totalGrossEquivalentTHB).toBeCloseTo(summary.totalReportableIncomeTHB, 6);
+  });
+
+  it('attributes each year only its own remittances', () => {
+    const split = makeDividend({
+      grossAmountUSD: 0.49, whtRate: 15, whtAmountUSD: 0.0735, netAmountUSD: 0.4165,
+      totalRemittedUSD: 0.4165, remainingToRemitUSD: 0,
+      remittances: [
+        makeRemittance({ id: 'a', amountUSD: 0.2, remitDate: '2026-04-07', remitFxRate: 32.53, reportableIncomeTHB: 6.506, whtCreditTHB: 1.1479 }),
+        makeRemittance({ id: 'b', amountUSD: 0.2165, remitDate: '2027-01-20', remitFxRate: 32.53, reportableIncomeTHB: 7.042745, whtCreditTHB: 1.243055 }),
+      ],
+    });
+    const y2026 = computeDividendSummary([split], 2026);
+    const y2027 = computeDividendSummary([split], 2027);
+    expect(y2026.totalGrossEquivalentTHB).toBeCloseTo(7.6539, 3);
+    expect(y2027.totalGrossEquivalentTHB).toBeCloseTo(8.2858, 3);
+    expect(y2026.totalGrossEquivalentTHB + y2027.totalGrossEquivalentTHB).toBeCloseTo(15.9397, 3);
+  });
+});

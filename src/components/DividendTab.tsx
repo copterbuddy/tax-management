@@ -237,9 +237,9 @@ export function DividendTab({
         />
         <KpiCard
           title={t('dividend:kpiReportable')}
-          value={`฿${summary ? fmtTHB(summary.totalReportableIncomeTHB) : '0.00'}`}
-          subValue={summary ? `${t('dividend:kpiGrossEquivalent')}: ฿${fmtTHB(summary.totalGrossEquivalentTHB)}` : undefined}
-          variant={summary && summary.totalReportableIncomeTHB > 0 ? 'highlight' : 'neutral'}
+          value={`฿${summary ? fmtTHB(summary.totalGrossEquivalentTHB) : '0.00'}`}
+          subValue={summary ? `${t('dividend:kpiReceivedLabel')}: ฿${fmtTHB(summary.totalReportableIncomeTHB)}` : undefined}
+          variant={summary && summary.totalGrossEquivalentTHB > 0 ? 'highlight' : 'neutral'}
           icon="💰"
           tooltip={t('dividend:kpiTooltipReportable')}
         />

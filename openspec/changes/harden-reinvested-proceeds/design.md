@@ -105,14 +105,21 @@ Flow for a submission:
 `RemittanceRecord` gains an optional `unapplied?: boolean`. Recompute paths become:
 
 ```
-apply list = records where !unapplied
-for each record:
-  candidate = validateRemittance(currentGain, record)
-  if valid  -> currentGain = applyRemittance(currentGain, record)
-  else      -> keep the record in the list with unapplied: true
+working = gain recomputed from the trades alone
+for each stored record in its stored order:
+  if validateRemittance(working, record).valid
+    -> working = applyRemittance(working, record); record.unapplied = undefined
+  else
+    -> keep the record untouched in the list, with unapplied: true
 ```
 
+Every record is re-evaluated on every recompute — including one already flagged — so a raised revenue or a reduced amount re-applies it and the flag clears; the order of the loop never migrates a record, only its applied/unapplied state.
+
 The record keeps every field (id, amountUSD, remitDate, fxRateTHB, notes) and stays in `tax_tracker_gains` inside `gain.remittances` — so nothing the user typed is lost — but it is excluded from `totalRemittedUSD`, `taxableGainTHB`, and every tax-year total.
+
+*The decision is per record, in order*: each record is tested against the gain as the records before it left it, so a record that still fits at its turn stays applied. Revenue 100 against remittances of 75 and 75 leaves the first applied and counted and flags only the second; revenue 100 against 120 and 120 flags both, because the first already exceeds the whole balance on its own. Nothing about a record decides its fate — its position does — which is why "two records totalling more than the revenue" is not the same statement as "both are flagged".
+
+*The flag must be filtered at the source, not only skipped when recording it*: `computeTaxSummary` builds `yearRemittances` from every gain's `remittances` filtered by date alone (`src/engine/fifoEngine.ts` L365–369), so a flagged record would still land in `totalRemittedUSD`, `taxableGainUSD`, `taxableGainTHB`, `totalRemittanceCount`, `remittedSellCount`, `excludedLossesUSD` and every `providerBreakdown` row. The "excluded from every tax-year total" claim above is true only once that one array also excludes `unapplied === true`; without the filter the flag changes a row on screen and leaves the tax figures untouched. That filter is therefore its own task in the engine group, ahead of the store-level marking, so the totals are correct the moment the first record is flagged.
 
 *Why not push the invalid record into a throwaway `state.issues` array*: the record would only survive a reload if it lives inside `gain.remittances`, because that is what `saveGains` writes. An issues array is either persisted (same schema change, less obvious) or lost. Keeping the flag on the record makes the record self-describing and re-derivable on load.
 

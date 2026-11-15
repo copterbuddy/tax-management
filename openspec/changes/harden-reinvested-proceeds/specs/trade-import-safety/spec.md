@@ -43,10 +43,10 @@ The import SHALL remove the records of a sale only when that sale is no longer p
 
 An imported trade list SHALL keep every remittance recorded against a sale it still contains, including a remittance the sale's new proceeds can no longer support. That record SHALL be retained and marked unresolved (unapplied) — never dropped and never silently re-applied — while the import is still applied to every sale. Flagging SHALL leave the record's amount, date, FX rate and notes intact.
 
-#### Scenario: A shrunken sale keeps its remittances and flags them
+#### Scenario: A shrunken sale keeps its remittances and flags only what no longer fits
 
-- **WHEN** a sale with two remittances totalling 150 is imported with a revenue of 100
-- **THEN** both remittances are still present with their original amounts and dates, each is marked unresolved, and the imported revenue is applied
+- **WHEN** a sale carrying two remittances of 75 each is imported with a revenue of 100
+- **THEN** both remittances are still present with their original amounts and dates, the first remains applied and counted, the second is marked unresolved and excluded from the year totals, and the imported revenue is applied
 
 #### Scenario: The flagged record is not silently dropped or re-applied
 

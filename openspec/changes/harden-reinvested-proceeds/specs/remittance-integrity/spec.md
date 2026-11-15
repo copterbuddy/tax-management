@@ -33,11 +33,15 @@ When a submission is rejected, the system SHALL keep the remittance form open wi
 - **THEN** the remittance is stored, the form closes, and the remittance appears in the list for that sell trade
 
 ### Requirement: A stored remittance made inapplicable by a later trade change is surfaced as unresolved
-WHEN adding, editing, or deleting a trade makes an already-stored remittance inapplicable, the system SHALL retain that remittance, SHALL report it as unresolved with the trade and the reason, and SHALL NOT let the affected tax-year total change without that report. The report SHALL clear once the data is consistent again.
+WHEN adding, editing, or deleting a trade makes an already-stored remittance inapplicable, the system SHALL retain that remittance, SHALL report it as unresolved with the trade and the reason, and SHALL exclude it from the tax-year totals while it stays unresolved, so the reduced figure always comes with that report. The report SHALL clear once the data is consistent again.
 
 #### Scenario: Trade edit invalidates a stored remittance
 - **WHEN** the user edits a sell trade so its proceeds fall below an amount already remitted against it
 - **THEN** the remittance is reported as unresolved, naming the sell trade and the reason, instead of disappearing from the tax-year figures
+
+#### Scenario: An unresolved remittance is excluded from the year totals
+- **WHEN** a year holds one applied and one unresolved remittance against a sale whose proceeds cover only the applied one
+- **THEN** the unresolved amount is absent from that year's remitted total, taxable gain, remittance count and provider row, while the applied amount is counted as usual
 
 #### Scenario: Correction clears the report
 - **WHEN** the user corrects either the trade or the remittance so that the remittance fits again

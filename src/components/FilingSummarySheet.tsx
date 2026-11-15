@@ -1,9 +1,13 @@
 import { useTranslation } from 'react-i18next';
-import type { FilingFigures, FilingIssue } from '../engine/filingSummary';
+import { changedFilingFields, type FilingFigures, type FilingIssue } from '../engine/filingSummary';
+import type { YearLock } from '../store/filingSlice';
 
 interface FilingSummarySheetProps {
   figures: FilingFigures;
   issues: FilingIssue[];
+  locked?: YearLock | null;
+  onLock: () => void;
+  onUnlock: () => void;
   onExport: () => void;
   onClose: () => void;
 }
@@ -12,7 +16,7 @@ interface FilingSummarySheetProps {
  * Year-end view: the figures a return asks for, what blocks filing, and one
  * export action. Presentational only — numbers and flags arrive as props.
  */
-export function FilingSummarySheet({ figures, issues, onExport, onClose }: FilingSummarySheetProps) {
+export function FilingSummarySheet({ figures, issues, locked, onLock, onUnlock, onExport, onClose }: FilingSummarySheetProps) {
   const { t } = useTranslation();
   const fmt = (n: number) =>
     n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -66,6 +70,34 @@ export function FilingSummarySheet({ figures, issues, onExport, onClose }: Filin
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+
+        <div className="filing-lock">
+          {locked ? (
+            <>
+              <p className="filing-locked-at">
+                {t('common:filingLockedAt', { date: locked.lockedAt.slice(0, 10) })}
+              </p>
+              {changedFilingFields(figures, locked.figures).length === 0 ? (
+                <p className="filing-ready">✓ {t('common:filingLockMatches')}</p>
+              ) : (
+                <p className="filing-lock-warn">
+                  {t('common:filingLockChanged', {
+                    fields: changedFilingFields(figures, locked.figures)
+                      .map(field => t(`common:filingField_${field}`))
+                      .join(' · '),
+                  })}
+                </p>
+              )}
+              <button type="button" className="btn btn-secondary" onClick={onUnlock}>
+                {t('common:filingUnlock')}
+              </button>
+            </>
+          ) : (
+            <button type="button" className="btn btn-secondary" onClick={onLock}>
+              {t('common:filingLock')}
+            </button>
           )}
         </div>
 

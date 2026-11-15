@@ -1,4 +1,4 @@
-import { buildFilingCsv, buildFilingFigures, findFilingIssues } from './filingSummary';
+import { buildFilingCsv, buildFilingFigures, changedFilingFields, findFilingIssues } from './filingSummary';
 import type { DividendSummary, RealizedGainResult, TaxSummary } from '../types/trade';
 
 const gainSummary = {
@@ -112,5 +112,24 @@ describe('buildFilingCsv', () => {
   it('quotes labels that contain a comma', () => {
     const csv = buildFilingCsv(figures, { ...labels, total: 'รวม, ทั้งหมด' });
     expect(csv).toContain('"รวม, ทั้งหมด"');
+  });
+});
+// ─── changedFilingFields ────────────────────────────────────────────────────
+
+describe('changedFilingFields', () => {
+  const filed = buildFilingFigures(2026, gainSummary, dividendSummary);
+
+  it('reports nothing when the year did not move', () => {
+    expect(changedFilingFields(filed, filed)).toEqual([]);
+  });
+
+  it('ignores sub-cent noise', () => {
+    const drifted = { ...filed, capitalGainTHB: filed.capitalGainTHB + 0.004 };
+    expect(changedFilingFields(drifted, filed)).toEqual([]);
+  });
+
+  it('names every field that moved', () => {
+    const moved = { ...filed, dividendCreditTHB: 3.1, capitalGainTHB: 11000 };
+    expect(changedFilingFields(moved, filed)).toEqual(['dividendCredit', 'capitalGain']);
   });
 });

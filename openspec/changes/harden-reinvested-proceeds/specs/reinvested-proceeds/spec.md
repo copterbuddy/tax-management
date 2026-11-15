@@ -52,6 +52,11 @@ When a reinvested amount cannot be recorded, the system SHALL leave every stored
 - **WHEN** the message is showing and a subsequent amount is recorded successfully
 - **THEN** the message disappears without a separate dismissal
 
+#### Scenario: A successful import clears a stale message
+
+- **WHEN** the message is showing and the user imports a trade list that is applied
+- **THEN** the message disappears without a separate dismissal and no stale text remains
+
 #### Scenario: The message speaks the interface language
 
 - **WHEN** the interface language is Thai

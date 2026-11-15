@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Governs what replacing the trade list may do to the records FIFO cannot derive — the remittances and reinvested amounts recorded against a sale — so that importing trades can never silently destroy history, whether by dropping the records of a sale that still exists or by quietly discarding a remittance that no longer fits its sale.
+Governs what replacing the trade list may do to the records FIFO cannot derive — the remittances and reinvested amounts recorded against a sale — so that importing trades can never silently destroy history, whether by dropping the records of a sale that still exists or by quietly discarding a remittance that no longer fits its sale. A record that no longer fits is kept and appears unresolved rather than deleted; how that unresolved state is displayed, corrected, and excluded from totals belongs to `remittance-integrity`.
 
 ## ADDED Requirements
 
@@ -39,34 +39,29 @@ The import SHALL remove the records of a sale only when that sale is no longer p
 - **WHEN** a sale was dropped by an earlier import and is imported again with the same identity
 - **THEN** the sale's gain exists with no remittances and no reinvested amount
 
-### Requirement: An import that would strand a recorded remittance is refused
+### Requirement: An import that leaves a recorded remittance unsupported keeps it and flags it
 
-An imported trade list that would leave any sale's recorded remittances above that sale's new proceeds SHALL be rejected in full: the trade list, every gain, every remittance, and every reinvested amount SHALL remain as they were, and the conflict SHALL be reported with a visible message that names the sale. Such a gain is a shape the engine refuses to build.
+An imported trade list SHALL keep every remittance recorded against a sale it still contains, including a remittance the sale's new proceeds can no longer support. That record SHALL be retained and marked unresolved (unapplied) — never dropped and never silently re-applied — while the import is still applied to every sale. Flagging SHALL leave the record's amount, date, FX rate and notes intact.
 
-#### Scenario: A shrunken sale keeps its remittances and blocks the import
+#### Scenario: A shrunken sale keeps its remittances and flags them
 
 - **WHEN** a sale with two remittances totalling 150 is imported with a revenue of 100
-- **THEN** both remittances are still present with their original amounts and dates, a visible message names that sale, and no other record changes
+- **THEN** both remittances are still present with their original amounts and dates, each is marked unresolved, and the imported revenue is applied
 
-#### Scenario: The refused import applies nothing
+#### Scenario: The flagged record is not silently dropped or re-applied
 
-- **WHEN** an import is refused because one sale no longer fits its remittances
-- **THEN** every sale, gain, remaining balance, and tax year summary is unchanged, including those the import would have updated successfully
+- **WHEN** an import leaves a remittance unable to fit its sale
+- **THEN** the record survives the import for a later correction, and its amount is not counted as remitted while it is flagged
 
-#### Scenario: An import that fits is still applied
+#### Scenario: An import that fits flags nothing
 
 - **WHEN** every surviving sale's new proceeds still cover its recorded remittances
-- **THEN** the import is applied and each surviving sale keeps its records as described by the preservation requirement
+- **THEN** the import is applied, each surviving sale keeps its records, and no record is marked unresolved
 
-#### Scenario: The conflict is reported on the Trades tab
+#### Scenario: The unresolved record stays visible
 
-- **WHEN** an import is refused for an over-remitted sale
-- **THEN** a dismissible message appears on the Trades tab naming that sale, in the active language
-
-#### Scenario: A later successful import clears the refusal message
-
-- **WHEN** an import was refused and the user then imports a list that fits every surviving sale
-- **THEN** the import is applied, the message disappears without a separate dismissal, and no stale conflict text remains
+- **WHEN** a flagged remittance belongs to the selected year
+- **THEN** it is shown in the remittance list as unresolved rather than omitted, as `remittance-integrity` requires
 
 ### Requirement: A no-op import changes no summary
 

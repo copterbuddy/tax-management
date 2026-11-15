@@ -9,6 +9,7 @@ import tradeReducer, {
   updateTrade,
   deleteTrade,
   addRemittance,
+  setRemittanceDocRef,
   updateRemittance,
   deleteRemittance,
   importTrades,
@@ -836,5 +837,45 @@ describe('tradeSlice — import safety', () => {
     store.dispatch(clearAllTrades());
 
     expect(store.getState().trade.ledgerError).toBeNull();
+  });
+});
+
+// ─── Evidence link on a remittance ─────────────────────────────────────────
+
+describe('tradeSlice — remittance document link', () => {
+  function seeded() {
+    const store = createTestStore();
+    store.dispatch(addTrade(makeTrade({ id: 'b1', date: '2026-01-02', type: 'BUY', quantity: 10, priceUSD: 150 })));
+    store.dispatch(addTrade(makeTrade({ id: 's1', date: '2026-02-13', type: 'SELL', quantity: 5, priceUSD: 200 })));
+    store.dispatch(addRemittance({ id: 'r1', sellTradeId: 's1', amountUSD: 100, remitDate: '2026-03-09', fxRateTHB: 32 }));
+    return store;
+  }
+
+  it('attaches a link without touching any amount', () => {
+    const store = seeded();
+    const before = store.getState().trade.taxSummaries[2026];
+
+    store.dispatch(setRemittanceDocRef({ sellTradeId: 's1', remittanceId: 'r1', docRef: 'https://example.com/slip.pdf' }));
+
+    const remittance = store.getState().trade.gains[0].remittances[0];
+    expect(remittance.docRef).toBe('https://example.com/slip.pdf');
+    expect(store.getState().trade.taxSummaries[2026]).toEqual(before);
+    expect(JSON.parse(localStorageMock.getStore()['tax_tracker_gains'])[0].remittances[0].docRef)
+      .toBe('https://example.com/slip.pdf');
+  });
+
+  it('clears the link when none is given', () => {
+    const store = seeded();
+    store.dispatch(setRemittanceDocRef({ sellTradeId: 's1', remittanceId: 'r1', docRef: 'https://example.com/slip.pdf' }));
+    store.dispatch(setRemittanceDocRef({ sellTradeId: 's1', remittanceId: 'r1' }));
+
+    expect(store.getState().trade.gains[0].remittances[0].docRef).toBeUndefined();
+  });
+
+  it('ignores an unknown remittance', () => {
+    const store = seeded();
+    const before = JSON.stringify(store.getState().trade.gains);
+    store.dispatch(setRemittanceDocRef({ sellTradeId: 's1', remittanceId: 'nope', docRef: 'https://example.com/x' }));
+    expect(JSON.stringify(store.getState().trade.gains)).toBe(before);
   });
 });

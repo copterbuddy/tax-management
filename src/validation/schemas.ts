@@ -39,6 +39,13 @@ export const tradeArraySchema = z.array(tradeTransactionSchema);
 
 // ─── Remittance Record ─────────────────────────────────────────────────────
 
+/** Evidence links must be openable in a browser; a local path would not survive. */
+const documentLinkSchema = z
+  .string()
+  .trim()
+  .url('Invalid URL')
+  .refine(v => /^https?:\/\//i.test(v), 'Only http/https links are accepted');
+
 export const remittanceRecordSchema = z.object({
   id: z.string().min(1),
   sellTradeId: z.string().min(1),
@@ -48,6 +55,7 @@ export const remittanceRecordSchema = z.object({
   notes: z.string().optional(),
   /** Absent means applied, so records saved before this flag load unchanged. */
   unapplied: z.boolean().optional(),
+  docRef: documentLinkSchema.optional(),
 });
 
 /** Array of RemittanceRecord */
@@ -69,6 +77,7 @@ export const dividendRemittanceSchema = z.object({
   reportableIncomeTHB: z.number().min(0),
   whtCreditTHB: z.number().min(0),
   notes: z.string().optional(),
+  docRef: documentLinkSchema.optional(),
 });
 
 // ─── Dividend Record ───────────────────────────────────────────────────────

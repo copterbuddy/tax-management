@@ -301,6 +301,17 @@ export const tradeSlice = createSlice({
       state.ledgerError = null;
     },
 
+    setRemittanceDocRef: (state, action: PayloadAction<{ sellTradeId: string; remittanceId: string; docRef?: string }>) => {
+      const gain = state.gains.find(g => g.sellTradeId === action.payload.sellTradeId);
+      const remittance = gain?.remittances.find(r => r.id === action.payload.remittanceId);
+      if (!gain || !remittance) return;
+
+      if (action.payload.docRef) remittance.docRef = action.payload.docRef;
+      else delete remittance.docRef;
+
+      saveGains(state.gains);
+    },
+
     updateRemittance: (state, action: PayloadAction<RemittanceRecord>) => {
       const gain = state.gains.find(g =>
         g.remittances.some(r => r.id === action.payload.id)
@@ -369,6 +380,7 @@ export const {
   updateTrade,
   deleteTrade,
   addRemittance,
+  setRemittanceDocRef,
   setReinvestedAmount,
   clearLedgerError,
   updateRemittance,

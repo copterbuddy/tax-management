@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import type { DividendRecord } from '../types/trade';
 import { KpiCard } from './KpiCard';
 import { ConfirmDialog } from './ConfirmDialog';
+import { DocRefDialog } from './DocRefDialog';
 
 interface DividendTabProps {
   dividends: DividendRecord[];
@@ -29,6 +30,7 @@ interface DividendTabProps {
   onYearChange: (year: number) => void;
   availableYears: number[];
   onDeleteRemittance: (dividendId: string, remittanceId: string) => void;
+  onSetRemittanceDocRef: (dividendId: string, remittanceId: string, docRef?: string) => void;
 }
 
 export function DividendTab({
@@ -42,11 +44,13 @@ export function DividendTab({
   onYearChange,
   availableYears,
   onDeleteRemittance,
+  onSetRemittanceDocRef,
 }: DividendTabProps) {
   const { t } = useTranslation();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleteRemitConfirm, setDeleteRemitConfirm] = useState<{ dividendId: string; remittanceId: string } | null>(null);
+  const [docTarget, setDocTarget] = useState<{ dividendId: string; remittanceId: string; label: string; value?: string } | null>(null);
 
   // ─── Filter by year ─────────────────────────────────────────────────
 
@@ -168,6 +172,19 @@ export function DividendTab({
                     <td className="mono" style={{ textAlign: 'right', color: 'var(--color-primary)' }}>฿{remit.reportableIncomeTHB.toFixed(2)}</td>
                     <td className="mono" style={{ textAlign: 'right', color: 'var(--color-success)' }}>฿{remit.whtCreditTHB.toFixed(2)}</td>
                     <td style={{ textAlign: 'center' }}>
+                      <button
+                        className={`btn-icon doc-link${remit.docRef ? ' has-doc' : ''}`}
+                        onClick={() => setDocTarget({
+                          dividendId: record.id,
+                          remittanceId: remit.id,
+                          label: `${record.symbol} · ${remit.remitDate}`,
+                          value: remit.docRef,
+                        })}
+                        title={remit.docRef ? t('remittance:docAttached') : t('remittance:docAttach')}
+                        aria-label={remit.docRef ? t('remittance:docAttached') : t('remittance:docAttach')}
+                      >
+                        📎
+                      </button>
                       <button
                         className="btn btn-sm btn-ghost"
                         onClick={() => setDeleteRemitConfirm({ dividendId: record.id, remittanceId: remit.id })}
@@ -433,6 +450,18 @@ export function DividendTab({
       </div>
 
       {/* Delete Confirm */}
+      {docTarget && (
+        <DocRefDialog
+          subject={docTarget.label}
+          value={docTarget.value}
+          onSave={docRef => {
+            onSetRemittanceDocRef(docTarget.dividendId, docTarget.remittanceId, docRef ?? undefined);
+            setDocTarget(null);
+          }}
+          onClose={() => setDocTarget(null)}
+        />
+      )}
+
       {deleteConfirm && (
         <ConfirmDialog
           message={t('dividend:deleteConfirm')}

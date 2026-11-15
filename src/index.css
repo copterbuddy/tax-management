@@ -1738,3 +1738,24 @@ a:hover {
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Remittance evidence (document link)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.doc-link {
+  opacity: 0.45;
+}
+.doc-link.has-doc {
+  opacity: 1;
+  filter: none;
+}
+
+.doc-dialog {
+  max-width: 520px;
+  width: 100%;
+}
+
+.doc-open-line {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+}

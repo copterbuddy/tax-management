@@ -111,6 +111,20 @@ export const dividendSlice = createSlice({
       }
     },
 
+    setDividendRemittanceDocRef: (
+      state,
+      action: PayloadAction<{ dividendId: string; remittanceId: string; docRef?: string }>,
+    ) => {
+      const record = state.records.find(r => r.id === action.payload.dividendId);
+      const remittance = record?.remittances.find(r => r.id === action.payload.remittanceId);
+      if (!record || !remittance) return;
+
+      if (action.payload.docRef) remittance.docRef = action.payload.docRef;
+      else delete remittance.docRef;
+
+      saveDividends(state.records);
+    },
+
     removeDividendRemittance: (
       state,
       action: PayloadAction<{ dividendId: string; remittanceId: string }>,
@@ -192,6 +206,7 @@ export const {
   updateDividend,
   deleteDividend,
   addDividendRemittance,
+  setDividendRemittanceDocRef,
   removeDividendRemittance,
   setDividendDisplayYear,
   importDividends,

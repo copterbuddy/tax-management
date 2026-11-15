@@ -273,4 +273,28 @@ describe('realizedGainSchema', () => {
     };
     expect(realizedGainSchema.safeParse(gain).success).toBe(true);
   });
+
+  const baseGain = {
+    sellTradeId: 's1', sellDate: '2026-01-10', symbol: 'AAPL', provider: 'Dime' as const,
+    sellQuantity: 10, sellRevenueUSD: 1998, buyCostBasisUSD: 1501, gainUSD: 497,
+    gainPercent: 0.249, matchedLots: [], totalRemittedUSD: 0, remainingProceedsUSD: 1998,
+    remittances: [], taxableGainTHB: 0,
+  };
+
+  it('keeps a gain without reinvestedUSD exactly as stored', () => {
+    const parsed = realizedGainSchema.safeParse(baseGain);
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.reinvestedUSD).toBeUndefined();
+  });
+
+  it('keeps a recorded reinvestedUSD', () => {
+    const parsed = realizedGainSchema.safeParse({
+      ...baseGain, reinvestedUSD: 146.43, remainingProceedsUSD: 1851.57,
+    });
+    expect(parsed.success && parsed.data.reinvestedUSD).toBeCloseTo(146.43, 2);
+  });
+
+  it('rejects a negative reinvestedUSD', () => {
+    expect(realizedGainSchema.safeParse({ ...baseGain, reinvestedUSD: -1 }).success).toBe(false);
+  });
 });

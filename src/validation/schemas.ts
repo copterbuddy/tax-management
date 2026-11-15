@@ -118,6 +118,7 @@ export const realizedGainSchema = z.object({
   remainingProceedsUSD: z.number(),
   remittances: z.array(remittanceRecordSchema),
   taxableGainTHB: z.number(),
+  reinvestedUSD: z.number().min(0).finite().optional(),
 });
 
 export const gainsArraySchema = z.array(realizedGainSchema);

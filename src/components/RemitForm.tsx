@@ -21,6 +21,8 @@ type RemitFormData = z.infer<typeof remitFormSchema>;
 interface RemitFormProps {
   gains: RealizedGainResult[];
   remittance?: RemittanceRecord | null;
+  /** Gain to preselect when the form is opened for a specific outstanding sale. */
+  initialSellTradeId?: string;
   onSubmit: (remittance: RemittanceRecord) => void;
   onCancel: () => void;
 }
@@ -31,7 +33,7 @@ function generateId(): string {
 
 // ─── Component ─────────────────────────────────────────────────────────────
 
-export function RemitForm({ gains, remittance, onSubmit, onCancel }: RemitFormProps) {
+export function RemitForm({ gains, remittance, initialSellTradeId, onSubmit, onCancel }: RemitFormProps) {
   const { t } = useTranslation();
   const isEdit = !!remittance;
 
@@ -45,7 +47,7 @@ export function RemitForm({ gains, remittance, onSubmit, onCancel }: RemitFormPr
   } = useForm<RemitFormData>({
     resolver: zodResolver(remitFormSchema),
     defaultValues: {
-      sellTradeId: remittance?.sellTradeId || '',
+      sellTradeId: remittance?.sellTradeId || initialSellTradeId || '',
       amountUSD: remittance?.amountUSD ?? 0,
       remitDate: remittance?.remitDate || new Date().toISOString().substring(0, 10),
       fxRateTHB: remittance?.fxRateTHB ?? 0,

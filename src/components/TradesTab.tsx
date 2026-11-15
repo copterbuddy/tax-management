@@ -7,7 +7,12 @@
 
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { TradeTransaction, RealizedGainResult, TaxSummary } from '../types/trade';
+import type {
+  TradeTransaction,
+  RealizedGainResult,
+  TaxSummary,
+  OutstandingProceedsRow,
+} from '../types/trade';
 import { formatGainIndicator } from '../engine/fifoEngine';
 import { KpiCard } from './KpiCard';
 import { TradeTable } from './TradeTable';
@@ -23,6 +28,8 @@ interface TradesTabProps {
   onEdit: (trade: TradeTransaction) => void;
   onDelete: (id: string) => void;
   onAddNew: () => void;
+  onRemitGain: (sellTradeId: string) => void;
+  onMarkReinvested: (row: OutstandingProceedsRow) => void;
 }
 
 export function TradesTab({
@@ -36,6 +43,8 @@ export function TradesTab({
   onEdit,
   onDelete,
   onAddNew,
+  onRemitGain,
+  onMarkReinvested,
 }: TradesTabProps) {
   const { t } = useTranslation();
 
@@ -45,6 +54,7 @@ export function TradesTab({
   []);
 
   const remitCount = summary?.totalRemittanceCount ?? 0;
+  const outstandingRows = summary?.outstandingRows ?? [];
 
   return (
     <div className="trades-tab">
@@ -84,7 +94,7 @@ export function TradesTab({
         <KpiCard
           title={t('common:kpiRemitted')}
           value={summary ? `$${fmtUSD(summary.totalRemittedUSD)}` : '$0.00'}
-          subValue={summary ? `${summary.totalSellCount} ${t('common:sellsCount')}` : undefined}
+          subValue={summary ? `${summary.remittedSellCount} ${t('common:sellsCount')}` : undefined}
           variant="neutral"
           icon="🏦"
           tooltip={t('common:tooltipRemitted')}
@@ -101,13 +111,49 @@ export function TradesTab({
         />
         <KpiCard
           title={t('common:kpiNotRemitted')}
-          value={summary ? `$${fmtUSD(summary.totalRevenueUSD - summary.totalRemittedUSD)}` : '$0.00'}
+          value={summary ? `$${fmtUSD(summary.unremittedUSD)}` : '$0.00'}
           subValue={t('common:kpiNotRemittedSub')}
           variant="neutral"
           icon="🌏"
           tooltip={t('common:tooltipNotRemitted')}
         />
       </div>
+
+      {/* Outstanding proceeds — the gains behind the "not yet returned" figure */}
+      {outstandingRows.length > 0 && (
+              <div className="outstanding-proceeds">
+                <h3>{t('common:outstandingTitle', { year: selectedYear })}</h3>
+                <p className="outstanding-hint">{t('common:outstandingHint')}</p>
+                <ul className="outstanding-list">
+                  {outstandingRows.map(row => (
+                    <li key={row.sellTradeId} className="outstanding-row">
+                      <span className="outstanding-identity">
+                        <strong>{row.symbol}</strong> · {row.provider} · {row.sellDate}
+                      </span>
+                      <span className="outstanding-balance">
+                        {t('common:outstandingBalanceLabel')}: ${fmtUSD(row.availableBalanceUSD)}
+                      </span>
+                      <span className="outstanding-actions">
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => onRemitGain(row.sellTradeId)}
+                        >
+                          {t('common:outstandingRemitAction')}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-secondary"
+                          onClick={() => onMarkReinvested(row)}
+                        >
+                          {t('common:outstandingMarkReinvestedAction')}
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
       {/* Provider KPI Row */}
       {summary?.providerBreakdown && summary.providerBreakdown.length > 0 && (
@@ -121,9 +167,9 @@ export function TradesTab({
                 key={pb.provider}
                 title={`🏢 ${pb.provider}`}
                 value={formatGainIndicator(pb.taxableGainTHB)}
-                subValue={`$${fmtUSD(pb.totalRemittedUSD)} remitted${pctText}`}
+                subValue={`$${fmtUSD(pb.totalRemittedUSD)} ${t('common:providerRemittedSuffix')}${pctText}`}
                 subValue2={pb.sellCount > 0
-                  ? `${pb.sellCount} sell${pb.sellCount !== 1 ? 's' : ''} | Net: ${pb.netGainUSD >= 0 ? '+' : ''}$${fmtUSD(pb.netGainUSD)}`
+                  ? `${pb.sellCount} ${t('common:sellsCount')} · ${t('common:providerGainLabel')}: ${pb.gainInRemittancesUSD >= 0 ? '+' : ''}$${fmtUSD(pb.gainInRemittancesUSD)}`
                   : t('common:noData')}
                 variant={pb.taxableGainTHB > 0 ? 'positive' : pb.taxableGainTHB < 0 ? 'negative' : 'neutral'}
               />

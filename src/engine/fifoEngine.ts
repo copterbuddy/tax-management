@@ -1,4 +1,4 @@
-import type { TradeTransaction, FifoLot, FifoMatchDetail, RealizedGainResult, RemittanceRecord, TaxSummary, ProviderType } from '../types/trade';
+import type { TradeTransaction, FifoLot, FifoMatchDetail, RealizedGainResult, RemittanceRecord, TaxSummary, ProviderType, ProviderBreakdown, OutstandingProceedsRow } from '../types/trade';
 
 // ─── Key generation ──────────────────────────────────────────────────────
 function lotKey(symbol: string, provider: ProviderType): string {
@@ -223,10 +223,12 @@ export function applyRemittance(
     throw new Error('Remittance does not match sell trade');
   }
 
+  const reinvested = reinvestedUSDOf(gainResult);
   const newTotalRemitted = gainResult.totalRemittedUSD + remittance.amountUSD;
-  if (newTotalRemitted > gainResult.sellRevenueUSD + MONEY_TOLERANCE_USD) {
+  const remittableRevenue = gainResult.sellRevenueUSD - reinvested;
+  if (newTotalRemitted > remittableRevenue + MONEY_TOLERANCE_USD) {
     throw new Error(
-      `Remittance exceeds remaining proceeds. Available: $${(gainResult.sellRevenueUSD - gainResult.totalRemittedUSD).toFixed(2)}`
+      `Remittance exceeds remaining proceeds. Available: $${(remittableRevenue - gainResult.totalRemittedUSD).toFixed(2)}`
     );
   }
 
@@ -238,10 +240,83 @@ export function applyRemittance(
   return {
     ...gainResult,
     totalRemittedUSD: newTotalRemitted,
-    remainingProceedsUSD: gainResult.sellRevenueUSD - newTotalRemitted,
+    remainingProceedsUSD: gainResult.sellRevenueUSD - newTotalRemitted - reinvested,
     remittances: [...gainResult.remittances, remittance],
     taxableGainTHB: gainResult.taxableGainTHB + taxableTHB,
   };
+}
+
+// ─── Reinvested proceeds ─────────────────────────────────────────────────
+
+/** USD amount of a gain's proceeds spent on another offshore purchase. */
+export function reinvestedUSDOf(gain: RealizedGainResult): number {
+  const amount = gain.reinvestedUSD ?? 0;
+  return Number.isFinite(amount) && amount > 0 ? amount : 0;
+}
+
+/**
+ * Record (or replace) the proceeds of a sale that were spent on another
+ * offshore purchase. The amount may not exceed what is left after
+ * remittances, so it can only ever reduce the outstanding balance.
+ */
+export function applyReinvestedAmount(
+  gainResult: RealizedGainResult,
+  amountUSD: number
+): RealizedGainResult {
+  if (!Number.isFinite(amountUSD)) {
+    throw new Error('Reinvested amount must be a finite number');
+  }
+  if (amountUSD < 0) {
+    throw new Error('Reinvested amount cannot be negative');
+  }
+  const limit = gainResult.sellRevenueUSD - gainResult.totalRemittedUSD;
+  if (amountUSD > limit + MONEY_TOLERANCE_USD) {
+    throw new Error(`Reinvested amount exceeds remaining proceeds. Available: $${limit.toFixed(2)}`);
+  }
+
+  return {
+    ...gainResult,
+    reinvestedUSD: amountUSD,
+    remainingProceedsUSD: limit - amountUSD,
+  };
+}
+
+export interface GainSummary {
+  totalReinvestedUSD: number;
+  unremittedUSD: number;
+  rows: OutstandingProceedsRow[];
+}
+
+/**
+ * Outstanding proceeds across the gains the caller passes in — a pure sum, so
+ * one over-recorded gain is clamped at 0 instead of offsetting another gain.
+ */
+export function computeGainSummary(gains: RealizedGainResult[]): GainSummary {
+  let totalReinvestedUSD = 0;
+  let unremittedUSD = 0;
+  const rows: OutstandingProceedsRow[] = [];
+
+  for (const g of gains) {
+    const reinvested = reinvestedUSDOf(g);
+    totalReinvestedUSD += reinvested;
+    const balance = g.sellRevenueUSD - g.totalRemittedUSD - reinvested;
+    unremittedUSD += Math.max(0, balance);
+    if (balance > MONEY_TOLERANCE_USD) {
+      rows.push({
+        sellTradeId: g.sellTradeId,
+        sellDate: g.sellDate,
+        symbol: g.symbol,
+        provider: g.provider,
+        sellRevenueUSD: g.sellRevenueUSD,
+        totalRemittedUSD: g.totalRemittedUSD,
+        reinvestedUSD: reinvested,
+        availableBalanceUSD: balance,
+      });
+    }
+  }
+
+  rows.sort((a, b) => a.sellDate.localeCompare(b.sellDate) || a.symbol.localeCompare(b.symbol));
+  return { totalReinvestedUSD, unremittedUSD, rows };
 }
 
 /**
@@ -267,64 +342,85 @@ export function computeTaxableGainsTHB(gains: RealizedGainResult[]): {
 
 // ─── Tax summary ─────────────────────────────────────────────────────────
 
+const PROVIDERS: readonly ProviderType[] = ['Dime', 'Liberator', 'FinansiaSyrus'];
+
+/**
+ * One pass over the complete book, three explicit populations.
+ *
+ * Base gains must come from every trade: FIFO cannot match a sale against
+ * buy lots that were filtered out by a year slice. From there
+ * `saleYearGains` answers what was sold in the year, and `yearRemittances`
+ * answers what arrived in Thailand in the year. Mixing the two produced
+ * lifetime remitted totals and dropped later-year remittances entirely.
+ */
 export function computeTaxSummary(
   trades: TradeTransaction[],
   taxYear: number,
   allGains: RealizedGainResult[] = []
 ): TaxSummary {
-  const yearTrades = trades.filter(t => {
-    const year = parseInt(t.date.substring(0, 4), 10);
-    return year === taxYear;
-  });
+  const year = String(taxYear);
+  const baseGains = allGains.length ? allGains : computeAllRealizedGains(trades).gains;
 
-  const { gains } = computeAllRealizedGains(yearTrades);
-
-  // Apply remittances from existing gain results (retain remittance history)
-  const gainMap = new Map<string, RealizedGainResult>();
-  for (const g of allGains) gainMap.set(g.sellTradeId, g);
-  const mergedGains = gains.map(g => gainMap.get(g.sellTradeId) || g);
-
-  // Filter gains where remittances occurred in this tax year
-  const yearGains = mergedGains.filter(g =>
-    g.remittances.some(r => r.remitDate.startsWith(String(taxYear)))
+  const saleYearGains = baseGains.filter(g => g.sellDate.startsWith(year));
+  const yearRemittances = baseGains.flatMap(g =>
+    g.remittances
+      .filter(r => r.remitDate.startsWith(year))
+      .map(r => ({ gain: g, remittance: r }))
   );
 
-  const totalRevenueUSD = yearGains.reduce((s, g) => s + g.sellRevenueUSD, 0);
-  const totalCostBasisUSD = yearGains.reduce((s, g) => s + g.buyCostBasisUSD, 0);
-  const netGainUSD = yearGains.reduce((s, g) => s + g.gainUSD, 0);
-  const totalRemittedUSD = yearGains.reduce((s, g) => s + g.totalRemittedUSD, 0);
+  // Sale-year figures — the tax basis of the sales dated in this year.
+  const totalRevenueUSD = saleYearGains.reduce((s, g) => s + g.sellRevenueUSD, 0);
+  const totalCostBasisUSD = saleYearGains.reduce((s, g) => s + g.buyCostBasisUSD, 0);
+  const netGainUSD = saleYearGains.reduce((s, g) => s + g.gainUSD, 0);
 
-  const yearRemittances = mergedGains.flatMap(g =>
-    g.remittances.filter(r => r.remitDate.startsWith(String(taxYear)))
+  // Remittance-year figures — what actually arrived in Thailand this year.
+  const totalRemittedUSD = yearRemittances.reduce((s, x) => s + x.remittance.amountUSD, 0);
+
+  // Losses cannot create a negative taxable amount, so each remittance
+  // contributes only its positive gain portion.
+  const taxableUSDOf = (x: (typeof yearRemittances)[number]) =>
+    Math.max(0, x.remittance.amountUSD * x.gain.gainPercent);
+
+  const taxableGainUSD = yearRemittances.reduce((s, x) => s + taxableUSDOf(x), 0);
+
+  const taxableGainTHB = yearRemittances.reduce(
+    (s, x) => s + taxableUSDOf(x) * x.remittance.fxRateTHB,
+    0
   );
 
-  const taxableGainUSD = yearRemittances.reduce((s, r) => {
-    const gain = mergedGains.find(g => g.sellTradeId === r.sellTradeId);
-    return s + (gain ? r.amountUSD * gain.gainPercent : 0);
-  }, 0);
+  // Losses are not deductible, so report the loss portion of this year's
+  // remittances separately instead of letting it shrink the taxable figure.
+  const excludedLossesUSD = yearRemittances.reduce(
+    (s, x) => s + Math.max(0, -(x.remittance.amountUSD * x.gain.gainPercent)),
+    0
+  );
 
-  const taxableGainTHB = yearRemittances.reduce((s, r) => {
-    const gain = mergedGains.find(g => g.sellTradeId === r.sellTradeId);
-    return s + (gain ? r.amountUSD * gain.gainPercent * r.fxRateTHB : 0);
-  }, 0);
+  const remittedSellCount = new Set(yearRemittances.map(x => x.remittance.sellTradeId)).size;
 
-  const { excludedLossesTHB } = computeTaxableGainsTHB(mergedGains);
-
-  // Provider breakdown — per-provider KPI
-  const providers = ['Dime', 'Liberator', 'FinansiaSyrus'] as const;
-  const providerBreakdown = providers.map(prov => {
-    const provGains = yearGains.filter(g => g.provider === prov);
-    const provRemitTHB = provGains.reduce((s, g) => s + g.taxableGainTHB, 0);
-    const provRemitUSD = provGains.reduce((s, g) => s + g.totalRemittedUSD, 0);
-    const provNetUSD = provGains.reduce((s, g) => s + g.gainUSD, 0);
-    return {
-      provider: prov,
-      taxableGainTHB: provRemitTHB,
-      totalRemittedUSD: provRemitUSD,
-      netGainUSD: provNetUSD,
-      sellCount: provGains.length,
-    };
+  // Provider rows are a partition of `yearRemittances`: same money, split by
+  // provider. A provider with no remittance this year has no row.
+  const providerBreakdown: ProviderBreakdown[] = PROVIDERS.flatMap(provider => {
+    const rows = yearRemittances.filter(x => x.gain.provider === provider);
+    if (rows.length === 0) return [];
+    // `taxableGainUSD` and `gainInRemittancesUSD` are the same sum by
+    // construction (design D8): the row shows a THB gain beside a USD figure.
+    const gainUSD = rows.reduce((s, x) => s + taxableUSDOf(x), 0);
+    return [{
+      provider,
+      taxableGainTHB: rows.reduce(
+        (s, x) => s + taxableUSDOf(x) * x.remittance.fxRateTHB,
+        0
+      ),
+      totalRemittedUSD: rows.reduce((s, x) => s + x.remittance.amountUSD, 0),
+      taxableGainUSD: gainUSD,
+      gainInRemittancesUSD: gainUSD,
+      sellCount: new Set(rows.map(x => x.remittance.sellTradeId)).size,
+    }];
   });
+
+  const { totalReinvestedUSD, unremittedUSD, rows: outstandingRows } = computeGainSummary(saleYearGains);
+
+  const yearTrades = trades.filter(t => t.date.startsWith(year));
 
   return {
     taxYear,
@@ -334,11 +430,15 @@ export function computeTaxSummary(
     totalRemittedUSD,
     taxableGainUSD,
     taxableGainTHB,
-    excludedLossesUSD: excludedLossesTHB,
+    excludedLossesUSD,
     totalTransactions: yearTrades.length,
     totalBuyCount: yearTrades.filter(t => t.type === 'BUY').length,
-    totalSellCount: yearTrades.filter(t => t.type === 'SELL').length,
+    totalSellCount: saleYearGains.length,
     totalRemittanceCount: yearRemittances.length,
+    remittedSellCount,
+    totalReinvestedUSD,
+    unremittedUSD,
+    outstandingRows,
     providerBreakdown,
   };
 }

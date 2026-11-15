@@ -70,25 +70,42 @@ export interface RealizedGainResult {
   matchedLots: FifoMatchDetail[];
   // Remittance tracking
   totalRemittedUSD: number;
-  remainingProceedsUSD: number;
+  remainingProceedsUSD: number; // revenue − remitted − reinvested
   remittances: RemittanceRecord[];
   taxableGainTHB: number; // Sum of (remitUSD × gainPercent × remitFX) across all remittances
+  /** Proceeds spent on another offshore purchase (USD). Absent means 0. */
+  reinvestedUSD?: number;
 }
 
 export interface ProviderBreakdown {
   provider: ProviderType;
   taxableGainTHB: number;
   totalRemittedUSD: number;
-  netGainUSD: number;
-  sellCount: number;
+  /** Gain represented by the money remitted this year. */
+  taxableGainUSD: number;
+  /** Same figure as `taxableGainUSD`, named for the row's USD role (see design D8). */
+  gainInRemittancesUSD: number;
+  sellCount: number; // Distinct sales with a remittance in the year
+}
+
+/** One gain that still has proceeds outside Thailand, as the Trades tab lists it. */
+export interface OutstandingProceedsRow {
+  sellTradeId: string;
+  sellDate: string;
+  symbol: string;
+  provider: ProviderType;
+  sellRevenueUSD: number;
+  totalRemittedUSD: number;
+  reinvestedUSD: number;
+  availableBalanceUSD: number;
 }
 
 export interface TaxSummary {
   taxYear: number;
-  totalRevenueUSD: number;
-  totalCostBasisUSD: number;
-  netGainUSD: number;
-  totalRemittedUSD: number;
+  totalRevenueUSD: number; // Sales dated in the tax year
+  totalCostBasisUSD: number; // Sales dated in the tax year
+  netGainUSD: number; // Sales dated in the tax year
+  totalRemittedUSD: number; // Remittances dated in the tax year
   taxableGainUSD: number; // Gain portion of remittances (USD)
   taxableGainTHB: number; // Gain converted at remittance FX rates
   excludedLossesUSD: number; // Losses not deductible
@@ -96,6 +113,10 @@ export interface TaxSummary {
   totalBuyCount: number;
   totalSellCount: number;
   totalRemittanceCount: number;
+  remittedSellCount: number; // Distinct sales remitted in the tax year
+  totalReinvestedUSD: number; // Reinvested proceed of sales dated in the tax year
+  unremittedUSD: number; // Proceeds still outside Thailand, Σ per-gain clamped
+  outstandingRows: OutstandingProceedsRow[];
   providerBreakdown: ProviderBreakdown[]; // Per-provider KPI
 }
 

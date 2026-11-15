@@ -1,7 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { TradeTransaction, RealizedGainResult, FifoLot, TaxSummary, RemittanceRecord } from '../types/trade';
-import { computeAllRealizedGains, computeTaxSummary, applyRemittance } from '../engine/fifoEngine';
+import { computeAllRealizedGains, computeTaxSummary, applyRemittance, applyReinvestedAmount } from '../engine/fifoEngine';
 import { STORAGE_KEYS } from '../constants';
 import { tradeArraySchema, gainsArraySchema, safeParse } from '../validation/schemas';
 
@@ -111,16 +111,28 @@ function recomputeGains(trades: TradeTransaction[], existingGains: RealizedGainR
 
   return freshGains.map(fg => {
     const old = oldGainMap.get(fg.sellTradeId);
-    if (old && old.remittances.length > 0) {
-      let result = { ...fg };
-      for (const r of old.remittances) {
-        try { result = applyRemittance(result, r); }
-        catch { /* skip invalid remittances */ }
-      }
-      return result;
+    // A reinvested amount is a user-recorded fact about the sale that FIFO
+    // cannot derive, so it survives every recompute (design D5).
+    let result = withReinvestedAmount({ ...fg }, old?.reinvestedUSD);
+    for (const r of old?.remittances ?? []) {
+      try { result = applyRemittance(result, r); }
+      catch { /* skip invalid remittances */ }
     }
-    return fg;
+    return result;
   });
+}
+
+/**
+ * Re-apply a previously recorded reinvested amount. A stale amount that no
+ * longer fits the sale is dropped rather than allowed to throw here.
+ */
+function withReinvestedAmount(
+  gain: RealizedGainResult,
+  reinvestedUSD: number | undefined
+): RealizedGainResult {
+  if (reinvestedUSD === undefined || reinvestedUSD <= 0) return gain;
+  try { return applyReinvestedAmount(gain, reinvestedUSD); }
+  catch { return gain; }
 }
 
 function recomputeGainsWithModifiedRemittances(
@@ -131,20 +143,19 @@ function recomputeGainsWithModifiedRemittances(
 ): RealizedGainResult[] {
   const { gains: freshGains } = computeAllRealizedGains(trades);
   return freshGains.map(fg => {
-    let result = { ...fg };
     if (fg.sellTradeId === sellTradeId) {
+      let result = withReinvestedAmount({ ...fg }, existingGains.find(g => g.sellTradeId === sellTradeId)?.reinvestedUSD);
       for (const r of newRemittances) {
         try { result = applyRemittance(result, r); }
         catch { /* skip invalid remittances */ }
       }
-    } else {
-      const otherGain = existingGains.find(g => g.sellTradeId === fg.sellTradeId);
-      if (otherGain) {
-        for (const r of otherGain.remittances) {
-          try { result = applyRemittance(result, r); }
-          catch { /* skip invalid remittances */ }
-        }
-      }
+      return result;
+    }
+    const otherGain = existingGains.find(g => g.sellTradeId === fg.sellTradeId);
+    let result = withReinvestedAmount({ ...fg }, otherGain?.reinvestedUSD);
+    for (const r of otherGain?.remittances ?? []) {
+      try { result = applyRemittance(result, r); }
+      catch { /* skip invalid remittances */ }
     }
     return result;
   });
@@ -232,6 +243,19 @@ export const tradeSlice = createSlice({
       }
     },
 
+    setReinvestedAmount: (state, action: PayloadAction<{ sellTradeId: string; amountUSD: number }>) => {
+      const gainIndex = state.gains.findIndex(g => g.sellTradeId === action.payload.sellTradeId);
+      if (gainIndex === -1) return;
+
+      try {
+        state.gains[gainIndex] = applyReinvestedAmount(state.gains[gainIndex], action.payload.amountUSD);
+        state.taxSummaries = recomputeSummaries(state.trades, state.gains);
+        saveGains(state.gains);
+      } catch (e) {
+        console.error('Failed to record reinvested amount:', e);
+      }
+    },
+
     updateRemittance: (state, action: PayloadAction<RemittanceRecord>) => {
       const gain = state.gains.find(g =>
         g.remittances.some(r => r.id === action.payload.id)
@@ -265,6 +289,9 @@ export const tradeSlice = createSlice({
     importTrades: (state, action: PayloadAction<TradeTransaction[]>) => {
       state.trades = action.payload;
       saveTrades(state.trades);
+      // Import replaces the gains wholesale, so no reinvested amount survives:
+      // an imported trade list carries no such record, and inventing one would
+      // attach a user decision to a sale the user just replaced.
       state.gains = recomputeGains(state.trades, []);
       state.remainingLots = computeAllRealizedGains(state.trades).remainingLots;
       state.taxSummaries = recomputeSummaries(state.trades, state.gains);
@@ -295,6 +322,7 @@ export const {
   updateTrade,
   deleteTrade,
   addRemittance,
+  setReinvestedAmount,
   updateRemittance,
   deleteRemittance,
   importTrades,

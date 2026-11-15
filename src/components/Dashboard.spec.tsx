@@ -211,3 +211,108 @@ describe('tab-scoped year controls', () => {
     expect(container.querySelectorAll('select')).toHaveLength(1);
   });
 });
+
+// ─── Requirement: Outstanding proceeds are workable from the list ──────────
+// The seeded 2026 book has three SELL gains whose proceeds are not fully back:
+// t2 (998.38 outstanding), t4 (1398.38) and t6 (898.38) — $3,295.14 in total.
+
+function kpiValue(container: HTMLElement, titleKey: string): string {
+  const title = i18next.t(titleKey);
+  const card = Array.from(container.querySelectorAll('.kpi-card'))
+    .find(c => c.querySelector('.kpi-title')?.textContent?.includes(title));
+  expect(card).toBeDefined();
+  return card!.querySelector('.kpi-value')!.textContent!;
+}
+
+function outstandingRow(container: HTMLElement, symbol: string): HTMLElement {
+  const row = Array.from(container.querySelectorAll('.outstanding-row'))
+    .find(r => r.textContent?.includes(symbol));
+  expect(row).toBeDefined();
+  return row as HTMLElement;
+}
+
+function outstandingSymbols(container: HTMLElement): string[] {
+  return Array.from(container.querySelectorAll('.outstanding-row')).map(
+    r => r.querySelector('.outstanding-identity strong')!.textContent!,
+  );
+}
+
+async function submitAmount(container: HTMLElement, amount: number) {
+  const input = container.querySelector('#mark-reinvested-amount') as HTMLInputElement;
+  expect(input).not.toBeNull();
+  fireEvent.change(input, { target: { value: String(amount) } });
+  fireEvent.click(container.querySelector('form.trade-form .btn-primary') as HTMLButtonElement);
+  await waitFor(() => {
+    expect(container.querySelector('#mark-reinvested-amount')).toBeNull();
+  });
+}
+
+describe('outstanding proceeds list', () => {
+  // The store module is a singleton, so a reinvested amount recorded by one test
+  // survives into the next; clear it before each test of this block.
+  beforeEach(async () => {
+    const { store } = await import('../store');
+    const { setReinvestedAmount } = await import('../store/tradeSlice');
+    await act(async () => {
+      store.dispatch(setReinvestedAmount({ sellTradeId: 't6', amountUSD: 0 }));
+    });
+  });
+
+  it('lists every gain of the year whose proceeds have not fully returned', async () => {
+    const { container } = await renderDashboard();
+
+    expect(kpiValue(container, 'common:kpiNotRemitted')).toBe('$3,295.14');
+    expect(outstandingSymbols(container).sort()).toEqual(['AAPL', 'MSFT', 'NVDA']);
+    expect(outstandingRow(container, 'NVDA').textContent).toContain('898.38');
+
+    for (const row of Array.from(container.querySelectorAll('.outstanding-row'))) {
+      expect(row.querySelectorAll('.outstanding-actions button')).toHaveLength(2);
+    }
+  });
+
+  it('opens the remit form with the row it was clicked from preselected', async () => {
+    const { container } = await renderDashboard();
+
+    fireEvent.click(outstandingRow(container, 'NVDA').querySelectorAll('button')[0]);
+
+    const select = await waitFor(() => {
+      const el = container.querySelector('#remit-trade') as HTMLSelectElement;
+      expect(el).not.toBeNull();
+      return el;
+    });
+    expect(select.value).toBe('t6');
+  });
+
+  it('removes a sale from the list once its full balance is reinvested', async () => {
+    const { container } = await renderDashboard();
+
+    fireEvent.click(outstandingRow(container, 'NVDA').querySelectorAll('button')[1]);
+    await submitAmount(container, 898.38);
+
+    expect(kpiValue(container, 'common:kpiNotRemitted')).toBe('$2,396.76');
+    expect(outstandingSymbols(container).sort()).toEqual(['AAPL', 'MSFT']);
+  });
+
+  it('keeps the remaining balance in the list when only part is reinvested', async () => {
+    const { container } = await renderDashboard();
+
+    fireEvent.click(outstandingRow(container, 'NVDA').querySelectorAll('button')[1]);
+    await submitAmount(container, 400);
+
+    expect(kpiValue(container, 'common:kpiNotRemitted')).toBe('$2,895.14');
+    expect(outstandingRow(container, 'NVDA').textContent).toContain('498.38');
+  });
+
+  it('changes nothing when the dialog is cancelled', async () => {
+    const { container } = await renderDashboard();
+
+    fireEvent.click(outstandingRow(container, 'NVDA').querySelectorAll('button')[1]);
+    fireEvent.click(container.querySelector('.trade-form-modal .btn-secondary') as HTMLButtonElement);
+
+    await waitFor(() => {
+      expect(container.querySelector('#mark-reinvested-amount')).toBeNull();
+    });
+    expect(kpiValue(container, 'common:kpiNotRemitted')).toBe('$3,295.14');
+    expect(outstandingSymbols(container)).toHaveLength(3);
+  });
+});

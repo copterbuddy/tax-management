@@ -8,11 +8,15 @@ import tradeReducer, {
   addTrade,
   updateTrade,
   deleteTrade,
+  addRemittance,
+  deleteRemittance,
+  importTrades,
+  setReinvestedAmount,
   setSelectedTaxYear,
   setDisplayTaxYear,
   clearAllTrades,
 } from './tradeSlice';
-import type { TradeTransaction } from '../types/trade';
+import type { RealizedGainResult, TradeTransaction } from '../types/trade';
 import type { TradeState } from './tradeSlice';
 
 // ─── localStorage mock ───────────────────────────────────────────────────
@@ -340,5 +344,122 @@ describe('tradeSlice', () => {
 
       expect(trades[0].grossAmountUSD).toBe(6647.13);
     });
+  });
+});
+// ─── Reinvested proceeds ────────────────────────────────────────────────
+
+describe('tradeSlice — reinvested proceeds', () => {
+  beforeEach(() => {
+    localStorageMock.clear();
+    localStorageMock.getItem.mockClear();
+  });
+
+  function seedSale() {
+    const store = createTestStore();
+    store.dispatch(addTrade(makeTrade({ id: 'b1', date: '2026-01-02', type: 'BUY', quantity: 10, priceUSD: 150 })));
+    store.dispatch(addTrade(makeTrade({ id: 's1', date: '2026-02-13', type: 'SELL', quantity: 5, priceUSD: 200 })));
+    const gain = () => store.getState().trade.gains.find((g: RealizedGainResult) => g.sellTradeId === 's1');
+    return { store, gain };
+  }
+
+  it('keeps a recorded amount across addTrade and updateTrade', () => {
+    const { store, gain } = seedSale();
+    store.dispatch(setReinvestedAmount({ sellTradeId: 's1', amountUSD: 100 }));
+
+    store.dispatch(addTrade(makeTrade({ id: 'b2', date: '2026-03-01', type: 'BUY', quantity: 1, priceUSD: 10 })));
+    expect(gain().reinvestedUSD).toBeCloseTo(100, 2);
+
+    store.dispatch(updateTrade(makeTrade({ id: 'b1', date: '2026-01-02', type: 'BUY', quantity: 10, priceUSD: 150, commissionUSD: 2 })));
+    expect(gain().reinvestedUSD).toBeCloseTo(100, 2);
+  });
+
+  it('keeps a recorded amount across deleteRemittance', () => {
+    const { store, gain } = seedSale();
+    store.dispatch(setReinvestedAmount({ sellTradeId: 's1', amountUSD: 100 }));
+    store.dispatch(addRemittance({ id: 'r1', sellTradeId: 's1', amountUSD: 50, remitDate: '2026-03-09', fxRateTHB: 32 }));
+    expect(gain().totalRemittedUSD).toBeCloseTo(50, 2);
+
+    store.dispatch(deleteRemittance({ id: 'r1', sellTradeId: 's1' }));
+
+    expect(gain().totalRemittedUSD).toBe(0);
+    expect(gain().reinvestedUSD).toBeCloseTo(100, 2);
+  });
+
+  it('restores a recorded amount when the slice loads from storage', () => {
+    const trades = [
+      makeTrade({ id: 'b1', date: '2026-01-02', type: 'BUY', quantity: 10, priceUSD: 150 }),
+      makeTrade({ id: 's1', date: '2026-02-13', type: 'SELL', quantity: 5, priceUSD: 200 }),
+    ];
+    localStorageMock.getStore()['tax_tracker_trades'] = JSON.stringify(trades);
+    localStorageMock.getStore()['tax_tracker_gains'] = JSON.stringify([
+      {
+        sellTradeId: 's1', sellDate: '2026-02-13', symbol: 'AAPL', provider: 'Dime', sellQuantity: 5,
+        sellRevenueUSD: 999, buyCostBasisUSD: 751, gainUSD: 248, gainPercent: 0.2482, matchedLots: [],
+        totalRemittedUSD: 0, remainingProceedsUSD: 899, remittances: [], taxableGainTHB: 0,
+        reinvestedUSD: 100,
+      },
+    ]);
+
+    let state: TradeState | undefined;
+    jest.isolateModules(() => {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const isolated = require('./tradeSlice');
+      state = isolated.default(undefined, { type: '@@INIT' });
+    });
+
+    const gain = (state as TradeState).gains.find(g => g.sellTradeId === 's1');
+    expect(gain?.reinvestedUSD).toBeCloseTo(100, 2);
+    expect(gain?.remainingProceedsUSD).toBeCloseTo((gain as RealizedGainResult).sellRevenueUSD - 100, 2);
+  });
+
+  it('lowers the year outstanding figure by the recorded amount', () => {
+    const { store, gain } = seedSale();
+    const revenue = gain().sellRevenueUSD;
+    expect(store.getState().trade.taxSummaries[2026].unremittedUSD).toBeCloseTo(revenue, 2);
+
+    store.dispatch(setReinvestedAmount({ sellTradeId: 's1', amountUSD: 100 }));
+
+    expect(store.getState().trade.taxSummaries[2026].unremittedUSD).toBeCloseTo(revenue - 100, 2);
+    expect(store.getState().trade.taxSummaries[2026].totalReinvestedUSD).toBeCloseTo(100, 2);
+  });
+
+  it('leaves state untouched when the amount exceeds the balance', () => {
+    const { store, gain } = seedSale();
+    const revenue = gain().sellRevenueUSD;
+    const gainsBefore = JSON.stringify(store.getState().trade.gains);
+    const summariesBefore = JSON.stringify(store.getState().trade.taxSummaries);
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    store.dispatch(setReinvestedAmount({ sellTradeId: 's1', amountUSD: revenue + 10 }));
+
+    errorSpy.mockRestore();
+    expect(JSON.stringify(store.getState().trade.gains)).toBe(gainsBefore);
+    expect(JSON.stringify(store.getState().trade.taxSummaries)).toBe(summariesBefore);
+    expect(gain().reinvestedUSD).toBeUndefined();
+  });
+
+  it('drops the amount with a deleted sale and clears its outstanding row', () => {
+    const { store } = seedSale();
+    store.dispatch(setReinvestedAmount({ sellTradeId: 's1', amountUSD: 100 }));
+    expect(store.getState().trade.taxSummaries[2026].outstandingRows).toHaveLength(1);
+
+    store.dispatch(deleteTrade('s1'));
+
+    expect(store.getState().trade.gains).toHaveLength(0);
+    expect(store.getState().trade.taxSummaries[2026].outstandingRows).toHaveLength(0);
+  });
+
+  it('replaces gains without reinvested amounts on import', () => {
+    const { store } = seedSale();
+    store.dispatch(setReinvestedAmount({ sellTradeId: 's1', amountUSD: 100 }));
+
+    store.dispatch(importTrades([
+      makeTrade({ id: 'b1', date: '2026-01-02', type: 'BUY', quantity: 10, priceUSD: 150 }),
+      makeTrade({ id: 's1', date: '2026-02-13', type: 'SELL', quantity: 5, priceUSD: 200 }),
+    ]));
+
+    const gain = store.getState().trade.gains.find((g: RealizedGainResult) => g.sellTradeId === 's1');
+    expect(gain?.reinvestedUSD).toBeUndefined();
+    expect(store.getState().trade.taxSummaries[2026].unremittedUSD).toBeCloseTo(gain!.sellRevenueUSD, 2);
   });
 });

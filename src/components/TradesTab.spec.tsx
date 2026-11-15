@@ -1,11 +1,22 @@
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
 import i18next from '../i18n/index';
 import { TradesTab } from './TradesTab';
-import type { TaxSummary, TradeTransaction } from '../types/trade';
+import type { OutstandingProceedsRow, TaxSummary, TradeTransaction } from '../types/trade';
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
+
+const outstandingRow: OutstandingProceedsRow = {
+  sellTradeId: 'sell_allw',
+  sellDate: '2026-02-13',
+  symbol: 'ALLW',
+  provider: 'Dime',
+  sellRevenueUSD: 204.75,
+  totalRemittedUSD: 58.32,
+  reinvestedUSD: 0,
+  availableBalanceUSD: 146.43,
+};
 
 const summary: TaxSummary = {
   taxYear: 2026,
@@ -20,16 +31,18 @@ const summary: TaxSummary = {
   totalBuyCount: 2,
   totalSellCount: 2,
   totalRemittanceCount: 1,
+  remittedSellCount: 1,
+  totalReinvestedUSD: 0,
+  unremittedUSD: 146.43,
+  outstandingRows: [outstandingRow],
   providerBreakdown: [
-    { provider: 'Dime', taxableGainTHB: 14432.7, totalRemittedUSD: 1500, netGainUSD: 696.78, sellCount: 1 },
-    { provider: 'Liberator', taxableGainTHB: 0, totalRemittedUSD: 0, netGainUSD: 397, sellCount: 1 },
-    { provider: 'FinansiaSyrus', taxableGainTHB: 0, totalRemittedUSD: 0, netGainUSD: 0, sellCount: 0 },
+    { provider: 'Dime', taxableGainTHB: 14432.7, totalRemittedUSD: 1500, taxableGainUSD: 696.78, gainInRemittancesUSD: 696.78, sellCount: 1 },
   ],
 };
 
 const trades: TradeTransaction[] = [];
 
-function renderTab() {
+function renderTab(overrides: Partial<Parameters<typeof TradesTab>[0]> = {}) {
   return render(
     <TradesTab
       trades={trades}
@@ -42,6 +55,9 @@ function renderTab() {
       onEdit={() => {}}
       onDelete={() => {}}
       onAddNew={() => {}}
+      onRemitGain={() => {}}
+      onMarkReinvested={() => {}}
+      {...overrides}
     />,
   );
 }
@@ -62,29 +78,90 @@ describe('TradesTab capital-gain summary', () => {
   it('renders one card per provider in the breakdown row', () => {
     const { container } = renderTab();
     const row = container.querySelector('.kpi-provider-row')!;
-    expect(row.querySelectorAll('.kpi-card')).toHaveLength(3);
+    expect(row.querySelectorAll('.kpi-card')).toHaveLength(1);
     expect(row.textContent).toContain('Dime');
-    expect(row.textContent).toContain('Liberator');
-    expect(row.textContent).toContain('FinansiaSyrus');
+  });
+
+  it('renders no provider card for a provider missing from the breakdown', () => {
+    const { container } = renderTab();
+    expect(container.querySelector('.kpi-provider-row')!.textContent).not.toContain('Liberator');
   });
 
   it('renders no provider row when the summary has no breakdown', () => {
-    const { container } = render(
-      <TradesTab
-        trades={trades}
-        gains={[]}
-        summary={undefined}
-        selectedYear={2026}
-        availableYears={[2026]}
-        lastUpdated={null}
-        onYearChange={() => {}}
-        onEdit={() => {}}
-        onDelete={() => {}}
-        onAddNew={() => {}}
-      />,
-    );
+    const { container } = renderTab({ summary: undefined, lastUpdated: null });
     expect(container.querySelector('.kpi-provider-row')).toBeNull();
     expect(container.querySelectorAll('.kpi-grid .kpi-card')).toHaveLength(4);
+  });
+});
+
+// ─── Not-yet-returned card ──────────────────────────────────────────────────
+
+describe('TradesTab not-yet-returned card', () => {
+  function notReturnedCard(container: HTMLElement): Element {
+    return container.querySelectorAll('.kpi-grid:not(.kpi-provider-row) .kpi-card')[3];
+  }
+
+  it('renders the summary figure verbatim without recomputing it', () => {
+    const { container } = renderTab({ summary: { ...summary, unremittedUSD: 123.45 } });
+    expect(notReturnedCard(container).textContent).toContain('$123.45');
+  });
+
+  it('shows $0.00 when nothing is outstanding', () => {
+    const { container } = renderTab({ summary: { ...summary, unremittedUSD: 0 } });
+    expect(notReturnedCard(container).textContent).toContain('$0.00');
+  });
+
+  it('describes proceeds not yet returned rather than cash sitting in an account', () => {
+    const { container } = renderTab();
+    const text = notReturnedCard(container).textContent ?? '';
+    expect(text).toContain('ยังไม่กลับไทย');
+    expect(text).not.toMatch(/บัญชี|คงเหลือใน|account/i);
+  });
+});
+
+// ─── Outstanding proceeds list ──────────────────────────────────────────────
+
+describe('TradesTab outstanding proceeds list', () => {
+  it('lists each gain with an outstanding balance and the year in the heading', () => {
+    const { container } = renderTab();
+    const section = container.querySelector('.outstanding-proceeds')!;
+    expect(section.querySelector('h3')!.textContent).toContain('2026');
+    expect(section.textContent).toContain('ALLW');
+    expect(section.textContent).toContain('146.43');
+  });
+
+  it('hides the list when nothing is outstanding', () => {
+    const { container } = renderTab({ summary: { ...summary, unremittedUSD: 0, outstandingRows: [] } });
+    expect(container.querySelector('.outstanding-proceeds')).toBeNull();
+  });
+
+  it('emits the sell trade id when remitting a row', async () => {
+    const onRemitGain = jest.fn();
+    const { container } = renderTab({ onRemitGain });
+    const buttons = container.querySelectorAll('.outstanding-actions .btn');
+    fireEvent.click(buttons[0] as HTMLElement);
+    expect(onRemitGain).toHaveBeenCalledWith('sell_allw');
+  });
+
+  it('emits the whole row when marking a row reinvested', async () => {
+    const onMarkReinvested = jest.fn();
+    const { container } = renderTab({ onMarkReinvested });
+    const buttons = container.querySelectorAll('.outstanding-actions .btn');
+    fireEvent.click(buttons[1] as HTMLElement);
+    expect(onMarkReinvested).toHaveBeenCalledWith(outstandingRow);
+  });
+});
+
+// ─── Remitted card ──────────────────────────────────────────────────────────
+
+describe('TradesTab remitted card', () => {
+  it('counts the remitted sales rather than the year sales', () => {
+    const { container } = renderTab({
+      summary: { ...summary, remittedSellCount: 3, totalSellCount: 9 },
+    });
+    const card = container.querySelectorAll('.kpi-grid:not(.kpi-provider-row) .kpi-card')[1];
+    expect(card.textContent).toContain('3');
+    expect(card.textContent).not.toMatch(/\b9\b/);
   });
 });
 
@@ -108,20 +185,7 @@ describe('TradesTab tax-year control', () => {
   });
 
   it('hides the data-freshness indicator when there is no last-updated date', () => {
-    const { container } = render(
-      <TradesTab
-        trades={trades}
-        gains={[]}
-        summary={summary}
-        selectedYear={2026}
-        availableYears={[2026]}
-        lastUpdated={null}
-        onYearChange={() => {}}
-        onEdit={() => {}}
-        onDelete={() => {}}
-        onAddNew={() => {}}
-      />,
-    );
+    const { container } = renderTab({ lastUpdated: null });
     expect(container.querySelector('.data-freshness')).toBeNull();
   });
 });

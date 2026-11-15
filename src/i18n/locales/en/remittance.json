@@ -41,5 +41,12 @@
   "editRemit": "Edit",
   "deleteRemit": "Delete",
   "colActions": "Actions",
-  "confirmDeleteRemit": "Are you sure you want to delete this remittance record?"
+  "confirmDeleteRemit": "Are you sure you want to delete this remittance record?",
+  "markReinvestedTitle": "Mark proceeds as reinvested",
+  "markReinvestedHelp": "Records that this much of the sale's proceeds was spent on another offshore purchase instead of being returned to Thailand. It stays off the outstanding figure and is not taxed until money is remitted.",
+  "markReinvestedAmount": "Reinvested amount (USD)",
+  "markReinvestedAmountHint": "Defaults to the full outstanding balance of ${{balance}}. A smaller amount leaves the remainder outstanding.",
+  "markReinvestedSubmit": "Record reinvested amount",
+  "markReinvestedExceeds": "Amount cannot exceed the outstanding balance of ${{balance}}",
+  "markReinvestedInvalid": "Enter a valid amount"
 }

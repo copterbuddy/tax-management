@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import type { TradeTransaction, RemittanceRecord, DividendRecord, DividendRemittance } from '../types/trade';
+import type { TradeTransaction, RemittanceRecord, DividendRecord, DividendRemittance, OutstandingProceedsRow } from '../types/trade';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import {
   addTrade,
@@ -8,6 +8,7 @@ import {
   addRemittance,
   updateRemittance,
   deleteRemittance,
+  setReinvestedAmount,
   setSelectedTaxYear,
 } from '../store/tradeSlice';
 import {
@@ -28,6 +29,8 @@ import { persistLanguage } from '../i18n/index';
 import { TradeForm } from './TradeForm';
 import { TradesTab } from './TradesTab';
 import { RemitForm } from './RemitForm';
+import { MarkReinvestedDialog } from './MarkReinvestedDialog';
+import type { ReinvestedAmountInput } from './MarkReinvestedDialog';
 import { ConfirmDialog } from './ConfirmDialog';
 import { RemittanceLog } from './RemittanceLog';
 import { DividendTab } from './DividendTab';
@@ -48,6 +51,8 @@ export function Dashboard() {
 
   const [showForm, setShowForm] = useState(false);
   const [showRemitForm, setShowRemitForm] = useState(false);
+  const [remittingGainId, setRemittingGainId] = useState<string | null>(null);
+  const [reinvestedTarget, setReinvestedTarget] = useState<OutstandingProceedsRow | null>(null);
   const [editingTrade, setEditingTrade] = useState<TradeTransaction | null>(null);
   const [editingRemittance, setEditingRemittance] = useState<RemittanceRecord | null>(null);
   const [activeTab, setActiveTab] = useState<'trades' | 'dividends' | 'remittances'>('trades');
@@ -140,6 +145,21 @@ export function Dashboard() {
   const handleAddRemittance = useCallback((remit: RemittanceRecord) => {
     dispatch(addRemittance(remit));
     setShowRemitForm(false);
+    setRemittingGainId(null);
+  }, [dispatch]);
+
+  const handleRemitGain = useCallback((sellTradeId: string) => {
+    setRemittingGainId(sellTradeId);
+    setShowRemitForm(true);
+  }, []);
+
+  const handleMarkReinvested = useCallback((row: OutstandingProceedsRow) => {
+    setReinvestedTarget(row);
+  }, []);
+
+  const handleSubmitReinvested = useCallback((input: ReinvestedAmountInput) => {
+    dispatch(setReinvestedAmount(input));
+    setReinvestedTarget(null);
   }, [dispatch]);
 
   const handleEditRemittance = useCallback((remit: RemittanceRecord) => {
@@ -321,6 +341,8 @@ export function Dashboard() {
           onEdit={handleEditTrade}
           onDelete={handleDeleteTrade}
           onAddNew={() => setShowForm(true)}
+          onRemitGain={handleRemitGain}
+          onMarkReinvested={handleMarkReinvested}
         />
       ) : activeTab === 'dividends' ? (
         <DividendTab
@@ -362,11 +384,22 @@ export function Dashboard() {
         <RemitForm
           gains={gains}
           remittance={editingRemittance}
+          initialSellTradeId={remittingGainId ?? undefined}
           onSubmit={editingRemittance ? handleUpdateRemittance : handleAddRemittance}
           onCancel={() => {
             setShowRemitForm(false);
             setEditingRemittance(null);
+            setRemittingGainId(null);
           }}
+        />
+      )}
+
+      {/* Mark Reinvested Dialog */}
+      {reinvestedTarget && (
+        <MarkReinvestedDialog
+          row={reinvestedTarget}
+          onSubmit={handleSubmitReinvested}
+          onCancel={() => setReinvestedTarget(null)}
         />
       )}
 

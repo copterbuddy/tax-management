@@ -1740,6 +1740,158 @@ a:hover {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   Filing summary sheet
+   ═══════════════════════════════════════════════════════════════════════════ */
+.filing-sheet {
+  max-width: 540px;
+  width: 100%;
+}
+
+.filing-subtitle {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.filing-figures {
+  margin: 0 0 var(--space-4);
+  display: flex;
+  flex-direction: column;
+}
+
+.filing-figures > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filing-figures dt {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.filing-figures dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.filing-figures .filing-total {
+  border-bottom: none;
+  border-top: 2px solid var(--color-border);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+}
+
+.filing-figures .filing-total dd {
+  font-size: var(--text-lg);
+  color: var(--color-primary);
+}
+
+.filing-issues {
+  margin-bottom: var(--space-5);
+  font-size: var(--text-sm);
+}
+
+.filing-issues ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--color-warning);
+}
+
+.filing-ready {
+  margin: 0;
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.filing-lock {
+  margin-bottom: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--color-border);
+  font-size: var(--text-sm);
+}
+
+.filing-locked-at {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-secondary);
+}
+
+.filing-lock-warn {
+  margin: 0 0 var(--space-3);
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
+.filing-estimate {
+  margin-bottom: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--color-border);
+  font-size: var(--text-sm);
+}
+
+.filing-estimate summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-primary);
+  list-style: none;
+}
+
+.filing-estimate summary::-webkit-details-marker {
+  display: none;
+}
+
+.filing-estimate summary::before {
+  content: '▸ ';
+}
+
+.filing-estimate[open] summary::before {
+  content: '▾ ';
+}
+
+.estimate-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.estimate-lines {
+  margin: var(--space-3) 0 0;
+}
+
+.estimate-lines > div {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.estimate-lines dt {
+  color: var(--color-text-secondary);
+}
+
+.estimate-lines dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.estimate-payable {
+  font-weight: 700;
+  color: var(--color-warning);
+}
+
+.estimate-overpaid {
+  font-weight: 700;
+  color: var(--color-success);
+}
+
+.estimate-hint {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
    Remittance evidence (document link)
    ═══════════════════════════════════════════════════════════════════════════ */
 .doc-link {

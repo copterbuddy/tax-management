@@ -67,6 +67,8 @@ function precedes(a: Element, b: Element) {
 
 beforeEach(async () => {
   await act(async () => { await i18next.changeLanguage('th'); });
+  // The active tab is read from the fragment, so each case starts from a clean URL.
+  window.history.replaceState(null, '', window.location.pathname);
 });
 
 // ─── Requirement: Tab navigation precedes all tab content ───────────────────
@@ -459,3 +461,56 @@ describe('outstanding proceeds list', () => {
                 expect(gain.remittances[0].amountUSD).toBe(100);
               });
             });
+
+// ─── Requirement: the active tab is addressable in the URL ──────────────────
+
+describe('active tab is addressable', () => {
+  it('opens the tab named by the fragment', async () => {
+    window.history.replaceState(null, '', '#dividends');
+    const { container } = await renderDashboard();
+
+    expect(container.querySelector('#dividend-year-select')).not.toBeNull();
+    expect(container.querySelector('#year-select')).toBeNull();
+  });
+
+  it('falls back to the trades tab for an unknown fragment', async () => {
+    window.history.replaceState(null, '', '#not-a-tab');
+    const { container } = await renderDashboard();
+
+    expect(container.querySelector('#year-select')).not.toBeNull();
+  });
+
+  it('writes the fragment when a tab is clicked', async () => {
+    const { container } = await renderDashboard();
+    clickTab(container, 2);
+
+    expect(window.location.hash).toBe('#remittances');
+  });
+
+  it('follows a hashchange event', async () => {
+    const { container } = await renderDashboard();
+
+    await act(async () => {
+      window.history.replaceState(null, '', '#dividends');
+      window.dispatchEvent(new HashChangeEvent('hashchange'));
+    });
+
+    expect(container.querySelector('#dividend-year-select')).not.toBeNull();
+  });
+});
+
+// ─── Requirement: one action opens the year's filing summary ────────────────
+
+describe('filing summary', () => {
+  it('opens from the header and reports the year', async () => {
+    const { container } = await renderDashboard();
+    const button = [...container.querySelectorAll('header button')]
+      .find(b => /สรุปเพื่อยื่น/.test(b.textContent ?? '')) as HTMLElement;
+
+    expect(button).toBeTruthy();
+    fireEvent.click(button);
+
+    expect(container.querySelector('.filing-sheet')).not.toBeNull();
+    expect(container.textContent).toContain('2026');
+  });
+});

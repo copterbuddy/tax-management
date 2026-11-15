@@ -1,6 +1,10 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { TradeTransaction, RemittanceRecord, DividendRecord, DividendRemittance, OutstandingProceedsRow } from '../types/trade';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { useActiveTab } from '../hooks/useActiveTab';
+import { TabNav } from './TabNav';
+import { FilingSummarySheet } from './FilingSummarySheet';
+import { lockYear, unlockYear } from '../store/filingSlice';
 import {
   addTrade,
   updateTrade,
@@ -24,6 +28,7 @@ import {
 } from '../store/dividendSlice';
 import { validateSellLots, computeAllRealizedGains, validateRemittance } from '../engine/fifoEngine';
 import { computeDividendSummary, getAvailableSymbols, validateRemittance as validateDividendRemittance } from '../engine/dividendEngine';
+import { buildFilingCsv, buildFilingFigures, findFilingIssues } from '../engine/filingSummary';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import type { SupportedLang } from '../i18n/index';
@@ -53,13 +58,15 @@ export function Dashboard() {
         ledgerError,
   } = useAppSelector(state => state.trade);
 
+  const [showFiling, setShowFiling] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showRemitForm, setShowRemitForm] = useState(false);
   const [remittingGainId, setRemittingGainId] = useState<string | null>(null);
   const [reinvestedTarget, setReinvestedTarget] = useState<OutstandingProceedsRow | null>(null);
   const [editingTrade, setEditingTrade] = useState<TradeTransaction | null>(null);
   const [editingRemittance, setEditingRemittance] = useState<RemittanceRecord | null>(null);
-  const [activeTab, setActiveTab] = useState<'trades' | 'dividends' | 'remittances'>('trades');
+  // Tab state lives in the URL fragment (hooks/useActiveTab), so F5 keeps the tab.
+  const [activeTab, selectTab] = useActiveTab();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteRemitConfirm, setDeleteRemitConfirm] = useState<RemittanceRecord | null>(null);
 
@@ -74,6 +81,7 @@ export function Dashboard() {
   const [dividendDeleteConfirm, setDividendDeleteConfirm] = useState<string | null>(null);
 
   const summary = taxSummaries[selectedTaxYear];
+  const yearLock = useAppSelector(state => state.filing.locks[selectedTaxYear]);
 
   const availableYears = Object.keys(taxSummaries)
     .map(Number)
@@ -211,6 +219,40 @@ export function Dashboard() {
     [dividendRecords, dividendDisplayYear],
   );
 
+  // The sheet always reads the tax year the header shows, so there is one
+  // answer to "which year am I filing".
+  const filingDividendSummary = useMemo(
+    () => computeDividendSummary(dividendRecords, selectedTaxYear),
+    [dividendRecords, selectedTaxYear],
+  );
+  const filingFigures = useMemo(
+    () => buildFilingFigures(selectedTaxYear, summary, filingDividendSummary),
+    [selectedTaxYear, summary, filingDividendSummary],
+  );
+  const filingIssues = useMemo(
+    () => findFilingIssues(gains, selectedTaxYear),
+    [gains, selectedTaxYear],
+  );
+  const handleExportFiling = useCallback(() => {
+    const csv = buildFilingCsv(filingFigures, {
+      year: t('common:filingCsvYear'),
+      item: t('common:filingCsvItem'),
+      amount: t('common:filingCsvAmount'),
+      dividendGross: t('common:filingDividendGross'),
+      dividendCredit: t('common:filingDividendCredit'),
+      capitalGain: t('common:filingCapitalGain'),
+      total: t('common:filingTotal'),
+    });
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tax-filing-${selectedTaxYear}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, [filingFigures, selectedTaxYear, t]);
+
   const availableSymbols = useMemo(
     () => getAvailableSymbols(trades),
     [trades],
@@ -299,6 +341,10 @@ export function Dashboard() {
           <p className="header-subtitle">{t('common:appSubtitle')}</p>
         </div>
         <div className="header-right">
+          <button className="btn btn-secondary" onClick={() => setShowFiling(true)}>
+            {t('common:filingSummary', { year: selectedTaxYear })}
+          </button>
+
           {/* Theme Toggle */}
           <button
             className="theme-toggle"
@@ -329,27 +375,7 @@ export function Dashboard() {
         </div>
       </header>
 
-      {/* Tabs */}
-      <div className="tab-nav">
-        <button
-          className={`tab-btn ${activeTab === 'trades' ? 'active' : ''}`}
-          onClick={() => setActiveTab('trades')}
-        >
-          📊 {t('common:tabTrades')}
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'dividends' ? 'active' : ''}`}
-          onClick={() => setActiveTab('dividends')}
-        >
-          💵 {t('dividend:tabDividends')}
-        </button>
-        <button
-          className={`tab-btn ${activeTab === 'remittances' ? 'active' : ''}`}
-          onClick={() => setActiveTab('remittances')}
-        >
-          🏦 {t('common:tabRemittances')}
-        </button>
-      </div>
+      <TabNav activeTab={activeTab} onSelect={selectTab} />
 
       {activeTab === 'trades' ? (
         <TradesTab
@@ -389,6 +415,18 @@ export function Dashboard() {
           onRecordRemit={() => setShowRemitForm(true)}
           onEditRemittance={handleEditRemittance}
           onDeleteRemittance={handleDeleteRemittance}
+        />
+      )}
+
+      {showFiling && (
+        <FilingSummarySheet
+          figures={filingFigures}
+          issues={filingIssues}
+          locked={yearLock}
+          onLock={() => dispatch(lockYear({ year: selectedTaxYear, figures: filingFigures }))}
+          onUnlock={() => dispatch(unlockYear(selectedTaxYear))}
+          onExport={handleExportFiling}
+          onClose={() => setShowFiling(false)}
         />
       )}
 

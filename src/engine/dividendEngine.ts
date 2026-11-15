@@ -9,6 +9,7 @@ import type {
   DividendSummary,
   TradeTransaction,
 } from '../types/trade';
+import { MONEY_TOLERANCE_USD } from '../constants';
 
 // ─── THB Snapshot at Dividend Date ──────────────────────────────────────────
 
@@ -73,7 +74,7 @@ export function validateRemittance(
   if (amountUSD <= 0) {
     return { valid: false, message: 'จำนวนเงินต้องมากกว่า 0' };
   }
-  if (amountUSD > dividend.remainingToRemitUSD) {
+  if (amountUSD > dividend.remainingToRemitUSD + MONEY_TOLERANCE_USD) {
     return { valid: false, message: `จำนวนเงินเกินที่สามารถนำเข้าได้ ($ ${dividend.remainingToRemitUSD.toFixed(2)})` };
   }
   return { valid: true };
@@ -101,7 +102,7 @@ export function applyDividendRemittance(
   return {
     ...record,
     totalRemittedUSD,
-    remainingToRemitUSD: record.netAmountUSD - totalRemittedUSD,
+    remainingToRemitUSD: Math.max(0, record.netAmountUSD - totalRemittedUSD),
     remittances: updatedRemittances,
   };
 }
@@ -142,6 +143,7 @@ export function computeDividendSummary(
   let totalRemittedUSD = 0;
   let totalReportableIncomeTHB = 0;
   let totalWhtCreditTHB = 0;
+  let totalGrossEquivalentTHB = 0;
   let totalUnremittedUSD = 0;
   let recordCount = 0;
   let remittedCount = 0;
@@ -176,6 +178,9 @@ export function computeDividendSummary(
     totalRemittedUSD += yearRemittedUSD;
     totalReportableIncomeTHB += yearReportableTHB;
     totalWhtCreditTHB += yearWhtCreditTHB;
+    // Gross = what was received + the tax already withheld on it, at the same
+    // remittance-date rate. Reported beside the net figure, never instead of it.
+    totalGrossEquivalentTHB += yearReportableTHB + yearWhtCreditTHB;
     recordCount++;
     remittedCount++;
   }
@@ -191,6 +196,7 @@ export function computeDividendSummary(
     totalRemittedUSD,
     totalReportableIncomeTHB,
     totalWhtCreditTHB,
+    totalGrossEquivalentTHB,
     totalUnremittedUSD,
     recordCount,
     remittedCount,

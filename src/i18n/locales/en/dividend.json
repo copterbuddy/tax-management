@@ -33,7 +33,7 @@
   "kpiTooltipGrossDiv": "Total gross dividends before withholding tax, all countries",
   "kpiTooltipWht": "Total withholding tax deducted by source countries",
   "kpiTooltipRemitted": "Net dividends remitted into Thailand",
-  "kpiTooltipReportable": "Dividends remitted × remittance date FX rate — enter this in PND 90",
+  "kpiTooltipReportable": "THB actually received for the remitted dividends (net of WHT) — use it when filing net; for a gross filing see «Gross equivalent»",
   "kpiTooltipWhtCredit": "Foreign WHT on remitted portion — claim as tax credit on PND 90",
   "kpiTooltipUnremitted": "Net dividends still overseas — not yet taxable in Thailand",
 
@@ -97,5 +97,7 @@
   "summaryWht": "WHT",
   "summaryRemitted": "Remitted",
   "summaryReportable": "Reportable",
-  "summaryCredit": "Credit"
+  "summaryCredit": "Credit",
+  "kpiGrossEquivalent": "Gross equivalent",
+  "kpiTooltipGrossEquivalent": "Full dividend of the remitted slice = income received + withholding tax. Use it when filing gross and claiming the credit."
 }

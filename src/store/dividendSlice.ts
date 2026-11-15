@@ -150,7 +150,27 @@ export const dividendSlice = createSlice({
     },
 
     importDividends: (state, action: PayloadAction<DividendRecord[]>) => {
-      state.records = action.payload;
+      // A dividends file is a snapshot: never let it delete a remittance the app
+      // already recorded against a record it still contains (spec: dividend-import-safety).
+      const stored = new Map(state.records.map(r => [r.id, r]));
+      state.records = action.payload.map(incoming => {
+        const existing = stored.get(incoming.id);
+        if (!existing || existing.remittances.length === 0) return incoming;
+
+        const byId = new Map<string, DividendRemittance>();
+        for (const r of existing.remittances) byId.set(r.id, r);
+        for (const r of incoming.remittances) byId.set(r.id, r); // the file wins on a shared id
+        const remittances = Array.from(byId.values())
+          .sort((a, b) => a.remitDate.localeCompare(b.remitDate));
+        const totalRemittedUSD = remittances.reduce((sum, r) => sum + r.amountUSD, 0);
+
+        return {
+          ...incoming,
+          remittances,
+          totalRemittedUSD,
+          remainingToRemitUSD: Math.max(0, incoming.netAmountUSD - totalRemittedUSD),
+        };
+      });
       state.availableYears = getDividendYears(state.records);
       if (state.availableYears.length > 0 && !state.availableYears.includes(state.displayYear)) {
         state.displayYear = state.availableYears[0];

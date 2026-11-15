@@ -1,5 +1,6 @@
 import type { TradeTransaction, FifoLot, FifoMatchDetail, RealizedGainResult, RemittanceRecord, TaxSummary, ProviderType, ProviderBreakdown, OutstandingProceedsRow } from '../types/trade';
 import type { ValidationResult } from './dividendEngine';
+import { MONEY_TOLERANCE_USD } from '../constants';
 
 // ─── Key generation ──────────────────────────────────────────────────────
 function lotKey(symbol: string, provider: ProviderType): string {
@@ -36,7 +37,6 @@ const MISMATCH_ABS_TOLERANCE = 0.01;
  * Binary float error on cent amounts (e.g. 6647.13 − 10.86 land on
  * 6636.2699999999995) must not reject a legitimate full remittance.
  */
-const MONEY_TOLERANCE_USD = 0.005;
 
 /**
  * Compare the slip gross amount with quantity × price.

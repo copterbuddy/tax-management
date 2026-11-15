@@ -184,6 +184,8 @@ export interface DividendSummary {
   totalRemittedUSD: number;
   totalReportableIncomeTHB: number;
   totalWhtCreditTHB: number;
+  /** Reportable income plus WHT credit — the gross dividend the remitted slice represents. */
+  totalGrossEquivalentTHB: number;
   totalUnremittedUSD: number;
   recordCount: number;
   remittedCount: number;

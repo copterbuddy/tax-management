@@ -35,6 +35,7 @@ const SUMMARY = {
   totalRemittedUSD: 142,
   totalReportableIncomeTHB: 4888.8,
   totalWhtCreditTHB: 862.7,
+  totalGrossEquivalentTHB: 5751.5,
   totalUnremittedUSD: 49.25,
   recordCount: 2,
   remittedCount: 2,
@@ -148,5 +149,13 @@ describe('DividendTab list identity', () => {
     const after = Array.from(container.querySelectorAll('tbody tr.trade-row .symbol-text')).map(el => el.textContent);
     expect(after).toEqual(before);
     expect(container.querySelectorAll('.remittance-history-row')).toHaveLength(1);
+  });
+});
+
+describe('DividendTab — gross equivalent', () => {
+  it('shows the gross equivalent beside the reportable income', () => {
+    renderTab([record()]);
+    expect(screen.getByText(/5,751\.50/)).toBeInTheDocument();
+    expect(screen.getByText(/4,888\.80/)).toBeInTheDocument();
   });
 });

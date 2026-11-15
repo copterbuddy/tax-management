@@ -63,6 +63,11 @@ An imported trade list that would leave any sale's recorded remittances above th
 - **WHEN** an import is refused for an over-remitted sale
 - **THEN** a dismissible message appears on the Trades tab naming that sale, in the active language
 
+#### Scenario: A later successful import clears the refusal message
+
+- **WHEN** an import was refused and the user then imports a list that fits every surviving sale
+- **THEN** the import is applied, the message disappears without a separate dismissal, and no stale conflict text remains
+
 ### Requirement: A no-op import changes no summary
 
 Importing the list that is already loaded SHALL leave every tax year summary identical, including the remitted total, the taxable gain, and the outstanding balance.

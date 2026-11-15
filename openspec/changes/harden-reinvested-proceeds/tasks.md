@@ -25,6 +25,7 @@
 - [ ] 3.4 Add a test for the over-remittance conflict: a sale carrying two remittances totalling 150 imported with a revenue of 100 leaves both remittances present with their original amounts and dates, sets `ledgerError` to `{ code: 'importOverRemittance', sellLabel }` naming that sale, and leaves trades, gains, `remainingProceedsUSD`, `outstandingRows`, and every year's `taxSummaries` byte-identical to their pre-import values; verify `npx jest tradeSlice` passes.
 - [ ] 3.5 Add a test that an import shrinking a sale while its remittances still fit is applied normally (records kept, no `ledgerError`), so the guard refuses only real conflicts; verify `npx jest tradeSlice` passes.
 - [ ] 3.6 Confirm the sale-year and remittance-year aggregates still reconcile after an identical import by asserting the card totals equal the provider totals in the same test; verify `npx jest tradeSlice` passes with no new console output.
+- [ ] 3.7 Clear `ledgerError` to `null` on every successful `importTrades` (the path that applies the new list), and in `clearAllTrades`; verify with a slice test that a refused import sets `{ code: 'importOverRemittance', sellLabel }`, then importing a valid list leaves `ledgerError === null` while trades, gains, and summaries update, and that clearing all trades from a refused-import state also leaves it `null`; verify `npx jest tradeSlice` passes.
 
 ## 4. Locale JSON formatting normalised
 

@@ -6,6 +6,7 @@ import {
   updateTrade,
   deleteTrade,
   addRemittance,
+  setRemittanceDocRef,
   updateRemittance,
   deleteRemittance,
   setReinvestedAmount,
@@ -18,6 +19,7 @@ import {
   deleteDividend,
   addDividendRemittance,
   removeDividendRemittance,
+  setDividendRemittanceDocRef,
   setDividendDisplayYear,
 } from '../store/dividendSlice';
 import { validateSellLots, computeAllRealizedGains, validateRemittance } from '../engine/fifoEngine';
@@ -378,10 +380,12 @@ export function Dashboard() {
           onYearChange={handleDividendYearChange}
           availableYears={dividendAvailableYears}
           onDeleteRemittance={handleDeleteDividendRemittance}
+          onSetRemittanceDocRef={(dividendId, remittanceId, docRef) => dispatch(setDividendRemittanceDocRef({ dividendId, remittanceId, docRef }))}
         />
       ) : (
         <RemittanceLog
           gains={gains}
+          onSetDocRef={(sellTradeId, remittanceId, docRef) => dispatch(setRemittanceDocRef({ sellTradeId, remittanceId, docRef }))}
           onRecordRemit={() => setShowRemitForm(true)}
           onEditRemittance={handleEditRemittance}
           onDeleteRemittance={handleDeleteRemittance}

@@ -30,15 +30,17 @@ const gain: RealizedGainResult = {
 function renderLog(overrides: Partial<RealizedGainResult> = {}) {
   const onEditRemittance = jest.fn();
   const onDeleteRemittance = jest.fn();
+  const onSetDocRef = jest.fn();
   render(
     <RemittanceLog
       gains={[{ ...gain, ...overrides }]}
       onRecordRemit={jest.fn()}
       onEditRemittance={onEditRemittance}
       onDeleteRemittance={onDeleteRemittance}
+      onSetDocRef={onSetDocRef}
     />
   );
-  return { onEditRemittance, onDeleteRemittance };
+  return { onEditRemittance, onDeleteRemittance, onSetDocRef };
 }
 
 beforeEach(async () => {
@@ -82,6 +84,7 @@ describe('RemittanceLog — unapplied remittances', () => {
       remitDate: '2026-04-09',
       fxRateTHB: 32,
       notes: undefined,
+      unapplied: true,
     });
 
     fireEvent.click(deleteButtons[0]);
@@ -94,5 +97,36 @@ describe('RemittanceLog — unapplied remittances', () => {
     expect(screen.queryByText('Not counted')).not.toBeInTheDocument();
     const footer = screen.getByText(/^Total/).closest('tr') as HTMLTableRowElement;
     expect(footer).toHaveTextContent('$255.00');
+  });
+});
+
+// ─── Evidence link ──────────────────────────────────────────────────────────
+
+describe('RemittanceLog — evidence link', () => {
+  it('opens the dialog from the paperclip and saves the link', () => {
+    const { onSetDocRef, onEditRemittance } = renderLog();
+
+    const paperclips = document.querySelectorAll('.doc-link');
+    expect(paperclips.length).toBe(2);
+    const row = [...document.querySelectorAll('tbody tr')].find(tr => tr.textContent?.includes('2026-03-09'))!;
+    fireEvent.click(row.querySelector('.doc-link') as HTMLElement);
+
+    const input = document.querySelector('#doc-ref-url') as HTMLInputElement;
+    fireEvent.change(input, { target: { value: 'https://example.com/slip.pdf' } });
+    fireEvent.click(document.querySelector('.doc-dialog .btn-primary') as HTMLElement);
+
+    expect(onSetDocRef).toHaveBeenCalledWith('sell_allw', 'r1', 'https://example.com/slip.pdf');
+    expect(onEditRemittance).not.toHaveBeenCalled();
+  });
+
+  it('marks rows that already carry a document', () => {
+    renderLog({
+      remittances: [
+        { id: 'r1', sellTradeId: 'sell_allw', amountUSD: 75, remitDate: '2026-03-09', fxRateTHB: 32, docRef: 'https://example.com/a.pdf' },
+      ],
+    });
+
+    const paperclip = document.querySelector('.doc-link') as HTMLElement;
+    expect(paperclip.className).toContain('has-doc');
   });
 });

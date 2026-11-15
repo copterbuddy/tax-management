@@ -6,6 +6,7 @@
 import {
   tradeTransactionSchema,
   remittanceRecordSchema,
+  dividendRemittanceSchema,
   providerTypeSchema,
   realizedGainSchema,
   gainsArraySchema,
@@ -354,5 +355,37 @@ describe('realizedGainSchema note', () => {
     expect(parsed.success && parsed.data.note).toBe(note);
     const again = realizedGainSchema.safeParse(parsed.success ? parsed.data : {});
     expect(again.success && again.data.note).toBe(note);
+  });
+});
+
+// ─── remittance document link ───────────────────────────────────────────────
+
+describe('remittance document links', () => {
+  const remittance = {
+    id: 'r1', sellTradeId: 's1', amountUSD: 500, remitDate: '2026-03-09', fxRateTHB: 32,
+  };
+
+  it('keeps an https link', () => {
+    const parsed = remittanceRecordSchema.safeParse({ ...remittance, docRef: 'https://example.com/slip.pdf' });
+    expect(parsed.success && parsed.data.docRef).toBe('https://example.com/slip.pdf');
+  });
+
+  it('refuses a non-web link', () => {
+    expect(remittanceRecordSchema.safeParse({ ...remittance, docRef: 'javascript:alert(1)' }).success).toBe(false);
+    expect(remittanceRecordSchema.safeParse({ ...remittance, docRef: '/home/me/slip.pdf' }).success).toBe(false);
+  });
+
+  it('leaves an absent link absent', () => {
+    const parsed = remittanceRecordSchema.safeParse(remittance);
+    expect(parsed.success && parsed.data.docRef).toBeUndefined();
+  });
+
+  it('applies the same rule to dividend remittances', () => {
+    const dividend = {
+      id: 'dr1', dividendId: 'd1', amountUSD: 0.4165, remitDate: '2026-04-07',
+      remitFxRate: 32.53, remitTHB: 13.55, reportableIncomeTHB: 13.55, whtCreditTHB: 2.39,
+    };
+    expect(dividendRemittanceSchema.safeParse({ ...dividend, docRef: 'https://example.com/1099.pdf' }).success).toBe(true);
+    expect(dividendRemittanceSchema.safeParse({ ...dividend, docRef: 'ftp://x/y' }).success).toBe(false);
   });
 });

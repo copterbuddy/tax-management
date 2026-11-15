@@ -53,5 +53,14 @@
   "markReinvestedExceeds": "Amount cannot exceed the outstanding balance of ${{balance}}",
   "markReinvestedInvalid": "Enter a valid amount",
   "unappliedMarker": "Not counted",
-  "unappliedReason": "This remittance exceeds the proceeds the sale can still support, so it is left out of every total. Reduce its amount or correct the sale to count it again."
+  "unappliedReason": "This remittance exceeds the proceeds the sale can still support, so it is left out of every total. Reduce its amount or correct the sale to count it again.",
+  "docDialogTitle": "Supporting document",
+  "docHint": "Paste a link to the slip, confirmation note or WHT certificate — http and https only",
+  "docUrlLabel": "Document URL",
+  "docSave": "Save",
+  "docRemove": "Remove link",
+  "docOpen": "Open document",
+  "docAttach": "Attach document",
+  "docAttached": "Document attached",
+  "docInvalid": "The link must start with http:// or https://"
 }

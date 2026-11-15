@@ -4,6 +4,7 @@ import dividendReducer, {
   updateDividend,
   deleteDividend,
   addDividendRemittance,
+  setDividendRemittanceDocRef,
   removeDividendRemittance,
   setDividendDisplayYear,
   importDividends,
@@ -473,5 +474,35 @@ describe('importDividends — remittance preservation', () => {
     const before = JSON.parse(JSON.stringify(store.getState().dividend.records));
     store.dispatch(importDividends(store.getState().dividend.records));
     expect(store.getState().dividend.records).toEqual(before);
+  });
+});
+
+
+// ─── Evidence link on a dividend remittance ────────────────────────────────
+
+describe('dividendSlice — remittance document link', () => {
+  function seeded() {
+    const store = createTestStore();
+    store.dispatch(addDividend(makeDividend()));
+    store.dispatch(addDividendRemittance(makeRemittance({ id: 'rem_1', amountUSD: 500 })));
+    return store;
+  }
+
+  it('attaches a link without touching the totals', () => {
+    const store = seeded();
+    store.dispatch(setDividendRemittanceDocRef({ dividendId: 'div_1', remittanceId: 'rem_1', docRef: 'https://example.com/1099.pdf' }));
+
+    const record = store.getState().dividend.records[0];
+    expect(record.remittances[0].docRef).toBe('https://example.com/1099.pdf');
+    expect(record.totalRemittedUSD).toBeCloseTo(500, 2);
+    expect(record.remainingToRemitUSD).toBeCloseTo(350, 2);
+  });
+
+  it('clears the link', () => {
+    const store = seeded();
+    store.dispatch(setDividendRemittanceDocRef({ dividendId: 'div_1', remittanceId: 'rem_1', docRef: 'https://example.com/1099.pdf' }));
+    store.dispatch(setDividendRemittanceDocRef({ dividendId: 'div_1', remittanceId: 'rem_1' }));
+
+    expect(store.getState().dividend.records[0].remittances[0].docRef).toBeUndefined();
   });
 });

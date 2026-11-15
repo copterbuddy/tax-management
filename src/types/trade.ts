@@ -41,6 +41,8 @@ export interface RemittanceRecord {
    * below what was remitted). Kept for the audit trail, excluded from totals.
    */
   unapplied?: boolean;
+  /** Link to the supporting document (bank slip, broker note) — http(s) only. */
+  docRef?: string;
 }
 
 export interface FifoLot {
@@ -174,6 +176,8 @@ export interface DividendRemittance {
   reportableIncomeTHB: number;   // same as remitTHB — for PND 90
   whtCreditTHB: number;          // (amountUSD/netUSD) × whtUSD × remitFxRate
   notes?: string;
+  /** Link to the supporting document (WHT certificate, bank slip) — http(s) only. */
+  docRef?: string;
 }
 
 export interface DividendSummary {

@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import type { RealizedGainResult, RemittanceRecord } from '../types/trade';
 import { useTranslation } from 'react-i18next';
+import { DocRefDialog } from './DocRefDialog';
 
 interface RemittanceLogProps {
   gains: RealizedGainResult[];
   onRecordRemit: () => void;
   onEditRemittance: (remittance: RemittanceRecord) => void;
   onDeleteRemittance: (remittance: RemittanceRecord) => void;
+  onSetDocRef: (sellTradeId: string, remittanceId: string, docRef?: string) => void;
 }
 
-export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDeleteRemittance }: RemittanceLogProps) {
+export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDeleteRemittance, onSetDocRef }: RemittanceLogProps) {
   const { t } = useTranslation();
   const [remitYear, setRemitYear] = useState<number>(new Date().getFullYear());
+  const [docTarget, setDocTarget] = useState<{ sellTradeId: string; remittanceId: string; label: string; value?: string } | null>(null);
 
   // Flatten all remittances with their parent gain info
   const allRemittances = gains.flatMap(g =>
@@ -134,6 +137,19 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
                   <td>{r.notes || '-'}</td>
                   <td className="actions-cell">
                     <button
+                      className={`btn-icon doc-link${r.docRef ? ' has-doc' : ''}`}
+                      onClick={() => setDocTarget({
+                        sellTradeId: r.sellTradeId,
+                        remittanceId: r.id,
+                        label: `${r.symbol} · ${r.remitDate}`,
+                        value: r.docRef,
+                      })}
+                      title={r.docRef ? t('remittance:docAttached') : t('remittance:docAttach')}
+                      aria-label={r.docRef ? t('remittance:docAttached') : t('remittance:docAttach')}
+                    >
+                      📎
+                    </button>
+                    <button
                       className="btn-icon btn-edit"
                       onClick={() => onEditRemittance({
                         id: r.id,
@@ -142,6 +158,8 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
                         remitDate: r.remitDate,
                         fxRateTHB: r.fxRateTHB,
                         notes: r.notes,
+                        ...(r.docRef ? { docRef: r.docRef } : {}),
+                        unapplied: r.unapplied,
                       })}
                       title={t('remittance:editRemit')}
                       aria-label={t('remittance:editRemit')}
@@ -157,6 +175,8 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
                         remitDate: r.remitDate,
                         fxRateTHB: r.fxRateTHB,
                         notes: r.notes,
+                        ...(r.docRef ? { docRef: r.docRef } : {}),
+                        unapplied: r.unapplied,
                       })}
                       title={t('remittance:deleteRemit')}
                       aria-label={t('remittance:deleteRemit')}
@@ -187,6 +207,18 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
         </div>
       )}
       </div>
+
+      {docTarget && (
+        <DocRefDialog
+          subject={docTarget.label}
+          value={docTarget.value}
+          onSave={docRef => {
+            onSetDocRef(docTarget.sellTradeId, docTarget.remittanceId, docRef ?? undefined);
+            setDocTarget(null);
+          }}
+          onClose={() => setDocTarget(null)}
+        />
+      )}
     </div>
   );
 }

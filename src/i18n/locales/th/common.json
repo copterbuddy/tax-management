@@ -79,5 +79,14 @@
   "filingClose": "ปิด",
   "filingCsvYear": "ปีภาษี",
   "filingCsvItem": "รายการ",
-  "filingCsvAmount": "จำนวน (บาท)"
+  "filingCsvAmount": "จำนวน (บาท)",
+  "filingLock": "ล็อกปีนี้ (บันทึกยอดที่ยื่น)",
+  "filingUnlock": "ปลดล็อกปีนี้",
+  "filingLockedAt": "ล็อกยอดที่ยื่นไว้เมื่อ {{date}}",
+  "filingLockMatches": "ตัวเลขยังตรงกับที่ยื่นไว้",
+  "filingLockChanged": "ตัวเลขเปลี่ยนหลังยื่น: {{fields}}",
+  "filingField_dividendGross": "เงินปันผล (ยอดเต็ม)",
+  "filingField_dividendCredit": "เครดิตภาษี",
+  "filingField_capitalGain": "กำไรจากเงินลงทุน",
+  "filingField_totalAssessable": "รวมเงินได้ที่ต้องยื่น"
 }

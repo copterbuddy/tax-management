@@ -48,6 +48,10 @@ export const VALIDATION = {
 
 // ─── Storage Keys (Dividend) ───────────────────────────────────────────────
 
+export const STORAGE_KEYS_YEAR_LOCKS = {
+  LOCKS: 'tax_tracker_year_locks',
+} as const;
+
 export const STORAGE_KEYS_DIVIDEND = {
   DIVIDENDS: 'tax_tracker_dividends',
 } as const;

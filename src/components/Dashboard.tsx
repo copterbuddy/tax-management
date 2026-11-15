@@ -4,6 +4,7 @@ import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { useActiveTab } from '../hooks/useActiveTab';
 import { TabNav } from './TabNav';
 import { FilingSummarySheet } from './FilingSummarySheet';
+import { lockYear, unlockYear } from '../store/filingSlice';
 import {
   addTrade,
   updateTrade,
@@ -78,6 +79,7 @@ export function Dashboard() {
   const [dividendDeleteConfirm, setDividendDeleteConfirm] = useState<string | null>(null);
 
   const summary = taxSummaries[selectedTaxYear];
+  const yearLock = useAppSelector(state => state.filing.locks[selectedTaxYear]);
 
   const availableYears = Object.keys(taxSummaries)
     .map(Number)
@@ -416,6 +418,9 @@ export function Dashboard() {
         <FilingSummarySheet
           figures={filingFigures}
           issues={filingIssues}
+          locked={yearLock}
+          onLock={() => dispatch(lockYear({ year: selectedTaxYear, figures: filingFigures }))}
+          onUnlock={() => dispatch(unlockYear(selectedTaxYear))}
           onExport={handleExportFiling}
           onClose={() => setShowFiling(false)}
         />

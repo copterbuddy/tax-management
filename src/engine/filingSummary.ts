@@ -88,3 +88,24 @@ export function buildFilingCsv(figures: FilingFigures, labels: FilingCsvLabels):
 
   return '\uFEFF' + lines.join('\n');
 }
+
+
+export type FilingField = 'dividendGross' | 'dividendCredit' | 'capitalGain' | 'totalAssessable';
+
+const FIELD_OF: Record<FilingField, keyof FilingFigures> = {
+  dividendGross: 'dividendGrossTHB',
+  dividendCredit: 'dividendCreditTHB',
+  capitalGain: 'capitalGainTHB',
+  totalAssessable: 'totalAssessableTHB',
+};
+
+/**
+ * Fields whose value moved by more than a cent between two figure sets — the
+ * question a filed return cares about. Sub-cent float noise is not a change.
+ */
+export function changedFilingFields(current: FilingFigures, filed: FilingFigures): FilingField[] {
+  return (Object.keys(FIELD_OF) as FilingField[]).filter(field => {
+    const key = FIELD_OF[field];
+    return Math.abs((current[key] as number) - (filed[key] as number)) > 0.005;
+  });
+}

@@ -79,5 +79,14 @@
   "filingClose": "Close",
   "filingCsvYear": "Tax year",
   "filingCsvItem": "Item",
-  "filingCsvAmount": "Amount (THB)"
+  "filingCsvAmount": "Amount (THB)",
+  "filingLock": "Lock this year (save filed figures)",
+  "filingUnlock": "Unlock this year",
+  "filingLockedAt": "Filed figures locked on {{date}}",
+  "filingLockMatches": "The figures still match what was filed",
+  "filingLockChanged": "Changed since filing: {{fields}}",
+  "filingField_dividendGross": "dividend income",
+  "filingField_dividendCredit": "tax credit",
+  "filingField_capitalGain": "capital gain",
+  "filingField_totalAssessable": "total assessable income"
 }

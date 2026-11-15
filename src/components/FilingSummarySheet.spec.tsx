@@ -19,7 +19,7 @@ beforeEach(async () => {
 
 describe('FilingSummarySheet', () => {
   it('reports the year and the figures a return asks for', () => {
-    render(<FilingSummarySheet figures={figures} issues={[]} onExport={() => {}} onClose={() => {}} />);
+    render(<FilingSummarySheet figures={figures} issues={[]} onExport={() => {}} onClose={() => {}} onLock={() => {}} onUnlock={() => {}} />);
 
     expect(screen.getByRole('heading', { name: /2569|2026/ })).toBeInTheDocument();
     expect(screen.getByText('฿15.94')).toBeInTheDocument();
@@ -29,7 +29,7 @@ describe('FilingSummarySheet', () => {
   });
 
   it('says the year is ready when nothing blocks it', () => {
-    render(<FilingSummarySheet figures={figures} issues={[]} onExport={() => {}} onClose={() => {}} />);
+    render(<FilingSummarySheet figures={figures} issues={[]} onExport={() => {}} onClose={() => {}} onLock={() => {}} onUnlock={() => {}} />);
     expect(screen.getByText(/พร้อมยื่น/)).toBeInTheDocument();
   });
 
@@ -40,6 +40,8 @@ describe('FilingSummarySheet', () => {
         issues={[{ code: 'unapplied', count: 2 }]}
         onExport={() => {}}
         onClose={() => {}}
+        onLock={() => {}}
+        onUnlock={() => {}}
       />,
     );
 
@@ -55,6 +57,8 @@ describe('FilingSummarySheet', () => {
         issues={[{ code: 'noData', count: 0 }]}
         onExport={() => {}}
         onClose={() => {}}
+        onLock={() => {}}
+        onUnlock={() => {}}
       />,
     );
 
@@ -65,7 +69,8 @@ describe('FilingSummarySheet', () => {
     const onExport = jest.fn();
     const onClose = jest.fn();
     const { container } = render(
-      <FilingSummarySheet figures={figures} issues={[]} onExport={onExport} onClose={onClose} />,
+      <FilingSummarySheet figures={figures} issues={[]} onExport={onExport} onClose={onClose}
+        onLock={() => {}} onUnlock={() => {}} />,
     );
 
     fireEvent.click(screen.getByRole('button', { name: /CSV/ }));
@@ -73,5 +78,48 @@ describe('FilingSummarySheet', () => {
 
     expect(onExport).toHaveBeenCalledTimes(1);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ─── Locked year ────────────────────────────────────────────────────────────
+
+describe('FilingSummarySheet — year lock', () => {
+  const locked = { lockedAt: '2027-03-01T10:00:00.000Z', figures };
+
+  it('offers to lock when the year is not locked', () => {
+    render(
+      <FilingSummarySheet figures={figures} issues={[]} onLock={() => {}} onUnlock={() => {}}
+        onExport={() => {}} onClose={() => {}} />,
+    );
+    expect(screen.getByRole('button', { name: /ล็อกปีนี้/ })).toBeInTheDocument();
+  });
+
+  it('reports the lock date and that the figures still match', () => {
+    render(
+      <FilingSummarySheet figures={figures} issues={[]} locked={locked} onLock={() => {}} onUnlock={() => {}}
+        onExport={() => {}} onClose={() => {}} />,
+    );
+    expect(screen.getByText(/2027-03-01/)).toBeInTheDocument();
+    expect(screen.getByText(/ยังตรงกับที่ยื่นไว้/)).toBeInTheDocument();
+  });
+
+  it('names the field that moved since filing', () => {
+    const moved = { ...figures, capitalGainTHB: 11000, totalAssessableTHB: 11015.94 };
+    render(
+      <FilingSummarySheet figures={moved} issues={[]} locked={locked} onLock={() => {}} onUnlock={() => {}}
+        onExport={() => {}} onClose={() => {}} />,
+    );
+    expect(document.querySelector('.filing-lock-warn')?.textContent).toMatch(/กำไรจากเงินลงทุน/);
+    expect(screen.queryByText(/ยังตรงกับที่ยื่นไว้/)).toBeNull();
+  });
+
+  it('unlocks through the button', () => {
+    const onUnlock = jest.fn();
+    render(
+      <FilingSummarySheet figures={figures} issues={[]} locked={locked} onLock={() => {}} onUnlock={onUnlock}
+        onExport={() => {}} onClose={() => {}} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /ปลดล็อก/ }));
+    expect(onUnlock).toHaveBeenCalledTimes(1);
   });
 });

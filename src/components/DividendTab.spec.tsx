@@ -108,14 +108,14 @@ describe('DividendTab empty state guidance', () => {
 describe('DividendTab KPI variants', () => {
   it('marks the unremitted card as a warning when there is unremitted income', () => {
     const { container } = renderTab([record()]);
-    const cards = Array.from(container.querySelectorAll('.kpi-dividend-grid .kpi-card'));
+    const cards = Array.from(container.querySelectorAll('.kpi-grid .kpi-card'));
     const unremitted = cards[cards.length - 1];
     expect(unremitted.classList.contains('kpi-warning')).toBe(true);
   });
 
   it('does not mark the unremitted card as a warning when nothing is unremitted', () => {
     const { container } = renderTab([record()], { summary: { ...SUMMARY, totalUnremittedUSD: 0 } });
-    const cards = Array.from(container.querySelectorAll('.kpi-dividend-grid .kpi-card'));
+    const cards = Array.from(container.querySelectorAll('.kpi-grid .kpi-card'));
     const unremitted = cards[cards.length - 1];
     expect(unremitted.classList.contains('kpi-warning')).toBe(false);
   });

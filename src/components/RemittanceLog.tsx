@@ -45,22 +45,9 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
   const totalTaxable = countedRemittances.reduce((s, r) => s + r.taxableTHB, 0);
 
   return (
-    <div className="trade-table-section">
-      <div className="trade-table-header">
-        <div className="trade-table-title">
-          <h2>{t('remittance:remittanceLog')} — {remitYear}</h2>
-          <span className="trade-count">
-            {yearRemittances.length} {t('remittance:remittanceCount')}
-          </span>
-        </div>
-        <button className="btn btn-primary" onClick={onRecordRemit}>
-          {t('remittance:recordRemit')}
-        </button>
-      </div>
-
-      {/* Remittance Year Filter */}
-      {years.length > 1 && (
-        <div className="year-filter" style={{ marginBottom: '0.75rem' }}>
+    <div className="trades-tab">
+      {years.length > 0 && (
+        <div className="year-filter">
           <label htmlFor="remit-year-select">{t('remittance:remitYear')}:</label>
           <select
             id="remit-year-select"
@@ -73,6 +60,19 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
           </select>
         </div>
       )}
+
+      <div className="trade-table-section">
+        <div className="trade-table-header">
+          <div className="trade-table-title">
+            <h2>{t('remittance:remittanceLog')} — {remitYear}</h2>
+            <span className="trade-count">
+              {yearRemittances.length} {t('remittance:remittanceCount')}
+            </span>
+          </div>
+          <button className="btn btn-primary" onClick={onRecordRemit}>
+            {t('remittance:recordRemit')}
+          </button>
+        </div>
 
       {yearRemittances.length === 0 ? (
         <div className="empty-state">
@@ -186,6 +186,7 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
           </table>
         </div>
       )}
+      </div>
     </div>
   );
 }

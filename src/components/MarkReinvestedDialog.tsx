@@ -31,17 +31,17 @@ export function MarkReinvestedDialog({ row, onSubmit, onCancel }: MarkReinvested
   const balance = toCents(row.availableBalanceUSD);
 
   // The limit is compared on the cent grid, against the same rounded balance
-    // the dialog displays and prefills — a raw float such as 0.30000000000000004
-    // must never refuse the value it just offered the user.
-    const schema = useMemo(
+  // the dialog displays and prefills — a raw float such as 0.30000000000000004
+  // must never refuse the value it just offered the user.
+  const schema = useMemo(
     () => z.object({
       amountUSD: z.number({ message: t('remittance:markReinvestedInvalid') })
         .min(0, { message: t('remittance:markReinvestedInvalid') })
-          .refine(amount => toCents(amount) <= balance, {
+        .refine(amount => toCents(amount) <= balance, {
           message: t('remittance:markReinvestedExceeds', { balance: balance.toFixed(2) }),
         }),
     }),
-      [balance, t],
+    [balance, t],
   );
 
   const {

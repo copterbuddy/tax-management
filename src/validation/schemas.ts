@@ -121,6 +121,9 @@ export const realizedGainSchema = z.object({
   remittances: z.array(remittanceRecordSchema),
   taxableGainTHB: z.number(),
   reinvestedUSD: z.number().min(0).finite().optional(),
+  // Free text the user writes about a sale. No max(): loadGains validates the
+  // whole array and falls back to [], so one over-long note would wipe every gain.
+  note: z.string().optional(),
 });
 
 export const gainsArraySchema = z.array(realizedGainSchema);

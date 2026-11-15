@@ -119,9 +119,9 @@ function recomputeGains(trades: TradeTransaction[], existingGains: RealizedGainR
 
   return freshGains.map(fg => {
     const old = oldGainMap.get(fg.sellTradeId);
-    // A reinvested amount is a user-recorded fact about the sale that FIFO
-    // cannot derive, so it survives every recompute (design D5).
-    const result = withReinvestedAmount({ ...fg }, old?.reinvestedUSD);
+    // Reinvested amounts and notes are user-recorded facts about the sale that
+    // FIFO cannot derive, so they survive every recompute (design D2).
+    const result = withReinvestedAmount(withNote({ ...fg }, old?.note), old?.reinvestedUSD);
     return replayRemittances(result, old?.remittances ?? []);
   });
 }
@@ -157,6 +157,12 @@ function withoutUnappliedFlag(record: RemittanceRecord): RemittanceRecord {
   return applied;
 }
 
+/** Carry a user-written note across a recompute; FIFO cannot derive it. */
+function withNote(gain: RealizedGainResult, note: string | undefined): RealizedGainResult {
+  if (!note) return gain;
+  return { ...gain, note };
+}
+
 /**
  * Re-apply a previously recorded reinvested amount. A stale amount that no
  * longer fits the sale is dropped rather than allowed to throw here.
@@ -183,7 +189,7 @@ function recomputeGainsWithModifiedRemittances(
   return freshGains.map(fg => {
     const old = oldGainMap.get(fg.sellTradeId);
     const records = fg.sellTradeId === sellTradeId ? newRemittances : old?.remittances ?? [];
-    const result = withReinvestedAmount({ ...fg }, old?.reinvestedUSD);
+    const result = withReinvestedAmount(withNote({ ...fg }, old?.note), old?.reinvestedUSD);
     return replayRemittances(result, records);
   });
 }

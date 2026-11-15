@@ -329,3 +329,30 @@ describe('remittanceRecordSchema unapplied flag', () => {
     expect(remittanceRecordSchema.safeParse({ ...applied, unapplied: 'yes' }).success).toBe(false);
   });
 });
+
+
+// ─── gain note ─────────────────────────────────────────────────────────────
+
+describe('realizedGainSchema note', () => {
+  const base = {
+    sellTradeId: 's1', sellDate: '2026-02-13', symbol: 'ALLW', provider: 'Dime',
+    sellQuantity: 7, sellRevenueUSD: 204.75, buyCostBasisUSD: 199.64,
+    gainUSD: 5.11, gainPercent: 0.025, matchedLots: [], totalRemittedUSD: 0,
+    remainingProceedsUSD: 204.75, remittances: [], taxableGainTHB: 0,
+  };
+
+  it('keeps a gain without a note exactly as stored', () => {
+    const parsed = realizedGainSchema.safeParse(base);
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.note).toBeUndefined();
+  });
+
+  it('round-trips a Thai note unchanged', () => {
+    const note = 'เงิน 204.75 ถูกใช้ซื้อ SPGI 202.40 ในวันเดียวกัน';
+    const parsed = realizedGainSchema.safeParse({ ...base, note });
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.note).toBe(note);
+    const again = realizedGainSchema.safeParse(parsed.success ? parsed.data : {});
+    expect(again.success && again.data.note).toBe(note);
+  });
+});

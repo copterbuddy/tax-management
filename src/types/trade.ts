@@ -80,6 +80,11 @@ export interface RealizedGainResult {
   taxableGainTHB: number; // Sum of (remitUSD × gainPercent × remitFX) across all remittances
   /** Proceeds spent on another offshore purchase (USD). Absent means 0. */
   reinvestedUSD?: number;
+  /**
+   * Free-text explanation the user attaches to a sale ("proceeds went into
+   * SPGI"). Describes the result; never feeds any computation.
+   */
+  note?: string;
 }
 
 export interface ProviderBreakdown {

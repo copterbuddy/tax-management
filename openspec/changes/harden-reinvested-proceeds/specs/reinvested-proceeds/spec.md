@@ -6,6 +6,8 @@
 
 The dialog SHALL validate the entered amount in whole cents against the same balance it displays and prefills, so the prefilled amount always submits, and an amount one cent above the displayed balance is refused with that balance in the message.
 
+This refines the single limit already stated in *Each outstanding gain offers remit and mark-reinvested actions*, defining how that one limit is compared; it adds no second cap.
+
 #### Scenario: A balance carrying float noise still submits its prefilled amount
 
 - **WHEN** the outstanding balance is `0.30000000000000004`, displayed and prefilled as `0.30`, and the user submits without editing
@@ -54,6 +56,11 @@ When a reinvested amount cannot be recorded, the system SHALL leave every stored
 
 - **WHEN** the interface language is Thai
 - **THEN** the message and its dismiss control appear in Thai, and in English when the language is English
+
+#### Scenario: The message belongs to the Trades tab
+
+- **WHEN** the message is showing and the user opens the Dividend or Remittances tab
+- **THEN** no such message is rendered there
 
 #### Scenario: The refusal is not a blocking alert
 

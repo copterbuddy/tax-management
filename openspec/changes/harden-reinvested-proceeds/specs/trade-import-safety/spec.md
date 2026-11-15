@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Governs what replacing the trade list may do to the records FIFO cannot derive — the remittances and reinvested amounts recorded against a sale — so that importing trades can never silently destroy history for sales that still exist.
+Governs what replacing the trade list may do to the records FIFO cannot derive — the remittances and reinvested amounts recorded against a sale — so that importing trades can never silently destroy history, whether by dropping the records of a sale that still exists or by quietly discarding a remittance that no longer fits its sale.
 
 ## ADDED Requirements
 
@@ -38,6 +38,30 @@ The import SHALL remove the records of a sale only when that sale is no longer p
 
 - **WHEN** a sale was dropped by an earlier import and is imported again with the same identity
 - **THEN** the sale's gain exists with no remittances and no reinvested amount
+
+### Requirement: An import that would strand a recorded remittance is refused
+
+An imported trade list that would leave any sale's recorded remittances above that sale's new proceeds SHALL be rejected in full: the trade list, every gain, every remittance, and every reinvested amount SHALL remain as they were, and the conflict SHALL be reported with a visible message that names the sale. Such a gain is a shape the engine refuses to build.
+
+#### Scenario: A shrunken sale keeps its remittances and blocks the import
+
+- **WHEN** a sale with two remittances totalling 150 is imported with a revenue of 100
+- **THEN** both remittances are still present with their original amounts and dates, a visible message names that sale, and no other record changes
+
+#### Scenario: The refused import applies nothing
+
+- **WHEN** an import is refused because one sale no longer fits its remittances
+- **THEN** every sale, gain, remaining balance, and tax year summary is unchanged, including those the import would have updated successfully
+
+#### Scenario: An import that fits is still applied
+
+- **WHEN** every surviving sale's new proceeds still cover its recorded remittances
+- **THEN** the import is applied and each surviving sale keeps its records as described by the preservation requirement
+
+#### Scenario: The conflict is reported on the Trades tab
+
+- **WHEN** an import is refused for an over-remitted sale
+- **THEN** a dismissible message appears on the Trades tab naming that sale, in the active language
 
 ### Requirement: A no-op import changes no summary
 

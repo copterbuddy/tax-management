@@ -498,3 +498,19 @@ describe('active tab is addressable', () => {
     expect(container.querySelector('#dividend-year-select')).not.toBeNull();
   });
 });
+
+// ─── Requirement: one action opens the year's filing summary ────────────────
+
+describe('filing summary', () => {
+  it('opens from the header and reports the year', async () => {
+    const { container } = await renderDashboard();
+    const button = [...container.querySelectorAll('header button')]
+      .find(b => /สรุปเพื่อยื่น/.test(b.textContent ?? '')) as HTMLElement;
+
+    expect(button).toBeTruthy();
+    fireEvent.click(button);
+
+    expect(container.querySelector('.filing-sheet')).not.toBeNull();
+    expect(container.textContent).toContain('2026');
+  });
+});

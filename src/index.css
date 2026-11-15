@@ -1738,3 +1738,70 @@ a:hover {
   white-space: pre-wrap;
   word-break: break-all;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Filing summary sheet
+   ═══════════════════════════════════════════════════════════════════════════ */
+.filing-sheet {
+  max-width: 540px;
+  width: 100%;
+}
+
+.filing-subtitle {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.filing-figures {
+  margin: 0 0 var(--space-4);
+  display: flex;
+  flex-direction: column;
+}
+
+.filing-figures > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filing-figures dt {
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.filing-figures dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.filing-figures .filing-total {
+  border-bottom: none;
+  border-top: 2px solid var(--color-border);
+  margin-top: var(--space-2);
+  padding-top: var(--space-3);
+}
+
+.filing-figures .filing-total dd {
+  font-size: var(--text-lg);
+  color: var(--color-primary);
+}
+
+.filing-issues {
+  margin-bottom: var(--space-5);
+  font-size: var(--text-sm);
+}
+
+.filing-issues ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--color-warning);
+}
+
+.filing-ready {
+  margin: 0;
+  color: var(--color-success);
+  font-weight: 600;
+}

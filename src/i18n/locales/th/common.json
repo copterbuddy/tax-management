@@ -64,5 +64,20 @@
   "providerGainLabel": "กำไรในเงินที่โอนเข้าปีนี้",
   "ledgerErrorReinvestedExceedsBalance": "บันทึกไม่ได้ — จำนวนเกินยอดที่ยังไม่กลับไทยของรายการขายนี้ ข้อมูลเดิมไม่ถูกเปลี่ยน",
   "dismiss": "ปิดข้อความ",
-  "freshnessLabel": "ข้อมูลล่าสุด"
+  "freshnessLabel": "ข้อมูลล่าสุด",
+  "filingSummary": "สรุปเพื่อยื่น {{year}}",
+  "filingSummaryTitle": "สรุปเพื่อยื่น ปีภาษี {{year}}",
+  "filingSummarySubtitle": "ตัวเลขสำหรับกรอก ภ.ง.ด.90 ของปีภาษี {{year}} — เป็นเงินได้ก่อนหักลดหย่อน ไม่ใช่ภาษีที่ต้องจ่าย",
+  "filingDividendGross": "เงินปันผล (ยอดเต็ม)",
+  "filingDividendCredit": "เครดิตภาษีหัก ณ ที่จ่าย",
+  "filingCapitalGain": "กำไรจากเงินลงทุนที่โอนเข้า",
+  "filingTotal": "รวมเงินได้ที่ต้องยื่น",
+  "filingIssueNoData": "ยังไม่มีรายการนำเงินเข้าในปี {{year}}",
+  "filingIssueUnapplied": "มี {{count}} รายการนำเข้าที่ถูกตั้งเป็นยังใช้ไม่ได้ — ต้องแก้ก่อนยื่น",
+  "filingReady": "ข้อมูลครบ พร้อมยื่น",
+  "filingExport": "ดาวน์โหลด CSV",
+  "filingClose": "ปิด",
+  "filingCsvYear": "ปีภาษี",
+  "filingCsvItem": "รายการ",
+  "filingCsvAmount": "จำนวน (บาท)"
 }

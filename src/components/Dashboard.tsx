@@ -3,6 +3,7 @@ import type { TradeTransaction, RemittanceRecord, DividendRecord, DividendRemitt
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { useActiveTab } from '../hooks/useActiveTab';
 import { TabNav } from './TabNav';
+import { FilingSummarySheet } from './FilingSummarySheet';
 import {
   addTrade,
   updateTrade,
@@ -24,6 +25,7 @@ import {
 } from '../store/dividendSlice';
 import { validateSellLots, computeAllRealizedGains, validateRemittance } from '../engine/fifoEngine';
 import { computeDividendSummary, getAvailableSymbols, validateRemittance as validateDividendRemittance } from '../engine/dividendEngine';
+import { buildFilingCsv, buildFilingFigures, findFilingIssues } from '../engine/filingSummary';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../context/ThemeContext';
 import type { SupportedLang } from '../i18n/index';
@@ -53,6 +55,7 @@ export function Dashboard() {
         ledgerError,
   } = useAppSelector(state => state.trade);
 
+  const [showFiling, setShowFiling] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showRemitForm, setShowRemitForm] = useState(false);
   const [remittingGainId, setRemittingGainId] = useState<string | null>(null);
@@ -212,6 +215,40 @@ export function Dashboard() {
     [dividendRecords, dividendDisplayYear],
   );
 
+  // The sheet always reads the tax year the header shows, so there is one
+  // answer to "which year am I filing".
+  const filingDividendSummary = useMemo(
+    () => computeDividendSummary(dividendRecords, selectedTaxYear),
+    [dividendRecords, selectedTaxYear],
+  );
+  const filingFigures = useMemo(
+    () => buildFilingFigures(selectedTaxYear, summary, filingDividendSummary),
+    [selectedTaxYear, summary, filingDividendSummary],
+  );
+  const filingIssues = useMemo(
+    () => findFilingIssues(gains, selectedTaxYear),
+    [gains, selectedTaxYear],
+  );
+  const handleExportFiling = useCallback(() => {
+    const csv = buildFilingCsv(filingFigures, {
+      year: t('common:filingCsvYear'),
+      item: t('common:filingCsvItem'),
+      amount: t('common:filingCsvAmount'),
+      dividendGross: t('common:filingDividendGross'),
+      dividendCredit: t('common:filingDividendCredit'),
+      capitalGain: t('common:filingCapitalGain'),
+      total: t('common:filingTotal'),
+    });
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `tax-filing-${selectedTaxYear}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, [filingFigures, selectedTaxYear, t]);
+
   const availableSymbols = useMemo(
     () => getAvailableSymbols(trades),
     [trades],
@@ -300,6 +337,10 @@ export function Dashboard() {
           <p className="header-subtitle">{t('common:appSubtitle')}</p>
         </div>
         <div className="header-right">
+          <button className="btn btn-secondary" onClick={() => setShowFiling(true)}>
+            {t('common:filingSummary', { year: selectedTaxYear })}
+          </button>
+
           {/* Theme Toggle */}
           <button
             className="theme-toggle"
@@ -368,6 +409,15 @@ export function Dashboard() {
           onRecordRemit={() => setShowRemitForm(true)}
           onEditRemittance={handleEditRemittance}
           onDeleteRemittance={handleDeleteRemittance}
+        />
+      )}
+
+      {showFiling && (
+        <FilingSummarySheet
+          figures={filingFigures}
+          issues={filingIssues}
+          onExport={handleExportFiling}
+          onClose={() => setShowFiling(false)}
         />
       )}
 

@@ -96,14 +96,3 @@ export const COUNTRY_WHT_INFO: Record<CountryCode, CountryWhtInfo> = {
     noteEN: 'Please verify WHT rate — may not have DTA with Thailand',
   },
 };
-
-// ─── Tax Constants (Thai) ──────────────────────────────────────────────────
-
-export const THAI_TAX = {
-  /** Personal allowance — every taxpayer gets this */
-  PERSONAL_ALLOWANCE: 60_000,
-  /** Standard expense deduction for employment/investment income */
-  EXPENSE_DEDUCTION: 100_000,
-  /** Default total deduction */
-  DEFAULT_DEDUCTION: 160_000,
-} as const;

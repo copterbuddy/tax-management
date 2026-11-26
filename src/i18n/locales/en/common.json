@@ -88,15 +88,5 @@
   "filingField_dividendGross": "dividend income",
   "filingField_dividendCredit": "tax credit",
   "filingField_capitalGain": "capital gain",
-  "filingField_totalAssessable": "total assessable income",
-  "filingEstimate": "Tax estimate",
-  "estimateOtherIncome": "Other assessable income (THB)",
-  "estimateDeductions": "Total deductions (THB)",
-  "estimateNetIncome": "Net income",
-  "estimateTax": "Tax at progressive rates",
-  "estimateCredit": "Withholding credit",
-  "estimatePayable": "Still payable",
-  "estimateOverpaid": "Overpaid (refundable)",
-  "estimateMarginal": "Marginal rate",
-  "estimateHint": "Only dividend withholding recorded in the app is counted; salary withholding is not included."
+  "filingField_totalAssessable": "total assessable income"
 }

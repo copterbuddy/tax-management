@@ -68,7 +68,6 @@ context: |
   src/store/     Redux Toolkit slices + localStorage persistence
     tradeSlice.ts        trades + capital-gain remittances
     dividendSlice.ts     dividend records + dividend remittances
-    taxSlice.ts          Thai progressive income-tax calculator
   src/components/  presentational + form components
   src/validation/   zod schemas, single source of truth for localStorage load
   src/types/        all shared TypeScript interfaces
@@ -91,7 +90,6 @@ context: |
   | Trades (BUY/SELL) | tax_tracker_trades | tradeSlice |
   | Capital-gain remittances | tax_tracker_remittances | tradeSlice |
   | Dividend records | tax_tracker_dividends | dividendSlice |
-  | Tax calculations | tax_tracker_calculations | taxSlice |
 
   Core types (src/types/trade.ts): TradeTransaction, RemittanceRecord, FifoLot,
   FifoMatchDetail, RealizedGainResult, TaxSummary, DividendRecord,
@@ -161,6 +159,9 @@ context: |
     is permanently exempt in Thailand, but the app does not model this. Known gap.
   - Generating filing documents (PND 90). This is a tracking tool; the user fills the
     return by hand.
+  - Personal income tax calculation (progressive Thai tax brackets, deductions/allowances,
+    net tax payable or refundable). This app calculates assessable income and withholding
+    credit to declare only.
 
 # Per-artifact rules (optional)
 # Add custom rules for specific artifacts.

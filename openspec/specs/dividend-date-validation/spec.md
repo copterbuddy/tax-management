@@ -1,7 +1,7 @@
 # dividend-date-validation Specification
 
 ## Purpose
-TBD - created by archiving change restrict-dividend-date-to-today. Update Purpose after archive.
+Ensures dividend receipt dates entered in `DividendForm` cannot be set in the future, rejecting tomorrow or later dates with a localized validation error while accepting today and past dates.
 
 ## Requirements
 

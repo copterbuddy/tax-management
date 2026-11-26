@@ -1,69 +1,60 @@
-# Spec: Dividend Tracking
+# dividend-tracker Specification
 
-## Capability
+## Purpose
 
-Foreign dividend tracking — recording dividend payments with WHT tracking, THB snapshot at dividend date FX, remittance-based income, and annual summary by remittance year.
+Manages foreign dividend records and their remittance tracking on the Dividends tab: recording dividends against symbols held in BUY trades, applying country default withholding rates with user override, preventing edits or deletions once remitted, and managing dividend remittance history.
 
-Reference BA spec (preserved in docs/ archive): `docs/specs/dividend-tracker.md`
+## Requirements
 
-## ADDED Requirements
+### Requirement: DividendTab displays KPI summary, year filter, and expandable remittance history
 
-### Requirement: DividendTab renders with table, KPI, and year filter
+When dividend records exist, `DividendTab` SHALL display a dividend-year selector, the six dividend KPI cards, and the dividend list (table on desktop, cards on mobile) with expandable remittance history per record and document-attachment actions on each remittance. When no dividend records exist, it SHALL render an empty state with an action to add a dividend.
 
-- **Given** user has dividend records and opens the Dividend tab
-- **When** Dashboard renders the tab between Trade Log and Remittance Log
-- **Then** it shows KPI cards (total gross, WHT, remitted, reportable, credit, remaining), a year filter, and a table with columns: Date, Symbol, Country, Gross (USD), WHT%, WHT (USD), Net (USD), Remitted (USD), Remaining (USD), Reportable (THB), WHT Credit (THB)
-- **And** responsive layout switches to cards on mobile
+#### Scenario: Empty state shown when no dividend records exist
 
-#### Scenario: Empty state shown when no records
+- **WHEN** the dividend record list is empty
+- **THEN** `DividendTab` renders the empty-state prompt and an add-dividend button
 
-- **WHEN** dividends array is empty
-- **THEN** display message "ยังไม่มีบันทึกเงินปันผล" + CTA button to add dividend
-- **AND** KPI cards show zero
+#### Scenario: Expanding a record reveals its remittance history
 
-### Requirement: DividendForm creates record with THB snapshot at dividend FX
+- **WHEN** the user expands a dividend record that has recorded remittances
+- **THEN** the remittance rows for that dividend are displayed with remittance date, USD amount, remittance FX rate, reportable THB, WHT credit THB, document link action, and delete action
 
-- **Given** user opens form and enters date, symbol, country, gross USD, WHT rate, FX rate
-- **When** form is saved
-- **Then** record saved with `dividendFxRate` and THB snapshot fields computed (`grossAmountTHB`, `whtAmountTHB`, `netAmountTHB`) at dividend date FX
-- **And** these THB values are immutable (reference only, not tax base)
+### Requirement: DividendForm links to BUY symbols and applies country default WHT
 
-### Requirement: Dividend record links to BUY symbol and validates country WHT
+`DividendForm` SHALL let the user select a stock symbol from symbols present in `BUY` trades (`getAvailableSymbols`), select a country (`US`, `UK`, `SG`, `OTHER`), auto-fill the default WHT rate from `COUNTRY_WHT_INFO` (`US` 15%, `UK` 0%, `SG` 0%, `OTHER` 0%) while allowing overrides from 0 to 100%, and compute immutable THB snapshots (`grossAmountTHB`, `whtAmountTHB`, `netAmountTHB`) at `dividendFxRate`.
 
-- **Given** user selects a symbol that exists in BUY trades
-- **When** country selected (US/UK/SG/OTHER)
-- **Then** WHT rate auto-filled from `COUNTRY_WHT_INFO`; user may override 0-100%
-- **And** symbol validated against available BUY positions
+#### Scenario: Selecting a country sets its default WHT rate and allows override
 
-### Requirement: Remittance creates reportable income at remittance FX
+- **WHEN** the user selects `US` in `DividendForm`
+- **THEN** `whtRate` defaults to `15`
+- **AND** the user can override it to `30` when no W-8BEN applies
 
-- **Given** dividend has `remainingToRemitUSD > 0`
-- **When** user records remittance with amount, remit date, remit FX rate
-- **Then** `reportableIncomeTHB = remittedUSD × remitFxRate`
-- **And** `whtCreditTHB = (remittedUSD / netAmountUSD) × whtAmountUSD × remitFxRate`
-- **And** `totalRemittedUSD` and `remainingToRemitUSD` updated; remittance appended
+#### Scenario: Saving computes THB snapshots from dividend-date FX
 
-### Requirement: Partial remittance allowed with validation
+- **WHEN** a dividend of `grossAmountUSD: 100`, `whtRate: 15`, `dividendFxRate: 34` is saved
+- **THEN** `whtAmountUSD` is `15`, `netAmountUSD` is `85`, `grossAmountTHB` is `3400`, `whtAmountTHB` is `510`, and `netAmountTHB` is `2890`
 
-- **Given** `remainingToRemitUSD = 350` after partial remits
-- **When** user tries remitting $500
-- **Then** validation error: amount exceeds remaining
-- **And** multiple remittances permitted until `remainingToRemitUSD = 0`
+### Requirement: Remittance status reflects remaining balance and allows partial remittances
 
-### Requirement: Annual summary groups by remittance year
+Each dividend record SHALL track `totalRemittedUSD` and `remainingToRemitUSD` so the UI displays remitted, partially remitted, or unremitted status and allows recording multiple partial remittances until `remainingToRemitUSD` reaches zero.
 
-- **When** computing annual summary for a tax year
-- **Then** group by `remitDate` year; calculate totals: gross, WHT, net, remitted, reportable (THB), WHT credit (THB), unremitted
-- **And** status reflects remittance state (remitted/partial/not remitted)
+#### Scenario: Partial remittance updates status and remaining balance
 
-### Requirement: Edit/delete blocked when remittance exists
+- **WHEN** a dividend with `netAmountUSD: 85` has a remittance of `50` recorded
+- **THEN** `totalRemittedUSD` becomes `50`, `remainingToRemitUSD` becomes `35`, and the record status is partial
 
-- **Given** dividend has `remittances.length > 0`
-- **When** user tries edit or delete
-- **Then** blocked with message requiring deletion of remittances first
+### Requirement: Dividends with recorded remittances cannot be edited or deleted directly
 
-### Requirement: WHT default 15% for US (with W-8BEN override to 30%)
+Attempting to edit or delete a dividend record that already has one or more remittances (`remittances.length > 0`) SHALL be blocked with an alert instructing the user to remove the remittances first. Deleting a remittance SHALL restore `remainingToRemitUSD` and allow editing or deleting the dividend once no remittances remain.
 
-- **Given** country US selected
-- **Then** default `whtRate = 15`
-- **And** user can override to 30% if W-8BEN missing
+#### Scenario: Edit and delete are blocked while remittances exist
+
+- **WHEN** the user clicks edit or delete on a dividend record with `remittances.length > 0`
+- **THEN** an alert is shown and the edit form or delete confirmation dialog does not open
+
+#### Scenario: Deleting the last remittance unblocks the dividend
+
+- **WHEN** all remittances on a dividend record are deleted
+- **THEN** `remainingToRemitUSD` returns to `netAmountUSD`
+- **AND** the dividend record can be edited or deleted

@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { act } from 'react';
 import i18next from '../i18n/index';
 import { TradeTable } from './TradeTable';
@@ -38,8 +38,8 @@ function renderTable(trades: TradeTransaction[]) {
 }
 
 function desktopTotals(container: HTMLElement): string[] {
-  return Array.from(container.querySelectorAll('.trade-table tbody tr')).map(
-    row => row.children[7].textContent!.trim(),
+  return Array.from(container.querySelectorAll('.trade-table tbody tr:not(.trade-detail-row)')).map(
+    row => row.querySelector('.col-total')!.textContent!.trim(),
   );
 }
 
@@ -120,5 +120,107 @@ describe('TradeTable fallback highlight', () => {
     const row = container.querySelector('.trade-table tbody tr')!;
 
     expect(row.querySelectorAll('button, a, input, select, textarea, [tabindex]')).toHaveLength(2);
+  });
+});
+
+describe('TradeTable visual foundation', () => {
+  it('renders remittance progress label outside the progress bar track so it is not clipped', () => {
+    const sell = makeTrade({ id: 'sell-remit', type: 'SELL' });
+    const { container } = render(
+      <TradeTable
+        trades={[sell]}
+        gains={[
+          {
+            sellTradeId: 'sell-remit',
+            sellDate: '2026-05-18',
+            symbol: 'ALLW',
+            provider: 'Dime',
+            sellQuantity: 224,
+            sellRevenueUSD: 6636.27,
+            buyCostBasisUSD: 5000,
+            gainUSD: 1636.27,
+            gainPercent: 0.2465,
+            matchedLots: [],
+            totalRemittedUSD: 3000,
+            remainingProceedsUSD: 3636.27,
+            remittances: [],
+            taxableGainTHB: 0,
+          },
+        ]}
+        selectedYear={2026}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onAddNew={() => {}}
+      />,
+    );
+
+    const wrap = container.querySelector('.trade-table .remit-progress-wrap')!;
+    expect(wrap).not.toBeNull();
+    const barTrack = wrap.querySelector('.remit-progress')!;
+    const label = wrap.querySelector('.remit-text')!;
+    expect(barTrack.contains(label)).toBe(false);
+    expect(label).toHaveTextContent('$3000 / $6636');
+  });
+
+  it('renders monochrome SVG icons for edit and delete actions', () => {
+    const { container } = renderTable([makeTrade({ id: 'svg-1' })]);
+    const actionSvgs = container.querySelectorAll('.trade-table .actions-cell button svg[aria-hidden="true"]');
+    expect(actionSvgs).toHaveLength(2);
+  });
+});
+
+describe('TradeTable progressive disclosure and quick filters', () => {
+  it('expands itemized fee breakdown and notes when clicking a row, and collapses on second click', () => {
+    const trade = makeTrade({
+      id: 'exp-1',
+      grossAmountUSD: 6647.13,
+      notes: 'Dime slip #42',
+    });
+    const { container } = renderTable([trade]);
+
+    expect(container.querySelector('.trade-detail-row')).toBeNull();
+
+    const row = container.querySelector('.trade-table tbody tr')!;
+    fireEvent.click(row);
+
+    const detail = container.querySelector('.trade-detail-row')!;
+    expect(detail).not.toBeNull();
+    expect(detail.textContent).toContain('$6647.13');
+    expect(detail.textContent).toContain('$9.97');
+    expect(detail.textContent).toContain('$10.86');
+    expect(detail.textContent).toContain('Dime slip #42');
+
+    fireEvent.click(row);
+    expect(container.querySelector('.trade-detail-row')).toBeNull();
+  });
+
+  it('filters trades by search query and trade type pills', () => {
+    const t1 = makeTrade({ id: 'b1', type: 'BUY', symbol: 'AAPL', notes: 'core holding' });
+    const t2 = makeTrade({ id: 's1', type: 'SELL', symbol: 'NVDA', notes: 'trim' });
+    const { container } = renderTable([t1, t2]);
+
+    expect(container.querySelectorAll('.trade-table tbody tr')).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Buy' }));
+    expect(container.querySelectorAll('.trade-table tbody tr')).toHaveLength(1);
+    expect(container.querySelector('.trade-table tbody')!.textContent).toContain('AAPL');
+
+    fireEvent.click(screen.getByRole('button', { name: 'All' }));
+    fireEvent.change(screen.getByPlaceholderText('Search symbol or notes...'), { target: { value: 'nvda' } });
+    expect(container.querySelectorAll('.trade-table tbody tr')).toHaveLength(1);
+    expect(container.querySelector('.trade-table tbody')!.textContent).toContain('NVDA');
+  });
+
+  it('marks the active sort column with .is-sorted and aria-sort', () => {
+    const { container } = renderTable([makeTrade({ id: 's1' })]);
+    const headers = container.querySelectorAll('.trade-table thead th.sortable');
+    expect(headers[0]).toHaveClass('is-sorted');
+    expect(headers[0]).toHaveAttribute('aria-sort', 'ascending');
+    expect(headers[1]).toHaveAttribute('aria-sort', 'none');
+
+    fireEvent.click(headers[1]);
+    expect(headers[1]).toHaveClass('is-sorted');
+    expect(headers[1]).toHaveAttribute('aria-sort', 'ascending');
+    expect(headers[0]).not.toHaveClass('is-sorted');
   });
 });

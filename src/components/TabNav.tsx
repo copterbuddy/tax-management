@@ -3,12 +3,14 @@
  */
 
 import { useTranslation } from 'react-i18next';
+import type { ReactNode } from 'react';
 import { TAB_IDS, type TabId } from '../hooks/useActiveTab';
+import { IconBarChart, IconCoins, IconLandmark } from './Icons';
 
-const TAB_META: Record<TabId, { icon: string; labelKey: string }> = {
-  trades: { icon: '📊', labelKey: 'common:tabTrades' },
-  dividends: { icon: '💵', labelKey: 'dividend:tabDividends' },
-  remittances: { icon: '🏦', labelKey: 'common:tabRemittances' },
+const TAB_META: Record<TabId, { icon: ReactNode; labelKey: string }> = {
+  trades: { icon: <IconBarChart size={16} />, labelKey: 'common:tabTrades' },
+  dividends: { icon: <IconCoins size={16} />, labelKey: 'dividend:tabDividends' },
+  remittances: { icon: <IconLandmark size={16} />, labelKey: 'common:tabRemittances' },
 };
 
 interface TabNavProps {
@@ -30,7 +32,8 @@ export function TabNav({ activeTab, onSelect }: TabNavProps) {
           className={`tab-btn ${activeTab === id ? 'active' : ''}`}
           onClick={() => onSelect(id)}
         >
-          {TAB_META[id].icon} {t(TAB_META[id].labelKey)}
+          {TAB_META[id].icon}
+          <span>{t(TAB_META[id].labelKey)}</span>
         </button>
       ))}
     </div>

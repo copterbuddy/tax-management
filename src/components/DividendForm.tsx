@@ -2,7 +2,7 @@
 // Modal form for adding/editing dividend records.
 // Uses react-hook-form + zodResolver (pattern matches TradeForm).
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   COUNTRY_WHT_INFO,
@@ -27,6 +27,15 @@ export function DividendForm({
 }: DividendFormProps) {
   const { t } = useTranslation();
   const isEdit = !!editRecord;
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
   // ─── Helper: today's date ───────────────────────────
   const today = useMemo(() => new Date().toISOString().split('T')[0], []);
@@ -54,7 +63,7 @@ export function DividendForm({
   const countryNote = useMemo(() => {
     const lang = document.documentElement.lang === 'th' || localStorage.getItem('lang') === 'th' ? 'TH' : 'EN';
     return lang === 'TH' ? countryInfo.noteTH : countryInfo.noteEN;
-  }, [country, countryInfo]);
+  }, [countryInfo]);
 
   // ─── Auto-calc ────────────────────────────────────────────────────────
 

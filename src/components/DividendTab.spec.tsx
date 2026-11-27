@@ -51,6 +51,7 @@ const baseProps = {
   onYearChange: () => {},
   availableYears: [2026, 2025],
   onDeleteRemittance: () => {},
+  onSetRemittanceDocRef: () => {},
 };
 
 function renderTab(dividends: DividendRecord[], over: Partial<typeof baseProps> = {}) {
@@ -162,5 +163,50 @@ describe('DividendTab — amount to declare', () => {
     expect(card).toBeTruthy();
     expect(card!.querySelector('.kpi-value')?.textContent).toContain('5,751.50');
     expect(card!.querySelector('.kpi-sub')?.textContent).toContain('4,888.80');
+  });
+});
+
+describe('DividendTab layout balance & stacked WHT cell', () => {
+  it('applies the balanced 3-column grid class to its 6 KPI cards', () => {
+    const { container } = renderTab([record()]);
+    const grid = container.querySelector('.kpi-grid.kpi-grid-3');
+    expect(grid).not.toBeNull();
+    expect(grid!.querySelectorAll('.kpi-card')).toHaveLength(6);
+  });
+
+  it('shows both WHT USD amount and percentage in one stacked cell', () => {
+    const { container } = renderTab([record({ whtAmountUSD: 18, whtRate: 15 })]);
+    const whtCell = container.querySelector('tbody tr.trade-row td.col-wht')!;
+    expect(whtCell).not.toBeNull();
+    expect(whtCell.textContent).toContain('$18.00');
+    expect(whtCell.textContent).toContain('15%');
+  });
+
+  it('filters dividend rows by remittance status pill and search input', () => {
+    const remitted = record({ id: 'd1', symbol: 'AAPL', totalRemittedUSD: 102, remainingToRemitUSD: 0 });
+    const unremitted = record({
+      id: 'd2',
+      symbol: 'NVDA',
+      totalRemittedUSD: 0,
+      remainingToRemitUSD: 50,
+      remittances: [],
+    });
+    const { container } = renderTab([remitted, unremitted]);
+
+    expect(container.querySelectorAll('tbody tr.trade-row')).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'ยังไม่นำเข้า' }));
+    expect(container.querySelectorAll('tbody tr.trade-row')).toHaveLength(1);
+    expect(container.querySelector('tbody')!.textContent).toContain('NVDA');
+
+    fireEvent.click(screen.getByRole('button', { name: 'ทั้งหมด' }));
+    fireEvent.change(screen.getByPlaceholderText('ค้นหาหุ้นหรือหมายเหตุ...'), { target: { value: 'aapl' } });
+    expect(container.querySelectorAll('tbody tr.trade-row')).toHaveLength(1);
+    expect(container.querySelector('tbody')!.textContent).toContain('AAPL');
+  });
+
+  it('uses monochrome SVG icon badge in empty state', () => {
+    const { container } = renderTab([]);
+    expect(container.querySelector('.empty-icon-badge svg[aria-hidden="true"]')).not.toBeNull();
   });
 });

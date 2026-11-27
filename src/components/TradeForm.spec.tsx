@@ -220,3 +220,40 @@ describe('TradeForm trade type toggle', () => {
         expect(grossInput().value).toBe('500.25');
       });
     });
+
+describe('TradeForm progressive disclosure, live summary & keyboard ergonomics', () => {
+  it('groups secondary fee/slip/notes inputs inside a collapsible section with net fees badge', () => {
+    const { container } = renderForm();
+    const details = container.querySelector('details.form-collapsible')!;
+    expect(details).not.toBeNull();
+    expect(details.querySelector('#trade-commission')).not.toBeNull();
+    expect(details.querySelector('#trade-gross-amount')).not.toBeNull();
+    expect(details.querySelector('.form-collapsible-badge')).toHaveTextContent('$0.00');
+
+    fireEvent.change(details.querySelector('#trade-commission')!, { target: { value: '2.25' } });
+    expect(details.querySelector('.form-collapsible-badge')).toHaveTextContent('$2.25');
+  });
+
+  it('renders a live trade summary bar with subtotal, net fees, and estimated net cost', () => {
+    const { container } = renderForm();
+    expect(container.querySelector('.trade-live-summary')).toBeNull();
+
+    fireEvent.change(screen.getByLabelText('Quantity'), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText('Unit Price (USD)'), { target: { value: '185.5' } });
+    fireEvent.change(document.querySelector('#trade-commission')!, { target: { value: '1.5' } });
+
+    const summaryBar = container.querySelector('.trade-live-summary')!;
+    expect(summaryBar).not.toBeNull();
+    expect(summaryBar.textContent).toContain('$1855.00');
+    expect(summaryBar.textContent).toContain('$1.50');
+    expect(summaryBar.textContent).toContain('$1856.50');
+  });
+
+  it('calls onCancel when Escape is pressed', () => {
+    const onCancel = jest.fn();
+    renderForm({ onCancel });
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+});

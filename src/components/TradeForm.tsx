@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -7,6 +7,7 @@ import { PROVIDER_OPTIONS, DATE_LIMITS, VALIDATION } from '../constants';
 import { notionalMismatchUSD } from '../engine/fifoEngine';
 import { useTranslation } from 'react-i18next';
 import { TradeTypeToggle } from './TradeTypeToggle';
+import { IconChevronDown, IconChevronRight } from './Icons';
 
 // ─── Form Schema ───────────────────────────────────────────────────────────
 
@@ -173,6 +174,33 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
   const watchedQuantity = watch('quantity');
   const watchedPriceUSD = watch('priceUSD');
   const watchedGrossAmountUSD = watch('grossAmountUSD');
+  const watchedCommissionUSD = watch('commissionUSD');
+  const watchedVatUSD = watch('vatUSD');
+  const watchedExchangeFeeUSD = watch('exchangeFeeUSD');
+  const watchedTafFeeUSD = watch('tafFeeUSD');
+  const watchedRebateUSD = watch('commissionRebateUSD');
+
+  const hasInitialSecondaryData = Boolean(
+    trade && (
+      trade.grossAmountUSD !== undefined ||
+      (trade.commissionUSD ?? 0) > 0 ||
+      (trade.vatUSD ?? 0) > 0 ||
+      (trade.exchangeFeeUSD ?? 0) > 0 ||
+      (trade.tafFeeUSD ?? 0) > 0 ||
+      (trade.commissionRebateUSD ?? 0) > 0 ||
+      Boolean(trade.notes)
+    ),
+  );
+  const [secondaryOpen, setSecondaryOpen] = useState(hasInitialSecondaryData);
+
+  // Close modal on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
 
   // ─── Slip gross amount vs quantity × price (warn, never block) ───────────
 
@@ -188,6 +216,43 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
       grossAmountUSD: Number(watchedGrossAmountUSD),
     });
   }, [watchedQuantity, watchedPriceUSD, watchedGrossAmountUSD]);
+
+  const liveSummary = useMemo(() => {
+    const qty = Number(watchedQuantity) || 0;
+    const price = Number(watchedPriceUSD) || 0;
+    const gross = watchedGrossAmountUSD !== undefined && Number.isFinite(Number(watchedGrossAmountUSD))
+      ? Number(watchedGrossAmountUSD)
+      : qty * price;
+    const comm = Number(watchedCommissionUSD) || 0;
+    const vat = Number(watchedVatUSD) || 0;
+    const exch = Number(watchedExchangeFeeUSD) || 0;
+    const taf = watchedType === 'SELL' ? (Number(watchedTafFeeUSD) || 0) : 0;
+    const rebate = Number(watchedRebateUSD) || 0;
+    const netFees = comm + vat + exch + taf - rebate;
+    const netTotal = watchedType === 'BUY' ? gross + netFees : gross - netFees;
+    return { gross, netFees, netTotal };
+  }, [
+    watchedType,
+    watchedQuantity,
+    watchedPriceUSD,
+    watchedGrossAmountUSD,
+    watchedCommissionUSD,
+    watchedVatUSD,
+    watchedExchangeFeeUSD,
+    watchedTafFeeUSD,
+    watchedRebateUSD,
+  ]);
+
+  const hasSecondaryErrorOrWarning = Boolean(
+    errors.grossAmountUSD ||
+    errors.commissionUSD ||
+    errors.vatUSD ||
+    errors.exchangeFeeUSD ||
+    errors.tafFeeUSD ||
+    errors.commissionRebateUSD ||
+    grossMismatch,
+  );
+  const isSecondaryExpanded = secondaryOpen || hasSecondaryErrorOrWarning;
 
   // ─── Type change: clear everything except the date ───────────────────────
 
@@ -477,116 +542,153 @@ export function TradeForm({ trade, onSubmit, onCancel, onValidate, remainingLots
             </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="trade-gross-amount">{t('trade:formGrossAmount')}</label>
-              <input
-                id="trade-gross-amount"
-                type="number"
-                step="any"
-                min="0"
-                placeholder="e.g. 6647.13"
-                {...grossAmountInputProps}
-                className={errors.grossAmountUSD ? 'input-error' : ''}
-              />
-              {errors.grossAmountUSD && (
-                <span className="error-msg">{errors.grossAmountUSD.message}</span>
-              )}
-              {grossMismatch ? (
-                <span className="warning-msg">
-                  {t('trade:formGrossMismatch', {
-                    derived: grossMismatch.derived.toFixed(2),
-                    gross: grossMismatch.gross.toFixed(2),
-                  })}
-                </span>
-              ) : (
-                <span className="hint-text">{t('trade:formGrossHint')}</span>
-              )}
-            </div>
-          </div>
+          <details
+            className="form-collapsible"
+            open={isSecondaryExpanded}
+            onToggle={e => setSecondaryOpen((e.currentTarget as HTMLDetailsElement).open)}
+          >
+            <summary className="form-collapsible-summary">
+              <span className="form-collapsible-title">
+                {isSecondaryExpanded ? <IconChevronDown size={15} /> : <IconChevronRight size={15} />}
+                <span>{t('trade:formSecondarySection')}</span>
+              </span>
+              <span className="form-collapsible-badge">
+                {t('trade:formNetFeesBadge')}: ${liveSummary.netFees.toFixed(2)}
+              </span>
+            </summary>
 
-          <div className="form-row form-row-fees">
-            <div className="form-group">
-              <label htmlFor="trade-commission">{t('trade:formFee')}</label>
-              <input
-                id="trade-commission"
-                type="number"
-                step="any"
-                min="0"
-                placeholder="e.g. 1.50"
-                {...register('commissionUSD', { valueAsNumber: true })}
-                className={errors.commissionUSD ? 'input-error' : ''}
-              />
-              {errors.commissionUSD && <span className="error-msg">{errors.commissionUSD.message}</span>}
-            </div>
-            <div className="form-group">
-              <label htmlFor="trade-vat">{t('trade:formVat')}</label>
-              <input
-                id="trade-vat"
-                type="number"
-                step="any"
-                min="0"
-                placeholder="e.g. 0.11"
-                {...register('vatUSD', { valueAsNumber: true })}
-                className={errors.vatUSD ? 'input-error' : ''}
-              />
-              {errors.vatUSD && <span className="error-msg">{errors.vatUSD.message}</span>}
-            </div>
-            <div className="form-group">
-              <label htmlFor="trade-exchange-fee">{t('trade:formExchangeFee')}</label>
-              <input
-                id="trade-exchange-fee"
-                type="number"
-                step="any"
-                min="0"
-                placeholder="e.g. 0.25"
-                {...register('exchangeFeeUSD', { valueAsNumber: true })}
-                className={errors.exchangeFeeUSD ? 'input-error' : ''}
-              />
-              {errors.exchangeFeeUSD && <span className="error-msg">{errors.exchangeFeeUSD.message}</span>}
-            </div>
-            {watchedType === 'SELL' && (
-              <div className="form-group">
-                <label htmlFor="trade-taf-fee">{t('trade:formTafFee')}</label>
-                <input
-                  id="trade-taf-fee"
-                  type="number"
-                  step="any"
-                  min="0"
-                  placeholder="e.g. 0.10"
-                  {...register('tafFeeUSD', { valueAsNumber: true })}
-                  className={errors.tafFeeUSD ? 'input-error' : ''}
-                />
-                {errors.tafFeeUSD && <span className="error-msg">{errors.tafFeeUSD.message}</span>}
+            <div className="form-collapsible-body">
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="trade-gross-amount">{t('trade:formGrossAmount')}</label>
+                  <input
+                    id="trade-gross-amount"
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="e.g. 6647.13"
+                    {...grossAmountInputProps}
+                    className={errors.grossAmountUSD ? 'input-error' : ''}
+                  />
+                  {errors.grossAmountUSD && (
+                    <span className="error-msg">{errors.grossAmountUSD.message}</span>
+                  )}
+                  {grossMismatch ? (
+                    <span className="warning-msg">
+                      {t('trade:formGrossMismatch', {
+                        derived: grossMismatch.derived.toFixed(2),
+                        gross: grossMismatch.gross.toFixed(2),
+                      })}
+                    </span>
+                  ) : (
+                    <span className="hint-text">{t('trade:formGrossHint')}</span>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="trade-rebate">{t('trade:formRebate')}</label>
-              <input
-                id="trade-rebate"
-                type="number"
-                step="any"
-                min="0"
-                placeholder="e.g. 0.50"
-                {...register('commissionRebateUSD', { valueAsNumber: true })}
-                className={errors.commissionRebateUSD ? 'input-error' : ''}
-              />
-              {errors.commissionRebateUSD && <span className="error-msg">{errors.commissionRebateUSD.message}</span>}
+              <div className="form-row form-row-fees">
+                <div className="form-group">
+                  <label htmlFor="trade-commission">{t('trade:formFee')}</label>
+                  <input
+                    id="trade-commission"
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="e.g. 1.50"
+                    {...register('commissionUSD', { valueAsNumber: true })}
+                    className={errors.commissionUSD ? 'input-error' : ''}
+                  />
+                  {errors.commissionUSD && <span className="error-msg">{errors.commissionUSD.message}</span>}
+                </div>
+                <div className="form-group">
+                  <label htmlFor="trade-vat">{t('trade:formVat')}</label>
+                  <input
+                    id="trade-vat"
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="e.g. 0.11"
+                    {...register('vatUSD', { valueAsNumber: true })}
+                    className={errors.vatUSD ? 'input-error' : ''}
+                  />
+                  {errors.vatUSD && <span className="error-msg">{errors.vatUSD.message}</span>}
+                </div>
+                <div className="form-group">
+                  <label htmlFor="trade-exchange-fee">{t('trade:formExchangeFee')}</label>
+                  <input
+                    id="trade-exchange-fee"
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="e.g. 0.25"
+                    {...register('exchangeFeeUSD', { valueAsNumber: true })}
+                    className={errors.exchangeFeeUSD ? 'input-error' : ''}
+                  />
+                  {errors.exchangeFeeUSD && <span className="error-msg">{errors.exchangeFeeUSD.message}</span>}
+                </div>
+                {watchedType === 'SELL' && (
+                  <div className="form-group">
+                    <label htmlFor="trade-taf-fee">{t('trade:formTafFee')}</label>
+                    <input
+                      id="trade-taf-fee"
+                      type="number"
+                      step="any"
+                      min="0"
+                      placeholder="e.g. 0.10"
+                      {...register('tafFeeUSD', { valueAsNumber: true })}
+                      className={errors.tafFeeUSD ? 'input-error' : ''}
+                    />
+                    {errors.tafFeeUSD && <span className="error-msg">{errors.tafFeeUSD.message}</span>}
+                  </div>
+                )}
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="trade-rebate">{t('trade:formRebate')}</label>
+                  <input
+                    id="trade-rebate"
+                    type="number"
+                    step="any"
+                    min="0"
+                    placeholder="e.g. 0.50"
+                    {...register('commissionRebateUSD', { valueAsNumber: true })}
+                    className={errors.commissionRebateUSD ? 'input-error' : ''}
+                  />
+                  {errors.commissionRebateUSD && <span className="error-msg">{errors.commissionRebateUSD.message}</span>}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="trade-notes">{t('trade:formNotes')}</label>
+                <input
+                  id="trade-notes"
+                  type="text"
+                  placeholder={t('trade:formNotesPlaceholder')}
+                  {...register('notes')}
+                />
+              </div>
             </div>
-          </div>
+          </details>
 
-          <div className="form-group">
-            <label htmlFor="trade-notes">{t('trade:formNotes')}</label>
-            <input
-              id="trade-notes"
-              type="text"
-              placeholder={t('trade:formNotesPlaceholder')}
-              {...register('notes')}
-            />
-          </div>
+          {liveSummary.gross > 0 && (
+            <div className="trade-live-summary" aria-live="polite">
+              <div className="trade-live-summary-item">
+                <span className="trade-live-summary-label">{t('trade:formSummaryGross')}</span>
+                <span className="trade-live-summary-value">${liveSummary.gross.toFixed(2)}</span>
+              </div>
+              <div className="trade-live-summary-item">
+                <span className="trade-live-summary-label">{t('trade:formSummaryFees')}</span>
+                <span className="trade-live-summary-value">${liveSummary.netFees.toFixed(2)}</span>
+              </div>
+              <div className="trade-live-summary-item is-total">
+                <span className="trade-live-summary-label">
+                  {watchedType === 'BUY' ? t('trade:formSummaryBuyNet') : t('trade:formSummarySellNet')}
+                </span>
+                <span className="trade-live-summary-value">${liveSummary.netTotal.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
 
           {errors.root && (
             <div className="validation-error">{errors.root.message}</div>

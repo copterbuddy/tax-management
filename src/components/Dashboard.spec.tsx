@@ -146,14 +146,20 @@ function clickEditForDate(container: HTMLElement, date: string) {
 }
 
 describe('edit-mode type safety guards', () => {
-  it('refuses to open a SELL trade that still has remittances', async () => {
+  it('refuses to open a SELL trade that still has remittances and shows a non-blocking toast', async () => {
     const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
     const { container } = await renderDashboard();
 
     clickEditForDate(container, '2026-03-10');
 
-    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(alertSpy).not.toHaveBeenCalled();
     expect(container.querySelector('form.trade-form')).toBeNull();
+    const toast = container.querySelector('.toast-banner[role="alert"]');
+    expect(toast).not.toBeNull();
+    expect(toast!.textContent).toContain(i18next.t('trade:remitBeforeEdit'));
+
+    fireEvent.click(toast!.querySelector('.toast-close')!);
+    expect(container.querySelector('.toast-banner')).toBeNull();
     alertSpy.mockRestore();
   });
 
@@ -164,6 +170,7 @@ describe('edit-mode type safety guards', () => {
     clickEditForDate(container, '2026-06-15');
 
     expect(alertSpy).not.toHaveBeenCalled();
+    expect(container.querySelector('.toast-banner')).toBeNull();
     expect(container.querySelector('form.trade-form')).not.toBeNull();
     alertSpy.mockRestore();
   });
@@ -512,5 +519,24 @@ describe('filing summary', () => {
 
     expect(container.querySelector('.filing-sheet')).not.toBeNull();
     expect(container.textContent).toContain('2026');
+  });
+});
+
+describe('display density toggle & semantic landmark', () => {
+  it('wraps tab content in a main landmark and toggles comfortable/compact density', async () => {
+    localStorage.removeItem('tax_tracker_density');
+    const { container } = await renderDashboard();
+
+    expect(container.querySelector('main.dashboard-main')).not.toBeNull();
+    expect(document.documentElement.getAttribute('data-density')).toBe('comfortable');
+
+    const toggle = container.querySelector('.density-toggle') as HTMLButtonElement;
+    expect(toggle).not.toBeNull();
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(toggle);
+    expect(document.documentElement.getAttribute('data-density')).toBe('compact');
+    expect(localStorage.getItem('tax_tracker_density')).toBe('compact');
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
   });
 });

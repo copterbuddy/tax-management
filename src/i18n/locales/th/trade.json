@@ -61,5 +61,18 @@
   "sellSelectSymbol": "-- เลือกหุ้น --",
   "sellAutoFilled": "ค่า auto-fill จาก Symbol ที่เลือก",
   "remitBeforeEdit": "⚠️ กรุณาลบรายการนำเงินเข้าก่อนแก้ไขรายการขายนี้",
-  "fifoLotsConflict": "การแก้ไขนี้จะทำให้รายการขายภายหลังมีจำนวนหุ้นไม่พอให้จับคู่ — กรุณาปรับจำนวนหรือวันที่"
+  "fifoLotsConflict": "การแก้ไขนี้จะทำให้รายการขายภายหลังมีจำนวนหุ้นไม่พอให้จับคู่ — กรุณาปรับจำนวนหรือวันที่",
+  "searchPlaceholder": "ค้นหาหุ้นหรือหมายเหตุ...",
+  "filterAll": "ทั้งหมด",
+  "allProviders": "ทุกโบรกเกอร์",
+  "noMatchingTrades": "ไม่พบรายการที่ตรงกับตัวกรอง",
+  "detailGrossSlip": "ยอดจากสลิป (USD)",
+  "detailGrossDerived": "ยอดคำนวณ (USD)",
+  "detailNotes": "หมายเหตุ",
+  "formSecondarySection": "ค่าธรรมเนียม ยอดจากสลิป และหมายเหตุ",
+  "formNetFeesBadge": "ค่าธรรมเนียมสุทธิ",
+  "formSummaryGross": "ยอดรวม",
+  "formSummaryFees": "ค่าธรรมเนียมสุทธิ",
+  "formSummaryBuyNet": "ต้นทุนสุทธิ (ประมาณ)",
+  "formSummarySellNet": "เงินรับสุทธิ (ประมาณ)"
 }

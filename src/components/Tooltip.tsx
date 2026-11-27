@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, type ReactNode } from 'react';
+import { IconInfo } from './Icons';
 
 interface TooltipProps {
   content: string;
@@ -50,7 +51,7 @@ export function Tooltip({ content, children, position = 'bottom' }: TooltipProps
         aria-label="More information"
         aria-expanded={open}
       >
-        {children || 'ⓘ'}
+        {children || <IconInfo size={14} />}
       </button>
 
       {open && (

@@ -126,8 +126,11 @@ describe('TradesTab not-yet-returned card', () => {
 describe('TradesTab outstanding proceeds list', () => {
   it('lists each gain with an outstanding balance and the year in the heading', () => {
     const { container } = renderTab();
-    const section = container.querySelector('.outstanding-proceeds')!;
+    const section = container.querySelector('details.outstanding-proceeds')!;
+    expect(section).not.toBeNull();
+    expect(section.hasAttribute('open')).toBe(true);
     expect(section.querySelector('h3')!.textContent).toContain('2026');
+    expect(section.querySelector('.outstanding-count-badge')!.textContent).toContain('1 · $146.43');
     expect(section.textContent).toContain('ALLW');
     expect(section.textContent).toContain('146.43');
   });

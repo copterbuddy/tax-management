@@ -88,5 +88,7 @@
   "filingField_dividendGross": "เงินปันผล (ยอดเต็ม)",
   "filingField_dividendCredit": "เครดิตภาษี",
   "filingField_capitalGain": "กำไรจากเงินลงทุน",
-  "filingField_totalAssessable": "รวมเงินได้ที่ต้องยื่น"
+  "filingField_totalAssessable": "รวมเงินได้ที่ต้องยื่น",
+  "filingCopy": "คัดลอกตัวเลข",
+  "filingCopied": "คัดลอกแล้ว"
 }

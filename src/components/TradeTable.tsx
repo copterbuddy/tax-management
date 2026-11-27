@@ -243,10 +243,18 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
           <table className="trade-table">
             <thead>
               <tr>
-                <th className="sortable" onClick={() => handleSort('date')}>
+                <th
+                  className={`sortable${sortField === 'date' ? ' is-sorted' : ''}`}
+                  aria-sort={sortField === 'date' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  onClick={() => handleSort('date')}
+                >
                   {t('trade:colDate')} {sortField === 'date' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                 </th>
-                <th className="sortable" onClick={() => handleSort('symbol')}>
+                <th
+                  className={`sortable${sortField === 'symbol' ? ' is-sorted' : ''}`}
+                  aria-sort={sortField === 'symbol' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  onClick={() => handleSort('symbol')}
+                >
                   {t('trade:colSymbol')} {sortField === 'symbol' ? (sortDir === 'asc' ? '▲' : '▼') : ''}
                 </th>
                 <th>{t('trade:colType')}</th>

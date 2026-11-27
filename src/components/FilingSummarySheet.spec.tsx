@@ -134,4 +134,21 @@ describe('FilingSummarySheet — year lock', () => {
     fireEvent.click(container.querySelector('.trade-form-overlay')!);
     expect(onClose).toHaveBeenCalledTimes(2);
   });
+
+  it('copies formatted filing figures to clipboard and updates button label', () => {
+    const writeText = jest.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    render(
+      <FilingSummarySheet figures={figures} issues={[]} onLock={() => {}} onUnlock={() => {}}
+        onExport={() => {}} onClose={() => {}} />,
+    );
+
+    const copyBtn = screen.getByRole('button', { name: /คัดลอกตัวเลข/ });
+    fireEvent.click(copyBtn);
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText.mock.calls[0][0]).toContain('2026');
+    expect(screen.getByRole('button', { name: /คัดลอกแล้ว/ })).toBeInTheDocument();
+  });
 });

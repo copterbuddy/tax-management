@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { changedFilingFields, type FilingFigures, type FilingIssue } from '../engine/filingSummary';
 import type { YearLock } from '../store/filingSlice';
+import { IconCheck, IconCopy } from './Icons';
 
 interface FilingSummarySheetProps {
   figures: FilingFigures;
@@ -19,6 +20,7 @@ interface FilingSummarySheetProps {
  */
 export function FilingSummarySheet({ figures, issues, locked, onLock, onUnlock, onExport, onClose }: FilingSummarySheetProps) {
   const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
   const fmt = (n: number) =>
     n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -29,6 +31,24 @@ export function FilingSummarySheet({ figures, issues, locked, onLock, onUnlock, 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  const handleCopy = () => {
+    const lines = [
+      t('common:filingSummaryTitle', { year: figures.year }),
+      `${t('common:filingDividendGross')}: ฿${fmt(figures.dividendGrossTHB)}`,
+      `${t('common:filingDividendCredit')}: ฿${fmt(figures.dividendCreditTHB)}`,
+      `${t('common:filingCapitalGain')}: ฿${fmt(figures.capitalGainTHB)}`,
+      `${t('common:filingTotal')}: ฿${fmt(figures.totalAssessableTHB)}`,
+    ];
+    navigator.clipboard?.writeText(lines.join('\n')).catch(() => {});
+    setCopied(true);
+  };
 
   return (
     <div
@@ -115,6 +135,10 @@ export function FilingSummarySheet({ figures, issues, locked, onLock, onUnlock, 
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose}>
               {t('common:filingClose')}
+            </button>
+            <button type="button" className="btn btn-secondary" onClick={handleCopy}>
+              {copied ? <IconCheck size={15} /> : <IconCopy size={15} />}
+              <span>{copied ? t('common:filingCopied') : t('common:filingCopy')}</span>
             </button>
             <button type="button" className="btn btn-primary" onClick={onExport}>
               {t('common:filingExport')}

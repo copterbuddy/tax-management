@@ -210,4 +210,17 @@ describe('TradeTable progressive disclosure and quick filters', () => {
     expect(container.querySelectorAll('.trade-table tbody tr')).toHaveLength(1);
     expect(container.querySelector('.trade-table tbody')!.textContent).toContain('NVDA');
   });
+
+  it('marks the active sort column with .is-sorted and aria-sort', () => {
+    const { container } = renderTable([makeTrade({ id: 's1' })]);
+    const headers = container.querySelectorAll('.trade-table thead th.sortable');
+    expect(headers[0]).toHaveClass('is-sorted');
+    expect(headers[0]).toHaveAttribute('aria-sort', 'ascending');
+    expect(headers[1]).toHaveAttribute('aria-sort', 'none');
+
+    fireEvent.click(headers[1]);
+    expect(headers[1]).toHaveClass('is-sorted');
+    expect(headers[1]).toHaveAttribute('aria-sort', 'ascending');
+    expect(headers[0]).not.toHaveClass('is-sorted');
+  });
 });

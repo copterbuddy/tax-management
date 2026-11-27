@@ -146,14 +146,20 @@ function clickEditForDate(container: HTMLElement, date: string) {
 }
 
 describe('edit-mode type safety guards', () => {
-  it('refuses to open a SELL trade that still has remittances', async () => {
+  it('refuses to open a SELL trade that still has remittances and shows a non-blocking toast', async () => {
     const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {});
     const { container } = await renderDashboard();
 
     clickEditForDate(container, '2026-03-10');
 
-    expect(alertSpy).toHaveBeenCalledTimes(1);
+    expect(alertSpy).not.toHaveBeenCalled();
     expect(container.querySelector('form.trade-form')).toBeNull();
+    const toast = container.querySelector('.toast-banner[role="alert"]');
+    expect(toast).not.toBeNull();
+    expect(toast!.textContent).toContain(i18next.t('trade:remitBeforeEdit'));
+
+    fireEvent.click(toast!.querySelector('.toast-close')!);
+    expect(container.querySelector('.toast-banner')).toBeNull();
     alertSpy.mockRestore();
   });
 
@@ -164,6 +170,7 @@ describe('edit-mode type safety guards', () => {
     clickEditForDate(container, '2026-06-15');
 
     expect(alertSpy).not.toHaveBeenCalled();
+    expect(container.querySelector('.toast-banner')).toBeNull();
     expect(container.querySelector('form.trade-form')).not.toBeNull();
     alertSpy.mockRestore();
   });

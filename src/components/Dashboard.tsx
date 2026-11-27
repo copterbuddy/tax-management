@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { TradeTransaction, RemittanceRecord, DividendRecord, DividendRemittance, OutstandingProceedsRow } from '../types/trade';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { useActiveTab } from '../hooks/useActiveTab';
@@ -45,6 +45,7 @@ import { DividendTab } from './DividendTab';
 import { DividendForm } from './DividendForm';
 import { DividendRemitForm } from './DividendRemitForm';
 import { IconMoon, IconSun } from './Icons';
+import { Toast, type ToastNotice } from './Toast';
 
 export function Dashboard() {
   const dispatch = useAppDispatch();
@@ -70,6 +71,17 @@ export function Dashboard() {
   const [activeTab, selectTab] = useActiveTab();
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [deleteRemitConfirm, setDeleteRemitConfirm] = useState<RemittanceRecord | null>(null);
+  const [toast, setToast] = useState<ToastNotice | null>(null);
+
+  const showToast = useCallback((message: string, variant: ToastNotice['variant'] = 'warning') => {
+    setToast({ message, variant });
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   // Dividend state
   const dividendRecords = useAppSelector(state => state.dividend.records);
@@ -102,11 +114,11 @@ export function Dashboard() {
       try {
         dispatch(updateTrade(trade));
       } catch {
-        alert(t('trade:fifoLotsConflict') ?? 'This change leaves a later SELL trade without enough lots to match');
+        showToast(t('trade:fifoLotsConflict') ?? 'This change leaves a later SELL trade without enough lots to match', 'error');
         return;
       }
     setEditingTrade(null);
-    }, [dispatch, t]);
+    }, [dispatch, showToast, t]);
 
   const handleDeleteTrade = useCallback((id: string) => {
     setDeleteConfirmId(id);
@@ -124,12 +136,12 @@ export function Dashboard() {
     if (trade.type === 'SELL') {
       const sellGain = gains.find(g => g.sellTradeId === trade.id);
       if (sellGain && sellGain.remittances.length > 0) {
-        alert(t('trade:remitBeforeEdit') ?? '⚠️ กรุณาลบรายการนำเงินเข้าก่อนแก้ไขรายการขายนี้');
+        showToast(t('trade:remitBeforeEdit') ?? '⚠️ กรุณาลบรายการนำเงินเข้าก่อนแก้ไขรายการขายนี้', 'warning');
         return;
       }
     }
     setEditingTrade(trade);
-  }, [gains, t]);
+  }, [gains, showToast, t]);
 
   const handleValidate = useCallback((trade: TradeTransaction): string | null => {
       if (trade.type === 'SELL') {
@@ -272,11 +284,11 @@ export function Dashboard() {
   const handleDeleteDividend = useCallback((id: string) => {
     const record = dividendRecords.find(r => r.id === id);
     if (record && record.remittances.length > 0) {
-      alert(t('dividend:hasRemittance'));
+      showToast(t('dividend:hasRemittance'), 'warning');
       return;
     }
     setDividendDeleteConfirm(id);
-  }, [dividendRecords, t]);
+  }, [dividendRecords, showToast, t]);
 
   const confirmDeleteDividend = useCallback(() => {
     if (dividendDeleteConfirm) {
@@ -289,11 +301,11 @@ export function Dashboard() {
     const record = dividendRecords.find(r => r.id === id);
     if (!record) return;
     if (record.remittances.length > 0) {
-      alert(t('dividend:hasRemittance'));
+      showToast(t('dividend:hasRemittance'), 'warning');
       return;
     }
     setEditingDividend(record);
-  }, [dividendRecords, t]);
+  }, [dividendRecords, showToast, t]);
 
   const handleRemitDividend = useCallback((id: string) => {
     const record = dividendRecords.find(r => r.id === id);
@@ -530,6 +542,9 @@ export function Dashboard() {
           danger
         />
       )}
+
+      {/* Non-blocking Toast Notification */}
+      {toast && <Toast notice={toast} onDismiss={() => setToast(null)} />}
     </div>
   );
 }

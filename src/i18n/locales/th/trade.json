@@ -68,5 +68,11 @@
   "noMatchingTrades": "ไม่พบรายการที่ตรงกับตัวกรอง",
   "detailGrossSlip": "ยอดจากสลิป (USD)",
   "detailGrossDerived": "ยอดคำนวณ (USD)",
-  "detailNotes": "หมายเหตุ"
+  "detailNotes": "หมายเหตุ",
+  "formSecondarySection": "ค่าธรรมเนียม ยอดจากสลิป และหมายเหตุ",
+  "formNetFeesBadge": "ค่าธรรมเนียมสุทธิ",
+  "formSummaryGross": "ยอดรวม",
+  "formSummaryFees": "ค่าธรรมเนียมสุทธิ",
+  "formSummaryBuyNet": "ต้นทุนสุทธิ (ประมาณ)",
+  "formSummarySellNet": "เงินรับสุทธิ (ประมาณ)"
 }

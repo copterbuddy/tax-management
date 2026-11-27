@@ -68,5 +68,11 @@
   "noMatchingTrades": "No trades match the current filters",
   "detailGrossSlip": "Slip Gross (USD)",
   "detailGrossDerived": "Calculated Gross (USD)",
-  "detailNotes": "Notes"
+  "detailNotes": "Notes",
+  "formSecondarySection": "Fees, slip amount & notes",
+  "formNetFeesBadge": "Net fees",
+  "formSummaryGross": "Subtotal",
+  "formSummaryFees": "Net fees",
+  "formSummaryBuyNet": "Est. net cost",
+  "formSummarySellNet": "Est. net proceeds"
 }

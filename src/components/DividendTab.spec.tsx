@@ -181,4 +181,32 @@ describe('DividendTab layout balance & stacked WHT cell', () => {
     expect(whtCell.textContent).toContain('$18.00');
     expect(whtCell.textContent).toContain('15%');
   });
+
+  it('filters dividend rows by remittance status pill and search input', () => {
+    const remitted = record({ id: 'd1', symbol: 'AAPL', totalRemittedUSD: 102, remainingToRemitUSD: 0 });
+    const unremitted = record({
+      id: 'd2',
+      symbol: 'NVDA',
+      totalRemittedUSD: 0,
+      remainingToRemitUSD: 50,
+      remittances: [],
+    });
+    const { container } = renderTab([remitted, unremitted]);
+
+    expect(container.querySelectorAll('tbody tr.trade-row')).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'ยังไม่นำเข้า' }));
+    expect(container.querySelectorAll('tbody tr.trade-row')).toHaveLength(1);
+    expect(container.querySelector('tbody')!.textContent).toContain('NVDA');
+
+    fireEvent.click(screen.getByRole('button', { name: 'ทั้งหมด' }));
+    fireEvent.change(screen.getByPlaceholderText('ค้นหาหุ้นหรือหมายเหตุ...'), { target: { value: 'aapl' } });
+    expect(container.querySelectorAll('tbody tr.trade-row')).toHaveLength(1);
+    expect(container.querySelector('tbody')!.textContent).toContain('AAPL');
+  });
+
+  it('uses monochrome SVG icon badge in empty state', () => {
+    const { container } = renderTab([]);
+    expect(container.querySelector('.empty-icon-badge svg[aria-hidden="true"]')).not.toBeNull();
+  });
 });

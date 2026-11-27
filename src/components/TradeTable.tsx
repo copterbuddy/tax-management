@@ -8,7 +8,7 @@ import {
 } from '../engine/fifoEngine';
 import { PROVIDER_OPTIONS } from '../constants';
 import { useTranslation } from 'react-i18next';
-import { IconChevronDown, IconChevronRight, IconPencil, IconSearch, IconTrash } from './Icons';
+import { IconBarChart, IconChevronDown, IconChevronRight, IconPencil, IconSearch, IconTrash } from './Icons';
 
 interface TradeTableProps {
   trades: TradeTransaction[];
@@ -227,7 +227,7 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
 
       {yearTrades.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">📊</div>
+          <div className="empty-icon-badge"><IconBarChart size={26} /></div>
           <p>{t('trade:noTrades')} {selectedYear}</p>
           <p className="empty-hint">{t('trade:noTradesHint')}</p>
           <button className="btn btn-primary" onClick={onAddNew}>

@@ -3,7 +3,7 @@ import type { ProviderType, RealizedGainResult, RemittanceRecord } from '../type
 import { PROVIDER_OPTIONS } from '../constants';
 import { useTranslation } from 'react-i18next';
 import { DocRefDialog } from './DocRefDialog';
-import { IconPaperclip, IconPencil, IconSearch, IconTrash } from './Icons';
+import { IconLandmark, IconPaperclip, IconPencil, IconSearch, IconTrash } from './Icons';
 
 interface RemittanceLogProps {
   gains: RealizedGainResult[];
@@ -135,7 +135,7 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
 
       {yearRemittances.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-icon">🏦</div>
+          <div className="empty-icon-badge"><IconLandmark size={26} /></div>
           <p>{t('remittance:noRemittances')} {remitYear}</p>
           <p className="empty-hint">{t('remittance:noRemittancesHint')}</p>
           <button className="btn btn-primary" onClick={onRecordRemit}>

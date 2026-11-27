@@ -142,8 +142,15 @@ export function TradesTab({
 
             {/* Outstanding proceeds — the gains behind the "not yet returned" figure */}
       {outstandingRows.length > 0 && (
-              <div className="outstanding-proceeds">
-                <h3>{t('common:outstandingTitle', { year: selectedYear })}</h3>
+              <details className="outstanding-proceeds" open>
+                <summary className="outstanding-summary">
+                  <span className="outstanding-summary-left">
+                    <h3>{t('common:outstandingTitle', { year: selectedYear })}</h3>
+                  </span>
+                  <span className="outstanding-count-badge">
+                    {outstandingRows.length} · ${fmtUSD(outstandingRows.reduce((s, r) => s + r.availableBalanceUSD, 0))}
+                  </span>
+                </summary>
                 <p className="outstanding-hint">{t('common:outstandingHint')}</p>
                 <ul className="outstanding-list">
                   {outstandingRows.map(row => (
@@ -173,7 +180,7 @@ export function TradesTab({
                     </li>
                   ))}
                 </ul>
-              </div>
+              </details>
             )}
 
       {/* Provider KPI Row */}

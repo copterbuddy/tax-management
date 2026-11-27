@@ -63,7 +63,7 @@ export function DividendForm({
   const countryNote = useMemo(() => {
     const lang = document.documentElement.lang === 'th' || localStorage.getItem('lang') === 'th' ? 'TH' : 'EN';
     return lang === 'TH' ? countryInfo.noteTH : countryInfo.noteEN;
-  }, [country, countryInfo]);
+  }, [countryInfo]);
 
   // ─── Auto-calc ────────────────────────────────────────────────────────
 

@@ -2,7 +2,7 @@
 // Main content for the Dividend tab in Dashboard.
 // Shows KPI cards, year filter, dividend table with expandable remittance history.
 
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DividendRecord } from '../types/trade';
 import { KpiCard } from './KpiCard';
@@ -18,6 +18,7 @@ import {
   IconPencil,
   IconPercent,
   IconReceipt,
+  IconSearch,
   IconTrash,
   IconWallet,
 } from './Icons';
@@ -61,9 +62,17 @@ export function DividendTab({
 }: DividendTabProps) {
   const { t } = useTranslation();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'REMITTED' | 'PARTIAL' | 'UNREMITTED'>('ALL');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleteRemitConfirm, setDeleteRemitConfirm] = useState<{ dividendId: string; remittanceId: string } | null>(null);
   const [docTarget, setDocTarget] = useState<{ dividendId: string; remittanceId: string; label: string; value?: string } | null>(null);
+
+  useEffect(() => {
+    setSearchQuery('');
+    setStatusFilter('ALL');
+    setExpandedId(null);
+  }, [displayYear]);
 
   // ─── Filter by year ─────────────────────────────────────────────────
 
@@ -80,6 +89,22 @@ export function DividendTab({
     });
   }, [dividends, displayYear]);
 
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const visibleDividends = useMemo(() => {
+    return filteredDividends.filter(record => {
+      if (statusFilter === 'REMITTED' && record.remainingToRemitUSD > 0) return false;
+      if (statusFilter === 'PARTIAL' && !(record.totalRemittedUSD > 0 && record.remainingToRemitUSD > 0)) return false;
+      if (statusFilter === 'UNREMITTED' && record.totalRemittedUSD > 0) return false;
+      if (normalizedQuery) {
+        const symMatch = record.symbol.toLowerCase().includes(normalizedQuery);
+        const notesMatch = (record.notes ?? '').toLowerCase().includes(normalizedQuery);
+        if (!symMatch && !notesMatch) return false;
+      }
+      return true;
+    });
+  }, [filteredDividends, statusFilter, normalizedQuery]);
+  const isFiltered = statusFilter !== 'ALL' || normalizedQuery.length > 0;
+
   // ─── Empty state ────────────────────────────────────────────────────
 
   if (dividends.length === 0) {
@@ -95,7 +120,7 @@ export function DividendTab({
             </button>
           </div>
           <div className="empty-state">
-            <div className="empty-state-icon">💵</div>
+            <div className="empty-icon-badge"><IconCoins size={26} /></div>
             <div className="empty-state-title">{t('dividend:noDividends')}</div>
             <div className="empty-state-desc">{t('dividend:noDividendsHint')}</div>
             <button className="btn btn-primary" onClick={onAdd}>
@@ -132,7 +157,7 @@ export function DividendTab({
             </button>
           </div>
           <div className="empty-state">
-            <div className="empty-state-icon">🔍</div>
+            <div className="empty-icon-badge"><IconSearch size={26} /></div>
             <div className="empty-state-title">{t('dividend:noDividendsYear')} {displayYear}</div>
             <div className="empty-state-desc">{t('dividend:noDividendsYearHint')}</div>
           </div>
@@ -293,12 +318,50 @@ export function DividendTab({
         <div className="trade-table-header">
           <div className="trade-table-title">
             <h2>{t('dividend:tabDividends')} — {displayYear}</h2>
-            <span className="trade-count">({filteredDividends.length})</span>
+            <span className="trade-count">
+              ({filteredDividends.length}{isFiltered ? ` · ${visibleDividends.length}` : ''})
+            </span>
           </div>
-          <button className="btn btn-primary" onClick={onAdd}>
-            {t('dividend:addDividend')}
-          </button>
+          <div className="trade-table-controls">
+            <div className="table-search">
+              <IconSearch size={14} className="table-search-icon" />
+              <input
+                type="search"
+                className="table-search-input"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder={t('trade:searchPlaceholder')}
+                aria-label={t('trade:searchPlaceholder')}
+              />
+            </div>
+            <div className="type-filter-group" role="group" aria-label={t('dividend:tabDividends')}>
+              {([
+                { id: 'ALL', label: t('trade:filterAll') },
+                { id: 'REMITTED', label: t('dividend:statusRemitted') },
+                { id: 'PARTIAL', label: t('dividend:statusPartial') },
+                { id: 'UNREMITTED', label: t('dividend:statusNotRemitted') },
+              ] as const).map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={`type-filter-btn${statusFilter === opt.id ? ' active' : ''}`}
+                  aria-pressed={statusFilter === opt.id}
+                  onClick={() => setStatusFilter(opt.id)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+            <button className="btn btn-primary" onClick={onAdd}>
+              {t('dividend:addDividend')}
+            </button>
+          </div>
         </div>
+        {visibleDividends.length === 0 ? (
+          <div className="empty-state">
+            <p>{t('trade:noMatchingTrades')}</p>
+          </div>
+        ) : (
         <div className="table-wrapper">
         <table className="trade-table">
           <thead>
@@ -317,7 +380,7 @@ export function DividendTab({
             </tr>
           </thead>
           <tbody>
-            {filteredDividends.map(record => (
+            {visibleDividends.map(record => (
               <Fragment key={record.id}>
                 <tr
                   className="trade-row trade-row-clickable"
@@ -396,11 +459,12 @@ export function DividendTab({
           </tbody>
         </table>
         </div>
+        )}
       </div>
 
       {/* Mobile Cards */}
       <div className="trade-cards">
-        {filteredDividends.map(record => (
+        {visibleDividends.map(record => (
           <div key={record.id} className="trade-card">
             <div className="trade-card-header">
               <span>

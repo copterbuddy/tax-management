@@ -1055,6 +1055,7 @@ a:hover {
 
 @media (max-width: 639px) {
   .trade-table { display: none; }
+  .trade-table.remit-log-table { display: table; }
   .trade-cards {
     display: flex;
     flex-direction: column;

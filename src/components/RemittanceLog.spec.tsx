@@ -130,3 +130,38 @@ describe('RemittanceLog — evidence link', () => {
     expect(paperclip.className).toContain('has-doc');
   });
 });
+
+describe('RemittanceLog — stacked layout & quick filters', () => {
+  it('marks the table with .remit-log-table and filters by search query and provider', () => {
+    const otherGain: RealizedGainResult = {
+      ...gain,
+      sellTradeId: 'sell_msft',
+      symbol: 'MSFT',
+      provider: 'Liberator',
+      remittances: [
+        { id: 'r3', sellTradeId: 'sell_msft', amountUSD: 200, remitDate: '2026-05-01', fxRateTHB: 35, notes: 'wire transfer' },
+      ],
+    };
+    const { container } = render(
+      <RemittanceLog
+        gains={[gain, otherGain]}
+        onRecordRemit={jest.fn()}
+        onEditRemittance={jest.fn()}
+        onDeleteRemittance={jest.fn()}
+        onSetDocRef={jest.fn()}
+      />,
+    );
+
+    expect(container.querySelector('.trade-table.remit-log-table')).not.toBeNull();
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(3);
+
+    fireEvent.change(screen.getByPlaceholderText('Search symbol or notes...'), { target: { value: 'msft' } });
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(container.querySelector('tbody')!.textContent).toContain('MSFT');
+    expect(container.querySelector('tbody')!.textContent).toContain('@ 35.00');
+
+    fireEvent.change(screen.getByPlaceholderText('Search symbol or notes...'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Liberator' }));
+    expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
+  });
+});

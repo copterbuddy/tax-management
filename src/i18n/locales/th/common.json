@@ -90,5 +90,7 @@
   "filingField_capitalGain": "กำไรจากเงินลงทุน",
   "filingField_totalAssessable": "รวมเงินได้ที่ต้องยื่น",
   "filingCopy": "คัดลอกตัวเลข",
-  "filingCopied": "คัดลอกแล้ว"
+  "filingCopied": "คัดลอกแล้ว",
+  "switchToCompact": "สลับเป็นโหมดกะทัดรัด",
+  "switchToComfortable": "สลับเป็นโหมดสบายตา"
 }

@@ -90,5 +90,7 @@
   "filingField_capitalGain": "capital gain",
   "filingField_totalAssessable": "total assessable income",
   "filingCopy": "Copy figures",
-  "filingCopied": "Copied"
+  "filingCopied": "Copied",
+  "switchToCompact": "Switch to compact density",
+  "switchToComfortable": "Switch to comfortable density"
 }

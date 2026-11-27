@@ -521,3 +521,22 @@ describe('filing summary', () => {
     expect(container.textContent).toContain('2026');
   });
 });
+
+describe('display density toggle & semantic landmark', () => {
+  it('wraps tab content in a main landmark and toggles comfortable/compact density', async () => {
+    localStorage.removeItem('tax_tracker_density');
+    const { container } = await renderDashboard();
+
+    expect(container.querySelector('main.dashboard-main')).not.toBeNull();
+    expect(document.documentElement.getAttribute('data-density')).toBe('comfortable');
+
+    const toggle = container.querySelector('.density-toggle') as HTMLButtonElement;
+    expect(toggle).not.toBeNull();
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(toggle);
+    expect(document.documentElement.getAttribute('data-density')).toBe('compact');
+    expect(localStorage.getItem('tax_tracker_density')).toBe('compact');
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  });
+});

@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import type { TradeTransaction, RemittanceRecord, DividendRecord, DividendRemittance, OutstandingProceedsRow } from '../types/trade';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
 import { useActiveTab } from '../hooks/useActiveTab';
+import { useDensity } from '../hooks/useDensity';
 import { TabNav } from './TabNav';
 import { FilingSummarySheet } from './FilingSummarySheet';
 import { lockYear, unlockYear } from '../store/filingSlice';
@@ -44,13 +45,14 @@ import { RemittanceLog } from './RemittanceLog';
 import { DividendTab } from './DividendTab';
 import { DividendForm } from './DividendForm';
 import { DividendRemitForm } from './DividendRemitForm';
-import { IconMoon, IconSun } from './Icons';
+import { IconMoon, IconSliders, IconSun } from './Icons';
 import { Toast, type ToastNotice } from './Toast';
 
 export function Dashboard() {
   const dispatch = useAppDispatch();
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
+  const [density, toggleDensity] = useDensity();
   const {
     trades,
     gains,
@@ -358,6 +360,18 @@ export function Dashboard() {
             {t('common:filingSummary', { year: selectedTaxYear })}
           </button>
 
+          {/* Display Density Toggle */}
+          <button
+            type="button"
+            className="theme-toggle density-toggle"
+            onClick={toggleDensity}
+            aria-pressed={density === 'compact'}
+            title={density === 'comfortable' ? t('common:switchToCompact') : t('common:switchToComfortable')}
+            aria-label={density === 'comfortable' ? t('common:switchToCompact') : t('common:switchToComfortable')}
+          >
+            <IconSliders size={17} />
+          </button>
+
           {/* Theme Toggle */}
           <button
             className="theme-toggle"
@@ -390,6 +404,7 @@ export function Dashboard() {
 
       <TabNav activeTab={activeTab} onSelect={selectTab} />
 
+      <main className="dashboard-main">
       {activeTab === 'trades' ? (
         <TradesTab
           trades={trades}
@@ -430,6 +445,7 @@ export function Dashboard() {
           onDeleteRemittance={handleDeleteRemittance}
         />
       )}
+      </main>
 
       {showFiling && (
         <FilingSummarySheet

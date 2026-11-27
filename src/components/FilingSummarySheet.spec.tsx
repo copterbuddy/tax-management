@@ -122,4 +122,16 @@ describe('FilingSummarySheet — year lock', () => {
     fireEvent.click(screen.getByRole('button', { name: /ปลดล็อก/ }));
     expect(onUnlock).toHaveBeenCalledTimes(1);
   });
+
+  it('dismisses on Escape key and backdrop click', () => {
+    const onClose = jest.fn();
+    const { container } = render(
+      <FilingSummarySheet figures={figures} issues={[]} onLock={() => {}} onUnlock={() => {}}
+        onExport={() => {}} onClose={onClose} />,
+    );
+    expect(container.querySelector('.trade-form-modal .trade-form')).not.toBeNull();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.click(container.querySelector('.trade-form-overlay')!);
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
 });

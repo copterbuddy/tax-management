@@ -50,4 +50,13 @@ describe('DocRefDialog', () => {
 
     expect(onSave).toHaveBeenCalledWith(null);
   });
+
+  it('dismisses on Escape key and backdrop click', () => {
+    const onClose = jest.fn();
+    const { container } = render(<DocRefDialog subject="ALLW" onSave={noop} onClose={onClose} />);
+    expect(container.querySelector('.trade-form-modal .trade-form')).not.toBeNull();
+    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.click(container.querySelector('.trade-form-overlay')!);
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
 });

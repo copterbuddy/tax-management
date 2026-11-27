@@ -215,3 +215,13 @@ export function IconSearch({ size = 16, className, ...rest }: IconProps) {
     </svg>
   );
 }
+
+export function IconInfo({ size = 14, className, ...rest }: IconProps) {
+  return (
+    <svg {...baseProps(size, className)} {...rest}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4" />
+      <path d="M12 8h.01" />
+    </svg>
+  );
+}

@@ -3,7 +3,7 @@
 // purchase instead of being returned to Thailand. Prefilled with the gain's
 // outstanding balance and editable down, never up.
 
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -29,6 +29,14 @@ function toCents(n: number): number {
 export function MarkReinvestedDialog({ row, onSubmit, onCancel }: MarkReinvestedDialogProps) {
   const { t } = useTranslation();
   const balance = toCents(row.availableBalanceUSD);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
 
   // The limit is compared on the cent grid, against the same rounded balance
   // the dialog displays and prefills — a raw float such as 0.30000000000000004

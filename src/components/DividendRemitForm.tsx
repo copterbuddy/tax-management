@@ -1,7 +1,7 @@
 // ─── Dividend Remittance Form ───────────────────────────────────────────────
 // Modal for recording a dividend remittance into Thailand.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { DividendRecord, DividendRemittance } from '../types/trade';
 import { calculateWhtCredit, validateRemittance } from '../engine/dividendEngine';
@@ -21,6 +21,15 @@ export function DividendRemitForm({
   dividend,
 }: DividendRemitFormProps) {
   const { t } = useTranslation();
+
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
   const [amountUSD, setAmountUSD] = useState(0);
   const [remitDate, setRemitDate] = useState('');
@@ -113,7 +122,7 @@ export function DividendRemitForm({
               ({dividend.symbol} — ${dividend.remainingToRemitUSD.toFixed(2)} {t('dividend:remitRemaining')})
             </span>
           </h2>
-          <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
+          <button className="btn-close" onClick={onClose} aria-label="Close">&times;</button>
         </div>
 
         <div className="modal-body">

@@ -165,3 +165,20 @@ describe('DividendTab — amount to declare', () => {
     expect(card!.querySelector('.kpi-sub')?.textContent).toContain('4,888.80');
   });
 });
+
+describe('DividendTab layout balance & stacked WHT cell', () => {
+  it('applies the balanced 3-column grid class to its 6 KPI cards', () => {
+    const { container } = renderTab([record()]);
+    const grid = container.querySelector('.kpi-grid.kpi-grid-3');
+    expect(grid).not.toBeNull();
+    expect(grid!.querySelectorAll('.kpi-card')).toHaveLength(6);
+  });
+
+  it('shows both WHT USD amount and percentage in one stacked cell', () => {
+    const { container } = renderTab([record({ whtAmountUSD: 18, whtRate: 15 })]);
+    const whtCell = container.querySelector('tbody tr.trade-row td.col-wht')!;
+    expect(whtCell).not.toBeNull();
+    expect(whtCell.textContent).toContain('$18.00');
+    expect(whtCell.textContent).toContain('15%');
+  });
+});

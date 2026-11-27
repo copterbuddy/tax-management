@@ -160,7 +160,7 @@ export function DividendTab({
 
     return (
       <tr className="remittance-history-row">
-        <td colSpan={12}>
+        <td colSpan={11}>
           <div className="remittance-history-pane">
             <div className="remittance-history-title">
               📋 {t('dividend:remitHistory')} ({record.remittances.length} {t('dividend:remitRecorded')})
@@ -241,8 +241,8 @@ export function DividendTab({
         </select>
       </div>
 
-      {/* KPI Row — 6 cards */}
-      <div className="kpi-grid">
+      {/* KPI Row — 6 cards in balanced 3×2 desktop grid */}
+      <div className="kpi-grid kpi-grid-3">
         <KpiCard
           title={t('dividend:kpiGrossDiv')}
           value={`$${summary ? fmtUSD(summary.totalGrossUSD) : '0.00'}`}
@@ -307,8 +307,7 @@ export function DividendTab({
               <th style={{ width: '80px' }}>{t('dividend:colSymbol')}</th>
               <th style={{ width: '80px' }}>{t('dividend:colCountry')}</th>
               <th style={{ textAlign: 'right', width: '100px' }}>{t('dividend:colGrossUSD')}</th>
-              <th style={{ textAlign: 'center', width: '60px' }}>{t('dividend:colWhtPct')}</th>
-              <th style={{ textAlign: 'right', width: '100px' }} className="col-optional">{t('dividend:colWhtUSD')}</th>
+              <th style={{ textAlign: 'right', width: '105px' }}>{t('dividend:colWhtUSD')}</th>
               <th style={{ textAlign: 'right', width: '100px' }}>{t('dividend:colNetUSD')}</th>
               <th style={{ textAlign: 'right', width: '100px' }}>{t('dividend:colRemitted')}</th>
               <th style={{ textAlign: 'right', width: '100px' }}>{t('dividend:colRemaining')}</th>
@@ -321,7 +320,7 @@ export function DividendTab({
             {filteredDividends.map(record => (
               <Fragment key={record.id}>
                 <tr
-                  className="trade-row"
+                  className="trade-row trade-row-clickable"
                   onClick={() => setExpandedId(expandedId === record.id ? null : record.id)}
                 >
                   <td>{record.date}</td>
@@ -331,8 +330,12 @@ export function DividendTab({
                     {' '}{record.country}
                   </td>
                   <td className="mono" style={{ textAlign: 'right' }}>${fmtUSD(record.grossAmountUSD)}</td>
-                  <td style={{ textAlign: 'center' }}>{record.whtRate}%</td>
-                  <td className="mono col-optional" style={{ textAlign: 'right' }}>${fmtUSD(record.whtAmountUSD)}</td>
+                  <td className="mono col-wht" style={{ textAlign: 'right' }}>
+                    <div className="cell-stack cell-stack-right">
+                      <span>${fmtUSD(record.whtAmountUSD)}</span>
+                      <span className="cell-sub">{record.whtRate}%</span>
+                    </div>
+                  </td>
                   <td className="mono" style={{ textAlign: 'right' }}>${fmtUSD(record.netAmountUSD)}</td>
                   <td className="mono" style={{ textAlign: 'right' }}>${fmtUSD(record.totalRemittedUSD)}</td>
                   <td style={{ textAlign: 'right' }}>

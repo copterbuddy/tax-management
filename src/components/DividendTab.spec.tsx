@@ -51,6 +51,7 @@ const baseProps = {
   onYearChange: () => {},
   availableYears: [2026, 2025],
   onDeleteRemittance: () => {},
+  onSetRemittanceDocRef: () => {},
 };
 
 function renderTab(dividends: DividendRecord[], over: Partial<typeof baseProps> = {}) {

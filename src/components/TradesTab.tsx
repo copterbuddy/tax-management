@@ -17,6 +17,7 @@ import type {
 import { formatGainIndicator } from '../engine/fifoEngine';
 import { KpiCard } from './KpiCard';
 import { TradeTable } from './TradeTable';
+import { IconBuilding, IconGlobe, IconLandmark, IconTrendingUp, IconWallet } from './Icons';
 
 /** Each refusal code owns exactly one message key — no branching in the JSX. */
 const LEDGER_ERROR_KEYS = {
@@ -98,7 +99,7 @@ export function TradesTab({
             ? `${t('common:kpiRemitFrom')} ${remitCount} ${remitCount === 1 ? t('common:kpiRemitCountSingular') : t('common:kpiRemitCountPlural')}`
             : undefined}
           variant={summary && summary.taxableGainTHB > 0 ? 'highlight' : 'neutral'}
-          icon="💰"
+          icon={<IconWallet size={18} />}
           tooltip={t('common:tooltipEstTax')}
         />
         <KpiCard
@@ -106,7 +107,7 @@ export function TradesTab({
           value={summary ? `$${fmtUSD(summary.totalRemittedUSD)}` : '$0.00'}
           subValue={summary ? `${summary.remittedSellCount} ${t('common:sellsCount')}` : undefined}
           variant="neutral"
-          icon="🏦"
+          icon={<IconLandmark size={18} />}
           tooltip={t('common:tooltipRemitted')}
         />
         <KpiCard
@@ -116,7 +117,7 @@ export function TradesTab({
             ? `${summary.totalBuyCount} ${t('common:buys')} / ${summary.totalSellCount} ${t('common:sells')}`
             : undefined}
           variant={summary && summary.netGainUSD > 0 ? 'positive' : summary && summary.netGainUSD < 0 ? 'negative' : 'neutral'}
-          icon="📈"
+          icon={<IconTrendingUp size={18} />}
           tooltip={t('common:tooltipNetGain')}
         />
         <KpiCard
@@ -124,7 +125,7 @@ export function TradesTab({
           value={summary ? `$${fmtUSD(summary.unremittedUSD)}` : '$0.00'}
           subValue={t('common:kpiNotRemittedSub')}
           variant="neutral"
-          icon="🌏"
+          icon={<IconGlobe size={18} />}
           tooltip={t('common:tooltipNotRemitted')}
         />
       </div>
@@ -185,7 +186,8 @@ export function TradesTab({
             return (
               <KpiCard
                 key={pb.provider}
-                title={`🏢 ${pb.provider}`}
+                title={pb.provider}
+                icon={<IconBuilding size={16} />}
                 value={formatGainIndicator(pb.taxableGainTHB)}
                 subValue={`$${fmtUSD(pb.totalRemittedUSD)} ${t('common:providerRemittedSuffix')}${pctText}`}
                 subValue2={pb.sellCount > 0

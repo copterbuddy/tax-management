@@ -44,6 +44,7 @@ import { RemittanceLog } from './RemittanceLog';
 import { DividendTab } from './DividendTab';
 import { DividendForm } from './DividendForm';
 import { DividendRemitForm } from './DividendRemitForm';
+import { IconMoon, IconSun } from './Icons';
 
 export function Dashboard() {
   const dispatch = useAppDispatch();
@@ -352,7 +353,7 @@ export function Dashboard() {
             title={theme === 'light' ? t('common:switchToDark') : t('common:switchToLight')}
             aria-label={theme === 'light' ? t('common:switchToDark') : t('common:switchToLight')}
           >
-            {theme === 'light' ? '🌙' : '☀️'}
+            {theme === 'light' ? <IconMoon size={18} /> : <IconSun size={18} />}
           </button>
 
           {/* Language Switcher */}

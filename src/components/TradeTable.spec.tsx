@@ -122,3 +122,49 @@ describe('TradeTable fallback highlight', () => {
     expect(row.querySelectorAll('button, a, input, select, textarea, [tabindex]')).toHaveLength(2);
   });
 });
+
+describe('TradeTable visual foundation', () => {
+  it('renders remittance progress label outside the progress bar track so it is not clipped', () => {
+    const sell = makeTrade({ id: 'sell-remit', type: 'SELL' });
+    const { container } = render(
+      <TradeTable
+        trades={[sell]}
+        gains={[
+          {
+            sellTradeId: 'sell-remit',
+            sellDate: '2026-05-18',
+            symbol: 'ALLW',
+            provider: 'Dime',
+            sellQuantity: 224,
+            sellRevenueUSD: 6636.27,
+            buyCostBasisUSD: 5000,
+            gainUSD: 1636.27,
+            gainPercent: 0.2465,
+            matchedLots: [],
+            totalRemittedUSD: 3000,
+            remainingProceedsUSD: 3636.27,
+            remittances: [],
+            taxableGainTHB: 0,
+          },
+        ]}
+        selectedYear={2026}
+        onEdit={() => {}}
+        onDelete={() => {}}
+        onAddNew={() => {}}
+      />,
+    );
+
+    const wrap = container.querySelector('.trade-table .remit-progress-wrap')!;
+    expect(wrap).not.toBeNull();
+    const barTrack = wrap.querySelector('.remit-progress')!;
+    const label = wrap.querySelector('.remit-text')!;
+    expect(barTrack.contains(label)).toBe(false);
+    expect(label).toHaveTextContent('$3000 / $6636');
+  });
+
+  it('renders monochrome SVG icons for edit and delete actions', () => {
+    const { container } = renderTable([makeTrade({ id: 'svg-1' })]);
+    const actionSvgs = container.querySelectorAll('.trade-table .actions-cell button svg[aria-hidden="true"]');
+    expect(actionSvgs).toHaveLength(2);
+  });
+});

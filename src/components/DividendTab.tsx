@@ -8,6 +8,19 @@ import type { DividendRecord } from '../types/trade';
 import { KpiCard } from './KpiCard';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocRefDialog } from './DocRefDialog';
+import {
+  IconCheckCircle,
+  IconChevronDown,
+  IconChevronRight,
+  IconClock,
+  IconCoins,
+  IconPaperclip,
+  IconPencil,
+  IconPercent,
+  IconReceipt,
+  IconTrash,
+  IconWallet,
+} from './Icons';
 
 interface DividendTabProps {
   dividends: DividendRecord[];
@@ -183,7 +196,7 @@ export function DividendTab({
                         title={remit.docRef ? t('remittance:docAttached') : t('remittance:docAttach')}
                         aria-label={remit.docRef ? t('remittance:docAttached') : t('remittance:docAttach')}
                       >
-                        📎
+                        <IconPaperclip size={15} />
                       </button>
                       <button
                         className="btn btn-sm btn-ghost"
@@ -191,7 +204,7 @@ export function DividendTab({
                         title={t('common:delete')}
                         aria-label={t('common:delete')}
                       >
-                        🗑️
+                        <IconTrash size={15} />
                       </button>
                     </td>
                   </tr>
@@ -234,14 +247,14 @@ export function DividendTab({
           title={t('dividend:kpiGrossDiv')}
           value={`$${summary ? fmtUSD(summary.totalGrossUSD) : '0.00'}`}
           subValue={summary ? `${summary.recordCount} ${t('dividend:remitRecorded')}` : undefined}
-          icon="💵"
+          icon={<IconCoins size={18} />}
           tooltip={t('dividend:kpiTooltipGrossDiv')}
         />
         <KpiCard
           title={t('dividend:kpiWhtTotal')}
           value={`-$${summary ? fmtUSD(summary.totalWhtUSD) : '0.00'}`}
           variant={summary && summary.totalWhtUSD > 0 ? 'negative' : 'neutral'}
-          icon="💸"
+          icon={<IconPercent size={18} />}
           tooltip={t('dividend:kpiTooltipWht')}
         />
         <KpiCard
@@ -249,7 +262,7 @@ export function DividendTab({
           value={`$${summary ? fmtUSD(summary.totalRemittedUSD) : '0.00'}`}
           subValue={summary ? `${summary.remittedCount} ${t('dividend:remitRecorded')}` : undefined}
           variant={summary && summary.totalRemittedUSD > 0 ? 'positive' : 'neutral'}
-          icon="✅"
+          icon={<IconCheckCircle size={18} />}
           tooltip={t('dividend:kpiTooltipRemitted')}
         />
         <KpiCard
@@ -257,20 +270,20 @@ export function DividendTab({
           value={`฿${summary ? fmtTHB(summary.totalGrossEquivalentTHB) : '0.00'}`}
           subValue={summary ? `${t('dividend:kpiReceivedLabel')}: ฿${fmtTHB(summary.totalReportableIncomeTHB)}` : undefined}
           variant={summary && summary.totalGrossEquivalentTHB > 0 ? 'highlight' : 'neutral'}
-          icon="💰"
+          icon={<IconWallet size={18} />}
           tooltip={t('dividend:kpiTooltipReportable')}
         />
         <KpiCard
           title={t('dividend:kpiWhtCredit')}
           value={`฿${summary ? fmtTHB(summary.totalWhtCreditTHB) : '0.00'}`}
-          icon="🧾"
+          icon={<IconReceipt size={18} />}
           tooltip={t('dividend:kpiTooltipWhtCredit')}
         />
         <KpiCard
           title={t('dividend:kpiUnremitted')}
           value={`$${summary ? fmtUSD(summary.totalUnremittedUSD) : '0.00'}`}
           variant={summary && summary.totalUnremittedUSD > 0 ? 'warning' : 'neutral'}
-          icon="⏳"
+          icon={<IconClock size={18} />}
           tooltip={t('dividend:kpiTooltipUnremitted')}
         />
       </div>
@@ -341,8 +354,9 @@ export function DividendTab({
                           className="btn-icon btn-remit"
                           onClick={e => { e.stopPropagation(); onRemit(record.id); }}
                           title={t('dividend:remitBtn')}
+                          aria-label={t('dividend:remitBtn')}
                         >
-                          💰
+                          <IconWallet size={15} />
                         </button>
                       )}
                       {record.remittances.length === 0 && (
@@ -351,22 +365,24 @@ export function DividendTab({
                             className="btn-icon btn-edit"
                             onClick={e => { e.stopPropagation(); onEdit(record.id); }}
                             title={t('common:edit')}
+                            aria-label={t('common:edit')}
                           >
-                            ✏️
+                            <IconPencil size={15} />
                           </button>
                           <button
                             className="btn-icon btn-delete"
                             onClick={e => { e.stopPropagation(); setDeleteConfirm(record.id); }}
                             title={t('common:delete')}
+                            aria-label={t('common:delete')}
                           >
-                            🗑️
+                            <IconTrash size={15} />
                           </button>
                         </>
                       )}
                       {expandedId === record.id ? (
-                        <span className="mono" style={{ color: 'var(--color-text-tertiary)' }}>▼</span>
+                        <IconChevronDown size={15} />
                       ) : (
-                        <span className="mono" style={{ color: 'var(--color-text-tertiary)' }}>▶</span>
+                        <IconChevronRight size={15} />
                       )}
                     </div>
                   </td>
@@ -390,12 +406,12 @@ export function DividendTab({
               </span>
               <div className="action-buttons">
                 {record.remainingToRemitUSD > 0 && (
-                  <button className="btn-icon btn-remit" onClick={() => onRemit(record.id)}>💰</button>
+                  <button className="btn-icon btn-remit" onClick={() => onRemit(record.id)} aria-label={t('dividend:remitBtn')}><IconWallet size={15} /></button>
                 )}
                 {record.remittances.length === 0 && (
                   <>
-                    <button className="btn-icon btn-edit" onClick={() => onEdit(record.id)}>✏️</button>
-                    <button className="btn-icon btn-delete" onClick={() => setDeleteConfirm(record.id)}>🗑️</button>
+                    <button className="btn-icon btn-edit" onClick={() => onEdit(record.id)} aria-label={t('common:edit')}><IconPencil size={15} /></button>
+                    <button className="btn-icon btn-delete" onClick={() => setDeleteConfirm(record.id)} aria-label={t('common:delete')}><IconTrash size={15} /></button>
                   </>
                 )}
               </div>

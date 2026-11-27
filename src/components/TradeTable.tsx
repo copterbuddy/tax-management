@@ -8,6 +8,7 @@ import {
 } from '../engine/fifoEngine';
 import { PROVIDER_OPTIONS } from '../constants';
 import { useTranslation } from 'react-i18next';
+import { IconPencil, IconTrash } from './Icons';
 
 interface TradeTableProps {
   trades: TradeTransaction[];
@@ -187,8 +188,10 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                     </td>
                     <td className="num remit-cell col-optional col-remitted">
                       {gain ? (
-                        <div className="remit-progress">
-                          <div className="remit-bar" style={{ width: `${gain.sellRevenueUSD > 0 ? (gain.totalRemittedUSD / gain.sellRevenueUSD) * 100 : 0}%` }} />
+                        <div className="remit-progress-wrap">
+                          <div className="remit-progress">
+                            <div className="remit-bar" style={{ width: `${gain.sellRevenueUSD > 0 ? Math.min(100, (gain.totalRemittedUSD / gain.sellRevenueUSD) * 100) : 0}%` }} />
+                          </div>
                           <span className="remit-text">${gain.totalRemittedUSD.toFixed(0)} / ${gain.sellRevenueUSD.toFixed(0)}</span>
                         </div>
                       ) : '-'}
@@ -199,7 +202,7 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                           {formatGainIndicator(gain.taxableGainTHB)}
                         </span>
                       ) : gain && gain.gainUSD < 0 ? (
-                        <span className="taxable-no" title={t('trade:taxableNo')}>❌ {t('trade:loss')}</span>
+                        <span className="taxable-no" title={t('trade:taxableNo')}>{t('trade:loss')}</span>
                       ) : (
                         <span className="gain-na">-</span>
                       )}
@@ -209,15 +212,17 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                         className="btn-icon btn-edit"
                         onClick={() => onEdit(trade)}
                         title={t('common:edit')}
+                        aria-label={t('common:edit')}
                       >
-                        ✏️
+                        <IconPencil size={15} />
                       </button>
                       <button
                         className="btn-icon btn-delete"
                         onClick={() => onDelete(trade.id)}
                         title={t('common:delete')}
+                        aria-label={t('common:delete')}
                       >
-                        🗑️
+                        <IconTrash size={15} />
                       </button>
                     </td>
                   </tr>
@@ -246,8 +251,8 @@ export function TradeTable({ trades, gains, selectedYear, onEdit, onDelete, onAd
                     </span>
                     <span className="trade-card-provider">{trade.provider}</span>
                     <div className="trade-card-actions">
-                      <button className="btn-icon btn-edit" onClick={() => onEdit(trade)} title={t('common:edit')}>✏️</button>
-                      <button className="btn-icon btn-delete" onClick={() => onDelete(trade.id)} title={t('common:delete')}>🗑️</button>
+                      <button className="btn-icon btn-edit" onClick={() => onEdit(trade)} title={t('common:edit')} aria-label={t('common:edit')}><IconPencil size={15} /></button>
+                      <button className="btn-icon btn-delete" onClick={() => onDelete(trade.id)} title={t('common:delete')} aria-label={t('common:delete')}><IconTrash size={15} /></button>
                     </div>
                   </div>
                   <div className="trade-card-body">

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { RealizedGainResult, RemittanceRecord } from '../types/trade';
 import { useTranslation } from 'react-i18next';
 import { DocRefDialog } from './DocRefDialog';
+import { IconPaperclip, IconPencil, IconTrash } from './Icons';
 
 interface RemittanceLogProps {
   gains: RealizedGainResult[];
@@ -147,7 +148,7 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
                       title={r.docRef ? t('remittance:docAttached') : t('remittance:docAttach')}
                       aria-label={r.docRef ? t('remittance:docAttached') : t('remittance:docAttach')}
                     >
-                      📎
+                      <IconPaperclip size={15} />
                     </button>
                     <button
                       className="btn-icon btn-edit"
@@ -164,7 +165,7 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
                       title={t('remittance:editRemit')}
                       aria-label={t('remittance:editRemit')}
                     >
-                      ✏️
+                      <IconPencil size={15} />
                     </button>
                     <button
                       className="btn-icon btn-delete"
@@ -181,7 +182,7 @@ export function RemittanceLog({ gains, onRecordRemit, onEditRemittance, onDelete
                       title={t('remittance:deleteRemit')}
                       aria-label={t('remittance:deleteRemit')}
                     >
-                      🗑️
+                      <IconTrash size={15} />
                     </button>
                   </td>
                 </tr>
